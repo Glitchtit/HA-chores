@@ -1,3 +1,7 @@
+## 0.2.16
+
+- Add: "🔔 Test Notification" button in Settings — sends a test push to the active person's linked mobile devices to verify notifications are working
+
 ## 0.2.15
 
 - Fix: "My Chores" now only shows chores assigned or claimed by the active person — unassigned claimable chores no longer appear here

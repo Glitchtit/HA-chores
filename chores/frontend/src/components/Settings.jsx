@@ -3,6 +3,7 @@ import * as api from '../api';
 
 export default function Settings({ persons, activePerson, setActivePerson, addToast }) {
   const [syncing, setSyncing] = useState(false);
+  const [testingNotify, setTestingNotify] = useState(false);
 
   const handleSyncPersons = useCallback(async () => {
     setSyncing(true);
@@ -14,6 +15,18 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
     }
     setSyncing(false);
   }, [addToast]);
+
+  const handleTestNotification = useCallback(async () => {
+    if (!activePerson) return;
+    setTestingNotify(true);
+    try {
+      await api.testNotification(activePerson);
+      addToast('📲 Test notification sent!', 'success');
+    } catch {
+      addToast('No mobile device found for this person', 'error');
+    }
+    setTestingNotify(false);
+  }, [activePerson, addToast]);
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -63,13 +76,25 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
         <p className="text-sm text-gray-400">
           Sync household members from Home Assistant Person entities.
         </p>
-        <button
-          onClick={handleSyncPersons}
-          disabled={syncing}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium"
-        >
-          {syncing ? 'Syncing...' : '🔄 Sync Persons from HA'}
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={handleSyncPersons}
+            disabled={syncing}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium"
+          >
+            {syncing ? 'Syncing...' : '🔄 Sync Persons from HA'}
+          </button>
+          <button
+            onClick={handleTestNotification}
+            disabled={testingNotify || !activePerson}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded-lg text-sm font-medium"
+          >
+            {testingNotify ? 'Sending...' : '🔔 Test Notification'}
+          </button>
+        </div>
+        <p className="text-xs text-gray-500">
+          Test notification sends to the active person's linked devices.
+        </p>
       </div>
 
       {/* About */}
