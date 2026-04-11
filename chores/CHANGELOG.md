@@ -1,3 +1,8 @@
+## 0.2.9
+
+- Fix: leaderboard now handles ties correctly — equal XP scores share the same rank and medal (e.g. two players at #1 both show 🥇, next player shows #3)
+- Podium and full rankings list both use rank-based medal logic
+
 ## 0.2.8
 
 - Auto-detect active person from HA login: when opening the web UI, the app now reads the logged-in HA user and automatically selects the matching household member
