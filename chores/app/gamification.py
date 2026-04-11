@@ -123,7 +123,7 @@ def check_and_award_badges(person_entity_id: str) -> list[dict]:
     if not person:
         return []
 
-    # Get already earned badge IDs
+    # Already-earned badge IDs
     earned = {
         r["badge_id"]
         for r in conn.execute(
@@ -132,67 +132,236 @@ def check_and_award_badges(person_entity_id: str) -> list[dict]:
         ).fetchall()
     }
 
-    # Get all badge definitions
     badges = conn.execute("SELECT * FROM badges").fetchall()
 
-    # Count total completions
-    total_completions = conn.execute(
-        "SELECT COUNT(*) as cnt FROM chore_instances WHERE completed_by = ? AND status = 'completed'",
-        (person_entity_id,),
-    ).fetchone()["cnt"]
-
-    # Count today's completions
+    # ── Pre-compute common stats ─────────────────────────────────────────────
     today = date.today().isoformat()
-    daily_completions = conn.execute(
-        "SELECT COUNT(*) as cnt FROM chore_instances WHERE completed_by = ? AND status = 'completed' AND date(completed_at) = ?",
-        (person_entity_id, today),
-    ).fetchone()["cnt"]
+    today_dt = date.today()
 
-    # Count claims
+    total_completions = conn.execute(
+        "SELECT COUNT(*) FROM chore_instances WHERE completed_by = ? AND status = 'completed'",
+        (person_entity_id,),
+    ).fetchone()[0]
+
+    daily_completions = conn.execute(
+        "SELECT COUNT(*) FROM chore_instances WHERE completed_by = ? AND status = 'completed' AND date(completed_at) = ?",
+        (person_entity_id, today),
+    ).fetchone()[0]
+
     total_claims = conn.execute(
-        """SELECT COUNT(*) as cnt FROM chore_instances ci
+        """SELECT COUNT(*) FROM chore_instances ci
            JOIN chores c ON ci.chore_id = c.id
            WHERE ci.completed_by = ? AND ci.status = 'completed'
            AND c.assignment_mode = 'claim'""",
         (person_entity_id,),
-    ).fetchone()["cnt"]
+    ).fetchone()[0]
 
-    # Check all chore types completed
     total_chore_types = conn.execute(
-        "SELECT COUNT(*) as cnt FROM chores WHERE active = 1"
-    ).fetchone()["cnt"]
+        "SELECT COUNT(*) FROM chores WHERE active = 1"
+    ).fetchone()[0]
     completed_types = conn.execute(
-        """SELECT COUNT(DISTINCT ci.chore_id) as cnt
+        """SELECT COUNT(DISTINCT ci.chore_id)
            FROM chore_instances ci
            JOIN chores c ON ci.chore_id = c.id
            WHERE ci.completed_by = ? AND ci.status = 'completed' AND c.active = 1""",
         (person_entity_id,),
-    ).fetchone()["cnt"]
+    ).fetchone()[0]
 
-    newly_earned = []
+    # ── Main badge loop ──────────────────────────────────────────────────────
+    newly_earned: list[dict] = []
+
     for badge in badges:
-        if badge["id"] in earned:
+        bid = badge["id"]
+        if bid in earned:
+            continue
+
+        ctype = badge["condition_type"]
+        cval  = badge["condition_value"]
+        try:
+            cextra = badge["condition_extra"] or ""
+        except (IndexError, KeyError):
+            cextra = ""
+
+        # badge_count is deferred to second pass
+        if ctype == "badge_count":
             continue
 
         awarded = False
-        ctype = badge["condition_type"]
-        cval = badge["condition_value"]
 
-        if ctype == "completions" and total_completions >= cval:
-            awarded = True
-        elif ctype == "streak" and person["current_streak"] >= cval:
-            awarded = True
-        elif ctype == "level" and person["level"] >= cval:
-            awarded = True
-        elif ctype == "daily_completions" and daily_completions >= cval:
-            awarded = True
-        elif ctype == "claims" and total_claims >= cval:
-            awarded = True
-        elif ctype == "all_types" and total_chore_types > 0 and completed_types >= total_chore_types:
-            awarded = True
-        # perfect_week is checked separately via scheduler
+        if ctype == "completions":
+            awarded = total_completions >= cval
 
+        elif ctype == "streak":
+            awarded = person["current_streak"] >= cval
+
+        elif ctype == "level":
+            awarded = person["level"] >= cval
+
+        elif ctype == "daily_completions":
+            awarded = daily_completions >= cval
+
+        elif ctype == "claims":
+            awarded = total_claims >= cval
+
+        elif ctype == "all_types":
+            awarded = total_chore_types > 0 and completed_types >= total_chore_types
+
+        elif ctype == "hour_before":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) < ?""",
+                (person_entity_id, cval),
+            ).fetchone()[0]
+            awarded = cnt > 0
+
+        elif ctype == "hour_after":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) >= ?""",
+                (person_entity_id, cval),
+            ).fetchone()[0]
+            awarded = cnt > 0
+
+        elif ctype == "hour_range":
+            try:
+                end_hour = int(cextra)
+            except (ValueError, TypeError):
+                continue
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) >= ?
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) < ?""",
+                (person_entity_id, cval, end_hour),
+            ).fetchone()[0]
+            awarded = cnt > 0
+
+        elif ctype == "midnight_count":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) < 4""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt >= cval
+
+        elif ctype == "calendar_date":
+            today_mmdd = today_dt.strftime("%m-%d")
+            if today_mmdd == cextra:
+                cnt = conn.execute(
+                    """SELECT COUNT(*) FROM chore_instances
+                       WHERE completed_by = ? AND status = 'completed'
+                       AND date(completed_at) = ?""",
+                    (person_entity_id, today),
+                ).fetchone()[0]
+                awarded = cnt > 0
+
+        elif ctype == "weekend_both":
+            cnt = conn.execute(
+                """SELECT COUNT(DISTINCT strftime('%w', completed_at)) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND strftime('%w', completed_at) IN ('0', '6')
+                   AND date(completed_at) >= date('now', '-14 days')""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt >= 2
+
+        elif ctype == "friday_night":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND strftime('%w', completed_at) = '5'
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) >= 23""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt > 0
+
+        elif ctype == "monday_early":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND strftime('%w', completed_at) = '1'
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) < 7""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt > 0
+
+        elif ctype == "sunday_early":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND strftime('%w', completed_at) = '0'
+                   AND CAST(strftime('%H', completed_at) AS INTEGER) < 9""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt > 0
+
+        elif ctype == "speed_run":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND completed_at >= datetime('now', '-10 minutes')""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt >= cval
+
+        elif ctype == "late_complete":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND due_date < date(completed_at)""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt >= cval
+
+        elif ctype == "days_since_first":
+            row = conn.execute(
+                """SELECT julianday('now') - julianday(MIN(completed_at)) as days
+                   FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'""",
+                (person_entity_id,),
+            ).fetchone()
+            if row and row[0] is not None:
+                awarded = row[0] >= cval
+
+        elif ctype == "midnight_window":
+            cnt = conn.execute(
+                """SELECT COUNT(*) FROM chore_instances
+                   WHERE completed_by = ? AND status = 'completed'
+                   AND (
+                       (CAST(strftime('%H', completed_at) AS INTEGER) = 23
+                        AND CAST(strftime('%M', completed_at) AS INTEGER) >= 55)
+                       OR
+                       (CAST(strftime('%H', completed_at) AS INTEGER) = 0
+                        AND CAST(strftime('%M', completed_at) AS INTEGER) <= 5)
+                   )""",
+                (person_entity_id,),
+            ).fetchone()[0]
+            awarded = cnt > 0
+
+        # perfect_week is checked separately by the scheduler
         if awarded:
+            conn.execute(
+                "INSERT OR IGNORE INTO person_badges (person_id, badge_id) VALUES (?, ?)",
+                (person_entity_id, badge["id"]),
+            )
+            newly_earned.append({
+                "id": badge["id"],
+                "name": badge["name"],
+                "icon": badge["icon"],
+            })
+
+    # ── Second pass: badge_count (meta-achievement) ──────────────────────────
+    newly_ids = {b["id"] for b in newly_earned}
+    total_badges_now = len(earned) + len(newly_earned)
+    for badge in badges:
+        if badge["id"] in earned or badge["id"] in newly_ids:
+            continue
+        if badge["condition_type"] != "badge_count":
+            continue
+        if total_badges_now >= badge["condition_value"]:
             conn.execute(
                 "INSERT OR IGNORE INTO person_badges (person_id, badge_id) VALUES (?, ?)",
                 (person_entity_id, badge["id"]),
