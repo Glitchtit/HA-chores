@@ -22,7 +22,7 @@ export default function Leaderboard() {
     );
   }
 
-  const podiumIcons = ['🥇', '🥈', '🥉'];
+  const medal = (rank) => rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
@@ -37,7 +37,7 @@ export default function Leaderboard() {
             const heights = ['h-28', 'h-20', 'h-14'];
             return (
               <div key={entry.entity_id} className="flex flex-col items-center">
-                <div className="text-3xl mb-1">{podiumIcons[idx] || ''}</div>
+                <div className="text-3xl mb-1">{medal(entry.rank) || ''}</div>
                 <div className="text-xl mb-1">
                   {entry.avatar_url ? (
                     <img src={entry.avatar_url} className="w-12 h-12 rounded-full" alt="" />
@@ -62,7 +62,7 @@ export default function Leaderboard() {
           <div key={entry.entity_id}
             className="bg-gray-800 rounded-lg p-4 flex items-center gap-4">
             <div className="text-lg font-bold text-gray-500 w-8 text-center">
-              {entry.rank <= 3 ? podiumIcons[entry.rank - 1] : `#${entry.rank}`}
+              {medal(entry.rank) || `#${entry.rank}`}
             </div>
             <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden">
               {entry.avatar_url ? (
