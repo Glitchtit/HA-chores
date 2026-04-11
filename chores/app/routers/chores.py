@@ -5,6 +5,7 @@ import json
 from fastapi import APIRouter, HTTPException
 from models import ChoreCreate, ChoreUpdate, Chore
 from database import get_connection
+from scheduler import generate_instances
 
 router = APIRouter(prefix="/api/chores", tags=["chores"])
 
@@ -57,6 +58,7 @@ async def create_chore(body: ChoreCreate):
         ),
     )
     conn.commit()
+    generate_instances(days_ahead=7)
     return await get_chore(cursor.lastrowid)
 
 

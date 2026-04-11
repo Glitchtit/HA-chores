@@ -1,3 +1,9 @@
+## 0.2.6
+
+- Fix: chore instances now generated immediately when a chore is created (not just on scheduler tick)
+- Fix: claim-mode chores now show Claim button on dashboard; claimed-by-others shows Claimed (grayed)
+- Fix: assignment_mode included in chore instance API responses
+
 ## 0.2.5
 
 - Difficulty now auto-sets XP reward when creating a chore (Easy=5, Medium=10, Hard=20)
