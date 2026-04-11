@@ -53,3 +53,17 @@ async def sync_persons():
     """Force re-sync persons from Home Assistant."""
     await sync_persons_from_ha()
     return await list_persons()
+
+
+@router.post("/{entity_id}/test-notification")
+async def test_notification(entity_id: str):
+    """Send a test push notification to a person's devices."""
+    from ha_client import send_notification
+    sent = await send_notification(
+        entity_id,
+        title="🔔 Test Notification",
+        message="Chores notifications are working correctly!",
+    )
+    if not sent:
+        raise HTTPException(404, "No mobile_app device found for this person")
+    return {"ok": True}
