@@ -17,6 +17,8 @@ def parse_recurrence(recurrence: str) -> dict:
       'daily'              → every day
       'weekly:mon,thu'     → every Monday and Thursday
       'monthly:1,15'       → 1st and 15th of each month
+      'biweekly:even'      → every even ISO week number, on Friday
+      'biweekly:odd'       → every odd ISO week number, on Friday
       'every:3'            → every 3 days
     """
     if not recurrence:
@@ -33,6 +35,9 @@ def parse_recurrence(recurrence: str) -> dict:
     elif rtype == "monthly":
         dom = [int(d.strip()) for d in parts[1].split(",")] if len(parts) > 1 else [1]
         return {"type": "monthly", "days_of_month": dom}
+    elif rtype == "biweekly":
+        parity = parts[1].strip() if len(parts) > 1 else "even"
+        return {"type": "biweekly", "parity": parity}
     elif rtype == "every":
         interval = int(parts[1]) if len(parts) > 1 else 1
         return {"type": "every", "interval": interval}
@@ -61,6 +66,14 @@ def should_schedule_on(recurrence: str, target_date: date) -> bool:
         return any(DAY_MAP.get(d, -1) == weekday for d in spec["days"])
     elif rtype == "monthly":
         return target_date.day in spec["days_of_month"]
+    elif rtype == "biweekly":
+        if target_date.weekday() != 4:  # must be Friday
+            return False
+        iso_week = target_date.isocalendar()[1]
+        if spec["parity"] == "even":
+            return iso_week % 2 == 0
+        else:
+            return iso_week % 2 == 1
     elif rtype == "every":
         return True  # Interval checking needs a reference point (handled by caller)
     return False

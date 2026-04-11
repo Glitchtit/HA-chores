@@ -1,3 +1,7 @@
+## 0.2.12
+
+- Change: replace "Twice/month (1st & 15th)" schedule with "Every even week (Friday)" and "Every odd week (Friday)" — fires every other Friday, alternating by ISO week parity
+
 ## 0.2.11
 
 - Add: manual-mode chores now show a 👤 Assign button in the Chores tab

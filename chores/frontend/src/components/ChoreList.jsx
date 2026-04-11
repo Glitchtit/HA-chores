@@ -17,8 +17,9 @@ const RECURRENCE_OPTIONS = [
   { value: 'weekly:tue,thu,sat', label: '3x/week (T/T/S)' },
   { value: 'weekly:sat', label: 'Weekly (Sat)' },
   { value: 'weekly:sun', label: 'Weekly (Sun)' },
+  { value: 'biweekly:even', label: 'Every even week (Friday)' },
+  { value: 'biweekly:odd', label: 'Every odd week (Friday)' },
   { value: 'monthly:1', label: 'Monthly (1st)' },
-  { value: 'monthly:1,15', label: 'Twice/month (1st & 15th)' },
 ];
 
 export default function ChoreList({ persons, addToast }) {
