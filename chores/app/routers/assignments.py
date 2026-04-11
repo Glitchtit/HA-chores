@@ -31,7 +31,7 @@ async def list_instances(
     """List chore instances with optional filters."""
     conn = get_connection()
     query = """
-        SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty
+        SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
         FROM chore_instances ci
         JOIN chores c ON ci.chore_id = c.id
         WHERE 1=1
@@ -85,7 +85,7 @@ async def create_instance(body: InstanceCreate, bg: BackgroundTasks):
         bg.add_task(notify_chore_assigned, body.assigned_to, chore["name"], body.due_date)
 
     row = conn.execute(
-        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty
+        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),
@@ -112,7 +112,7 @@ async def claim_instance(instance_id: int, body: InstanceClaim):
     conn.commit()
 
     updated = conn.execute(
-        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty
+        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),
@@ -175,7 +175,7 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
         bg.add_task(notify_level_up, body.completed_by, new_level)
 
     updated = conn.execute(
-        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty
+        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),
@@ -200,7 +200,7 @@ async def skip_instance(instance_id: int):
     conn.commit()
 
     updated = conn.execute(
-        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty
+        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),
@@ -230,7 +230,7 @@ async def assign_instance(instance_id: int, body: InstanceClaim, bg: BackgroundT
     bg.add_task(notify_chore_assigned, body.person_id, row["chore_name"], row["due_date"])
 
     updated = conn.execute(
-        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty
+        """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),
