@@ -42,6 +42,8 @@ export const assignInstance = (id, personId) =>
 export const getPersons = () => api.get('/persons/').then(r => r.data);
 export const getMe = () => api.get('/persons/me').then(r => r.data);
 export const syncPersons = () => api.post('/persons/sync').then(r => r.data);
+export const testNotification = (entityId) =>
+  api.post(`/persons/${entityId}/test-notification`).then(r => r.data);
 
 // ── Gamification ────────────────────────────────────────────────────────────
 export const getLeaderboard = () => api.get('/gamification/leaderboard').then(r => r.data);
