@@ -52,6 +52,8 @@ async def send_notification(
 
     Maps person entity_id to their mobile_app notification target by
     looking up the device_trackers associated with the person.
+    Tries all trackers, constructing the notify service as
+    mobile_app_<device_name> regardless of the tracker's own prefix.
     """
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -66,37 +68,44 @@ async def send_notification(
                 "device_trackers", []
             )
 
-            # Try to find a mobile_app device tracker
+            payload: dict = {"title": title, "message": message}
+            if data:
+                payload["data"] = data
+
             notified = False
             for tracker in device_trackers:
-                if "mobile_app" in tracker:
-                    # Extract device name: device_tracker.mobile_app_xxx -> xxx
-                    device_name = tracker.replace("device_tracker.", "")
-                    service_target = f"mobile_app_{device_name.replace('mobile_app_', '')}"
+                # Strip entity prefix, then build notify service name.
+                # Handles both device_tracker.mobile_app_foo → mobile_app_foo
+                # and device_tracker.cph2621 → mobile_app_cph2621
+                device_name = tracker.replace("device_tracker.", "")
+                if device_name.startswith("mobile_app_"):
+                    service_target = device_name
+                else:
+                    service_target = f"mobile_app_{device_name}"
 
-                    payload: dict = {
-                        "title": title,
-                        "message": message,
-                    }
-                    if data:
-                        payload["data"] = data
-
-                    notify_resp = await client.post(
-                        f"{HA_URL}/api/services/notify/{service_target}",
-                        headers=_headers(),
-                        json=payload,
+                notify_resp = await client.post(
+                    f"{HA_URL}/api/services/notify/{service_target}",
+                    headers=_headers(),
+                    json=payload,
+                )
+                if notify_resp.status_code < 300:
+                    notified = True
+                    logger.info(
+                        "Notification sent to %s via %s",
+                        person_entity_id,
+                        service_target,
                     )
-                    if notify_resp.status_code < 300:
-                        notified = True
-                        logger.info(
-                            "Notification sent to %s via %s",
-                            person_entity_id,
-                            service_target,
-                        )
+                else:
+                    logger.debug(
+                        "Notify service %s returned %d for %s",
+                        service_target,
+                        notify_resp.status_code,
+                        person_entity_id,
+                    )
 
             if not notified:
                 logger.warning(
-                    "No mobile_app device found for %s (trackers: %s)",
+                    "No working notify service found for %s (trackers: %s)",
                     person_entity_id,
                     device_trackers,
                 )

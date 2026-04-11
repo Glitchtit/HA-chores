@@ -1,3 +1,7 @@
+## 0.2.17
+
+- Fix: notifications now work for devices whose tracker doesn't contain "mobile_app" in the name (e.g. device_tracker.cph2621 → notify.mobile_app_cph2621)
+
 ## 0.2.16
 
 - Add: "🔔 Test Notification" button in Settings — sends a test push to the active person's linked mobile devices to verify notifications are working
