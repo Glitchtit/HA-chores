@@ -110,6 +110,8 @@ class Badge(BaseModel):
     icon: str
     condition_type: str
     condition_value: int
+    hidden: int = 0
+    condition_extra: str = ""
 
 
 class BadgeEarned(BaseModel):
