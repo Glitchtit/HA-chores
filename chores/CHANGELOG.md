@@ -1,3 +1,7 @@
+## 0.2.15
+
+- Fix: "My Chores" now only shows chores assigned or claimed by the active person — unassigned claimable chores no longer appear here
+
 ## 0.2.14
 
 - Fix: chores directly assigned to a person now show the green "Done ✓" button instead of the blue "Claim" button on their dashboard
