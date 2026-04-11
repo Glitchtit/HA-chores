@@ -1,3 +1,10 @@
+## 0.2.3
+
+- Fix: white page under HA ingress (Vite relative asset paths)
+- Fix: integration DNS error — add Supervisor auto-discovery and connection validation
+- Fix: add hacs.json for HACS custom repository support
+- Fix: version fields were not bumped in prior releases (config.json, manifest.json)
+
 ## 0.2.0
 
 - Wire overdue, streak warning, and weekly summary notifications into scheduler
