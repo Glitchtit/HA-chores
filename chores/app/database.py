@@ -93,7 +93,8 @@ CREATE TABLE IF NOT EXISTS persons (
     current_streak      INTEGER DEFAULT 0,
     longest_streak      INTEGER DEFAULT 0,
     last_completion_date TEXT,
-    avatar_url          TEXT    DEFAULT ''
+    avatar_url          TEXT    DEFAULT '',
+    ha_user_id          TEXT    DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS badges (
@@ -177,14 +178,18 @@ SEED_BADGES = [
 
 def _migrate(conn: sqlite3.Connection) -> None:
     """Apply schema migrations for columns added after initial release."""
-    for col, defn in [
-        ("hidden",          "INTEGER DEFAULT 0"),
-        ("condition_extra", "TEXT DEFAULT ''"),
-    ]:
+    migrations = [
+        # badges columns (v0.2.7)
+        ("badges",  "hidden",          "INTEGER DEFAULT 0"),
+        ("badges",  "condition_extra", "TEXT DEFAULT ''"),
+        # persons columns (v0.2.8)
+        ("persons", "ha_user_id",      "TEXT DEFAULT ''"),
+    ]
+    for table, col, defn in migrations:
         try:
-            conn.execute(f"ALTER TABLE badges ADD COLUMN {col} {defn}")
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {defn}")
             conn.commit()
-            logger.info("Migration: added column 'badges.%s'", col)
+            logger.info("Migration: added column '%s.%s'", table, col)
         except Exception:
             pass  # Column already exists
 

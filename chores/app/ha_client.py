@@ -34,6 +34,7 @@ async def get_persons() -> list[dict]:
                         "entity_id": s["entity_id"],
                         "name": attrs.get("friendly_name", s["entity_id"]),
                         "avatar_url": attrs.get("entity_picture", ""),
+                        "user_id": attrs.get("user_id", ""),
                     })
             return persons
     except Exception as e:

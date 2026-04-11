@@ -1,3 +1,12 @@
+## 0.2.8
+
+- Auto-detect active person from HA login: when opening the web UI, the app now reads the logged-in HA user and automatically selects the matching household member
+- Header shows a green "you" badge next to your name when auto-detected
+- Manual override still available in Settings (clears the auto badge)
+- nginx now forwards X-Hass-User-ID header to the API backend
+- ha_user_id stored per person in DB (populated on sync with HA person entities)
+- New endpoint: GET /api/persons/me — returns the person matching the current HA user
+
 ## 0.2.7
 
 - Achievements expanded from 10 to 35 badges
