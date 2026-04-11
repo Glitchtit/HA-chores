@@ -1,3 +1,7 @@
+## 0.2.10
+
+- Fix: podium pedestals now use rank-based height — tied players get equal-height pedestals
+
 ## 0.2.9
 
 - Fix: leaderboard now handles ties correctly — equal XP scores share the same rank and medal (e.g. two players at #1 both show 🥇, next player shows #3)

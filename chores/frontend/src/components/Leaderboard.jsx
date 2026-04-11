@@ -23,6 +23,7 @@ export default function Leaderboard() {
   }
 
   const medal = (rank) => rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+  const podiumHeight = (rank) => rank === 1 ? 'h-28' : rank === 2 ? 'h-20' : 'h-14';
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
@@ -34,7 +35,6 @@ export default function Leaderboard() {
           {[1, 0, 2].map(idx => {
             const entry = leaderboard.entries[idx];
             if (!entry) return <div key={idx} className="w-24" />;
-            const heights = ['h-28', 'h-20', 'h-14'];
             return (
               <div key={entry.entity_id} className="flex flex-col items-center">
                 <div className="text-3xl mb-1">{medal(entry.rank) || ''}</div>
@@ -47,7 +47,7 @@ export default function Leaderboard() {
                   {entry.name}
                 </div>
                 <div className="text-xs text-amber-400 font-bold">Lv {entry.level}</div>
-                <div className={`${heights[idx]} w-20 bg-gradient-to-t from-amber-700 to-amber-500 rounded-t-lg mt-2 flex items-end justify-center pb-2`}>
+                <div className={`${podiumHeight(entry.rank)} w-20 bg-gradient-to-t from-amber-700 to-amber-500 rounded-t-lg mt-2 flex items-end justify-center pb-2`}>
                   <span className="text-xs font-bold">{entry.xp_total} XP</span>
                 </div>
               </div>
