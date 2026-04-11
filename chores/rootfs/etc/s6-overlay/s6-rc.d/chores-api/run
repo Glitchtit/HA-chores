@@ -1,0 +1,27 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Chores API – Start the FastAPI backend
+# ==============================================================================
+
+bashio::log.info "Starting Chores API..."
+
+# ── Read config from HA supervisor ───────────────────────────────────────────
+if bashio::config.true 'debug'; then
+    export DEBUG=1
+    bashio::log.info "Debug mode enabled"
+else
+    export DEBUG=0
+fi
+
+export PYTHONUNBUFFERED=1
+
+# ── Ensure data directories exist ────────────────────────────────────────────
+DATA_DIR="/data"
+export DATA_DIR
+mkdir -p "${DATA_DIR}"
+
+bashio::log.info "Data directory: ${DATA_DIR}"
+
+# ── Start FastAPI ────────────────────────────────────────────────────────────
+exec python3 /app/main.py
