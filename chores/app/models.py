@@ -79,6 +79,7 @@ class ChoreInstance(BaseModel):
     chore_name: Optional[str] = None
     chore_icon: Optional[str] = None
     chore_difficulty: Optional[str] = None
+    chore_assignment_mode: Optional[str] = None
 
 
 # ── Persons ──────────────────────────────────────────────────────────────────

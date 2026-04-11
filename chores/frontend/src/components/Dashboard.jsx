@@ -30,6 +30,16 @@ export default function Dashboard({ activePerson, persons, addToast }) {
     }
   };
 
+  const handleClaim = async (instanceId) => {
+    try {
+      await api.claimInstance(instanceId, activePerson);
+      addToast('🙋 Chore claimed!', 'success');
+      load();
+    } catch (e) {
+      addToast('Failed to claim chore', 'error');
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-12 text-gray-500">Loading...</div>;
   }
@@ -121,20 +131,38 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                   <span className="text-2xl">{ci.chore_icon || '🧹'}</span>
                   <div>
                     <div className="font-medium">{ci.chore_name}</div>
-                    <div className="text-xs text-gray-500">
-                      {ci.status === 'overdue' && <span className="text-red-400">Overdue · </span>}
-                      {ci.chore_difficulty}
+                    <div className="text-xs text-gray-500 flex gap-2 items-center">
+                      {ci.status === 'overdue' && <span className="text-red-400">Overdue ·</span>}
+                      <span>{ci.chore_difficulty}</span>
+                      {ci.chore_assignment_mode === 'claim' && ci.status === 'claimed' && ci.assigned_to !== activePerson && (
+                        <span className="text-amber-400">· claimed</span>
+                      )}
                     </div>
                   </div>
                 </div>
-                {ci.status !== 'completed' && (
-                  <button
-                    onClick={() => handleComplete(ci.id)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Done ✓
-                  </button>
-                )}
+                <div>
+                  {ci.status === 'completed' ? null
+                    : ci.chore_assignment_mode === 'claim' && ci.status === 'pending' ? (
+                      <button
+                        onClick={() => handleClaim(ci.id)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Claim 🙋
+                      </button>
+                    ) : ci.chore_assignment_mode === 'claim' && ci.status === 'claimed' && ci.assigned_to !== activePerson ? (
+                      <span className="px-3 py-2 text-xs text-gray-500 bg-gray-700 rounded-lg">
+                        Claimed
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleComplete(ci.id)}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Done ✓
+                      </button>
+                    )
+                  }
+                </div>
               </div>
             ))}
           </div>
