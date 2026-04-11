@@ -30,6 +30,8 @@ export default function ChoreList({ persons, addToast }) {
     difficulty: 'medium', recurrence: '', estimated_minutes: '',
     assignment_mode: 'manual', rotation_order: [],
   });
+  const [assignChore, setAssignChore] = useState(null); // chore being assigned
+  const [assignForm, setAssignForm] = useState({ person_id: '', due_date: '' });
 
   const load = useCallback(async () => {
     try {
@@ -106,6 +108,29 @@ export default function ChoreList({ persons, addToast }) {
       load();
     } catch {
       addToast('Failed to update', 'error');
+    }
+  };
+
+  const openAssign = (chore) => {
+    setAssignChore(chore);
+    setAssignForm({
+      person_id: persons[0]?.entity_id || '',
+      due_date: new Date().toISOString().slice(0, 10),
+    });
+  };
+
+  const handleAssign = async (e) => {
+    e.preventDefault();
+    try {
+      await api.createInstance({
+        chore_id: assignChore.id,
+        due_date: assignForm.due_date,
+        assigned_to: assignForm.person_id,
+      });
+      addToast(`Assigned to ${persons.find(p => p.entity_id === assignForm.person_id)?.name || 'person'}`, 'success');
+      setAssignChore(null);
+    } catch {
+      addToast('Failed to assign chore', 'error');
     }
   };
 
@@ -284,6 +309,53 @@ export default function ChoreList({ persons, addToast }) {
         </div>
       )}
 
+      {/* Assign modal */}
+      {assignChore && (
+        <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-4"
+             onClick={() => setAssignChore(null)}>
+          <div className="bg-gray-800 rounded-xl p-5 w-full max-w-sm"
+               onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold mb-1">Assign Chore</h3>
+            <p className="text-sm text-gray-400 mb-4">{assignChore.icon} {assignChore.name}</p>
+            <form onSubmit={handleAssign} className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-400">Assign to</label>
+                <select
+                  value={assignForm.person_id}
+                  onChange={e => setAssignForm(f => ({ ...f, person_id: e.target.value }))}
+                  required
+                  className="w-full bg-gray-700 rounded px-3 py-2 mt-1"
+                >
+                  {persons.map(p => (
+                    <option key={p.entity_id} value={p.entity_id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-400">Due date</label>
+                <input
+                  type="date"
+                  value={assignForm.due_date}
+                  onChange={e => setAssignForm(f => ({ ...f, due_date: e.target.value }))}
+                  required
+                  className="w-full bg-gray-700 rounded px-3 py-2 mt-1"
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit"
+                  className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium">
+                  Assign
+                </button>
+                <button type="button" onClick={() => setAssignChore(null)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Chore list */}
       {chores.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
@@ -313,6 +385,13 @@ export default function ChoreList({ persons, addToast }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  {c.assignment_mode === 'manual' && c.active && (
+                    <button onClick={() => openAssign(c)}
+                      className="p-2 hover:bg-gray-700 rounded text-sm"
+                      title="Assign to person">
+                      👤
+                    </button>
+                  )}
                   <button onClick={() => openEdit(c)}
                     className="p-2 hover:bg-gray-700 rounded text-sm"
                     title="Edit">

@@ -1,3 +1,8 @@
+## 0.2.11
+
+- Add: manual-mode chores now show a 👤 Assign button in the Chores tab
+- Clicking it opens a modal to pick a person and due date, creating a chore instance assigned to that person (with notification)
+
 ## 0.2.10
 
 - Fix: podium pedestals now use rank-based height — tied players get equal-height pedestals
