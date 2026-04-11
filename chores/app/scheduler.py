@@ -3,7 +3,7 @@
 from __future__ import annotations
 import json
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from database import get_connection
 
@@ -151,6 +151,18 @@ def mark_overdue() -> int:
     """Mark past-due pending/claimed instances as overdue. Returns count."""
     conn = get_connection()
     today = date.today().isoformat()
+
+    # Collect assigned persons for overdue notifications before updating
+    about_to_be_overdue = conn.execute(
+        """SELECT ci.assigned_to, c.name as chore_name
+           FROM chore_instances ci
+           JOIN chores c ON ci.chore_id = c.id
+           WHERE ci.status IN ('pending', 'claimed')
+           AND ci.due_date < ?
+           AND ci.assigned_to IS NOT NULL""",
+        (today,),
+    ).fetchall()
+
     cursor = conn.execute(
         """UPDATE chore_instances
            SET status = 'overdue'
@@ -162,4 +174,94 @@ def mark_overdue() -> int:
     count = cursor.rowcount
     if count > 0:
         logger.info("Marked %d instances as overdue", count)
-    return count
+
+    # Return overdue notification targets for the async caller
+    return count, [
+        {"person": r["assigned_to"], "chore_name": r["chore_name"]}
+        for r in about_to_be_overdue
+    ]
+
+
+def get_streak_at_risk_persons() -> list[dict]:
+    """Return persons who have an active streak but haven't completed today."""
+    conn = get_connection()
+    today = date.today().isoformat()
+    rows = conn.execute(
+        """SELECT entity_id, name, current_streak
+           FROM persons
+           WHERE current_streak > 0
+           AND (last_completion_date IS NULL OR last_completion_date < ?)""",
+        (today,),
+    ).fetchall()
+    return [{"entity_id": r["entity_id"], "name": r["name"], "streak": r["current_streak"]} for r in rows]
+
+
+def get_weekly_summary_data() -> list[dict]:
+    """Compute weekly summary stats for each person."""
+    conn = get_connection()
+    week_start = (date.today() - timedelta(days=7)).isoformat()
+
+    persons = conn.execute("SELECT entity_id, name, xp_total FROM persons").fetchall()
+    if not persons:
+        return []
+
+    # Find leader
+    leader = max(persons, key=lambda p: p["xp_total"])
+
+    summaries = []
+    for p in persons:
+        completed = conn.execute(
+            """SELECT COUNT(*) as cnt FROM chore_instances
+               WHERE completed_by = ? AND status = 'completed'
+               AND completed_at >= ?""",
+            (p["entity_id"], week_start),
+        ).fetchone()["cnt"]
+
+        total = conn.execute(
+            """SELECT COUNT(*) as cnt FROM chore_instances
+               WHERE (assigned_to = ? OR completed_by = ?)
+               AND due_date >= ?""",
+            (p["entity_id"], p["entity_id"], week_start),
+        ).fetchone()["cnt"]
+
+        xp_earned = conn.execute(
+            """SELECT COALESCE(SUM(xp_awarded), 0) as total FROM chore_instances
+               WHERE completed_by = ? AND status = 'completed'
+               AND completed_at >= ?""",
+            (p["entity_id"], week_start),
+        ).fetchone()["total"]
+
+        summaries.append({
+            "entity_id": p["entity_id"],
+            "completed": completed,
+            "total": max(total, completed),
+            "xp_earned": xp_earned,
+            "leader_name": leader["name"],
+            "leader_xp": leader["xp_total"],
+        })
+
+    return summaries
+
+
+def check_perfect_week(person_entity_id: str) -> bool:
+    """Check if a person completed all assigned chores for the past 7 days."""
+    conn = get_connection()
+    week_start = (date.today() - timedelta(days=7)).isoformat()
+
+    assigned = conn.execute(
+        """SELECT COUNT(*) as cnt FROM chore_instances
+           WHERE assigned_to = ? AND due_date >= ? AND due_date < ?""",
+        (person_entity_id, week_start, date.today().isoformat()),
+    ).fetchone()["cnt"]
+
+    if assigned == 0:
+        return False
+
+    completed = conn.execute(
+        """SELECT COUNT(*) as cnt FROM chore_instances
+           WHERE assigned_to = ? AND due_date >= ? AND due_date < ?
+           AND status = 'completed'""",
+        (person_entity_id, week_start, date.today().isoformat()),
+    ).fetchone()["cnt"]
+
+    return completed >= assigned

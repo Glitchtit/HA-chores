@@ -3,7 +3,7 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from datetime import date
+from datetime import date, timedelta
 from scheduler import parse_recurrence, should_schedule_on, get_next_assignee
 
 
@@ -131,8 +131,124 @@ class TestMarkOverdue:
         )
         tmp_db.commit()
 
-        count = mark_overdue()
+        count, targets = mark_overdue()
         assert count == 1
+        # No assigned_to, so no notification targets
+        assert len(targets) == 0
 
         row = tmp_db.execute("SELECT status FROM chore_instances WHERE chore_id = 1").fetchone()
         assert row["status"] == "overdue"
+
+    def test_marks_overdue_with_notification_target(self, tmp_db):
+        from scheduler import mark_overdue
+
+        tmp_db.execute("INSERT INTO chores (id, name) VALUES (1, 'Dishes')")
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.alice', 'Alice')")
+        tmp_db.execute(
+            """INSERT INTO chore_instances (chore_id, due_date, status, assigned_to)
+               VALUES (1, '2020-01-01', 'pending', 'person.alice')"""
+        )
+        tmp_db.commit()
+
+        count, targets = mark_overdue()
+        assert count == 1
+        assert len(targets) == 1
+        assert targets[0]["person"] == "person.alice"
+        assert targets[0]["chore_name"] == "Dishes"
+
+
+class TestStreakAtRisk:
+    def test_returns_at_risk_persons(self, tmp_db):
+        from scheduler import get_streak_at_risk_persons
+
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        tmp_db.execute(
+            """INSERT INTO persons (entity_id, name, current_streak, last_completion_date)
+               VALUES ('person.alice', 'Alice', 5, ?)""",
+            (yesterday,),
+        )
+        tmp_db.commit()
+
+        at_risk = get_streak_at_risk_persons()
+        assert len(at_risk) == 1
+        assert at_risk[0]["entity_id"] == "person.alice"
+        assert at_risk[0]["streak"] == 5
+
+    def test_excludes_zero_streak(self, tmp_db):
+        from scheduler import get_streak_at_risk_persons
+
+        tmp_db.execute(
+            "INSERT INTO persons (entity_id, name, current_streak) VALUES ('person.bob', 'Bob', 0)"
+        )
+        tmp_db.commit()
+        assert len(get_streak_at_risk_persons()) == 0
+
+    def test_excludes_completed_today(self, tmp_db):
+        from scheduler import get_streak_at_risk_persons
+
+        today = date.today().isoformat()
+        tmp_db.execute(
+            """INSERT INTO persons (entity_id, name, current_streak, last_completion_date)
+               VALUES ('person.alice', 'Alice', 5, ?)""",
+            (today,),
+        )
+        tmp_db.commit()
+        assert len(get_streak_at_risk_persons()) == 0
+
+
+class TestWeeklySummary:
+    def test_returns_summary_for_persons(self, tmp_db):
+        from scheduler import get_weekly_summary_data
+
+        tmp_db.execute(
+            "INSERT INTO persons (entity_id, name, xp_total) VALUES ('person.alice', 'Alice', 100)"
+        )
+        tmp_db.execute("INSERT INTO chores (id, name) VALUES (1, 'Test')")
+        tmp_db.execute(
+            """INSERT INTO chore_instances (chore_id, due_date, completed_by, status, completed_at, xp_awarded)
+               VALUES (1, ?, 'person.alice', 'completed', ?, 10)""",
+            (date.today().isoformat(), date.today().isoformat()),
+        )
+        tmp_db.commit()
+
+        summaries = get_weekly_summary_data()
+        assert len(summaries) == 1
+        assert summaries[0]["completed"] == 1
+        assert summaries[0]["xp_earned"] == 10
+
+
+class TestPerfectWeek:
+    def test_perfect_week_true(self, tmp_db):
+        from scheduler import check_perfect_week
+
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.alice', 'Alice')")
+        tmp_db.execute("INSERT INTO chores (id, name) VALUES (1, 'Test')")
+
+        for i in range(1, 8):
+            d = (date.today() - timedelta(days=i)).isoformat()
+            tmp_db.execute(
+                """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status, completed_by)
+                   VALUES (1, ?, 'person.alice', 'completed', 'person.alice')""",
+                (d,),
+            )
+        tmp_db.commit()
+
+        assert check_perfect_week("person.alice") is True
+
+    def test_perfect_week_false_with_missed(self, tmp_db):
+        from scheduler import check_perfect_week
+
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.alice', 'Alice')")
+        tmp_db.execute("INSERT INTO chores (id, name) VALUES (1, 'Test')")
+
+        for i in range(1, 8):
+            d = (date.today() - timedelta(days=i)).isoformat()
+            status = "completed" if i <= 5 else "pending"
+            tmp_db.execute(
+                """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status)
+                   VALUES (1, ?, 'person.alice', ?)""",
+                (d, status),
+            )
+        tmp_db.commit()
+
+        assert check_perfect_week("person.alice") is False
