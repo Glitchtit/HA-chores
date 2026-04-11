@@ -43,6 +43,7 @@ export default function App() {
   const [attempt, setAttempt] = useState(0);
   const [persons, setPersons] = useState([]);
   const [activePerson, setActivePerson] = useState(null);
+  const [autoDetected, setAutoDetected] = useState(false);
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = 'info') => {
@@ -77,12 +78,23 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
-  // Load persons once ready
+  // Load persons once ready, then auto-detect active person
   useEffect(() => {
     if (!ready) return;
-    api.getPersons().then(p => {
+    api.getPersons().then(async p => {
       setPersons(p);
-      if (p.length > 0 && !activePerson) setActivePerson(p[0].entity_id);
+      if (p.length === 0) return;
+      try {
+        const me = await api.getMe();
+        if (me && p.some(person => person.entity_id === me.entity_id)) {
+          setActivePerson(me.entity_id);
+          setAutoDetected(true);
+        } else if (!activePerson) {
+          setActivePerson(p[0].entity_id);
+        }
+      } catch {
+        if (!activePerson) setActivePerson(p[0].entity_id);
+      }
     }).catch(() => {});
   }, [ready]);
 
@@ -122,7 +134,8 @@ export default function App() {
         return <Achievements activePerson={activePerson} persons={persons} />;
       case 'settings':
         return <Settings persons={persons} activePerson={activePerson}
-                         setActivePerson={setActivePerson} addToast={addToast} />;
+                         setActivePerson={(id) => { setActivePerson(id); setAutoDetected(false); }}
+                         addToast={addToast} />;
       default:
         return null;
     }
@@ -138,8 +151,13 @@ export default function App() {
           🧹 <span>Chores</span>
         </h1>
         {activePerson && (
-          <div className="text-sm text-gray-400">
-            {persons.find(p => p.entity_id === activePerson)?.name || ''}
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm text-gray-300">
+              {persons.find(p => p.entity_id === activePerson)?.name || ''}
+            </span>
+            {autoDetected && (
+              <span title="Auto-detected from your HA login" className="text-xs bg-emerald-800/60 text-emerald-400 px-1.5 py-0.5 rounded">you</span>
+            )}
           </div>
         )}
       </header>
