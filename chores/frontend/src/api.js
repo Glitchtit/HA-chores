@@ -40,6 +40,7 @@ export const assignInstance = (id, personId) =>
 
 // ── Persons ─────────────────────────────────────────────────────────────────
 export const getPersons = () => api.get('/persons/').then(r => r.data);
+export const getMe = () => api.get('/persons/me').then(r => r.data);
 export const syncPersons = () => api.post('/persons/sync').then(r => r.data);
 
 // ── Gamification ────────────────────────────────────────────────────────────
