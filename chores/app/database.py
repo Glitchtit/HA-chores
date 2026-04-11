@@ -32,6 +32,7 @@ def initialize() -> int:
     """Create tables and return the number of tables."""
     conn = get_connection()
     conn.executescript(SCHEMA)
+    _migrate(conn)
     _seed_badges(conn)
     tables = conn.execute(
         "SELECT count(*) FROM sqlite_master WHERE type='table'"
@@ -101,7 +102,9 @@ CREATE TABLE IF NOT EXISTS badges (
     description     TEXT DEFAULT '',
     icon            TEXT DEFAULT '🏅',
     condition_type  TEXT NOT NULL,
-    condition_value INTEGER DEFAULT 0
+    condition_value INTEGER DEFAULT 0,
+    hidden          INTEGER DEFAULT 0,
+    condition_extra TEXT    DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS person_badges (
@@ -119,25 +122,80 @@ CREATE TABLE IF NOT EXISTS config (
 
 
 SEED_BADGES = [
-    ("first_chore", "First Steps", "Complete your first chore", "🌟", "completions", 1),
-    ("streak_7", "On Fire", "Achieve a 7-day streak", "🔥", "streak", 7),
-    ("streak_30", "Unstoppable", "Achieve a 30-day streak", "💪", "streak", 30),
-    ("completions_100", "Century", "Complete 100 chores", "🏆", "completions", 100),
-    ("speed_5", "Speed Demon", "Complete 5 chores in one day", "⚡", "daily_completions", 5),
-    ("all_types", "Master Cleaner", "Complete every chore type at least once", "🧹", "all_types", 1),
-    ("perfect_week", "Consistency King", "Complete all assigned chores for a full week", "🎯", "perfect_week", 1),
-    ("level_5", "Rising Star", "Reach level 5", "📈", "level", 5),
-    ("level_10", "Veteran", "Reach level 10", "🌠", "level", 10),
-    ("claims_10", "Team Player", "Claim 10 unassigned chores", "🤝", "claims", 10),
+    # (id, name, description, icon, condition_type, condition_value, hidden, condition_extra)
+
+    # ── Completions ──────────────────────────────────────────────────────────
+    ("first_chore",      "First Steps",             "Complete your first chore",                       "🌟", "completions",       1,   0, ""),
+    ("completions_10",   "Getting Warmed Up",        "Complete 10 chores total",                        "🧤", "completions",       10,  0, ""),
+    ("completions_50",   "Regular",                  "Complete 50 chores total",                        "🪣", "completions",       50,  0, ""),
+    ("completions_100",  "Century",                  "Complete 100 chores total",                       "🏆", "completions",       100, 0, ""),
+    ("completions_500",  "Obsessed (Positively)",    "Complete 500 chores total",                       "💎", "completions",       500, 0, ""),
+
+    # ── Streaks ──────────────────────────────────────────────────────────────
+    ("streak_3",         "Hat Trick",                "Achieve a 3-day streak",                          "⚡", "streak",            3,   0, ""),
+    ("streak_7",         "On Fire",                  "Achieve a 7-day streak",                          "🔥", "streak",            7,   0, ""),
+    ("streak_30",        "Month Warrior",             "Achieve a 30-day streak",                         "🗓️", "streak",            30,  0, ""),
+    ("streak_100",       "Unstoppable",              "Achieve a 100-day streak",                        "💪", "streak",            100, 0, ""),
+
+    # ── Levels ───────────────────────────────────────────────────────────────
+    ("level_5",          "Rising Star",              "Reach level 5",                                   "📈", "level",             5,   0, ""),
+    ("level_10",         "Veteran",                  "Reach level 10",                                  "🌠", "level",             10,  0, ""),
+    ("level_20",         "Legend",                   "Reach level 20",                                  "👑", "level",             20,  0, ""),
+
+    # ── Speed ────────────────────────────────────────────────────────────────
+    ("speed_5",          "Speed Demon",              "Complete 5 chores in one day",                    "⚡", "daily_completions", 5,   0, ""),
+    ("speed_10",         "Overachiever",             "Complete 10 chores in a single day",              "🚀", "daily_completions", 10,  0, ""),
+
+    # ── Claims ───────────────────────────────────────────────────────────────
+    ("claims_10",        "Team Player",              "Voluntarily claim 10 unassigned chores",          "🤝", "claims",            10,  0, ""),
+    ("claims_25",        "Social Butterfly",         "Voluntarily claim 25 unassigned chores",          "🦋", "claims",            25,  0, ""),
+
+    # ── Special ──────────────────────────────────────────────────────────────
+    ("perfect_week",     "Consistency King",         "Complete all assigned chores for a full week",    "🎯", "perfect_week",      1,   0, ""),
+    ("all_types",        "Master Cleaner",           "Complete every type of chore at least once",      "🧹", "all_types",         1,   0, ""),
+    ("early_bird",       "Early Bird",               "Complete a chore before 7 AM",                    "🐦", "hour_before",       7,   0, ""),
+    ("night_owl",        "Night Owl",                "Complete a chore after 10 PM",                    "🦉", "hour_after",        22,  0, ""),
+    ("weekend_warrior",  "Weekend Warrior",          "Complete chores on both Saturday and Sunday",     "⚔️", "weekend_both",      1,   0, ""),
+    ("late_complete_5",  "Better Late Than Never",   "Complete 5 chores after their due date",          "⌛", "late_complete",     5,   0, ""),
+
+    # ── Hidden / Funny ───────────────────────────────────────────────────────
+    ("vampire_hours",    "Vampire Hours",            "Complete a chore between 1–3 AM",                 "🧛", "hour_range",        1,   1, "3"),
+    ("nocturnal_pro",    "They Sleep, I Sweep",      "Accumulate 3 completions between midnight and 4 AM", "🌙", "midnight_count", 3,   1, ""),
+    ("christmas_clean",  "Silent Night... Cleaning", "Complete a chore on Christmas Day",               "🎄", "calendar_date",     0,   1, "12-25"),
+    ("new_year_clean",   "New Year, Clean House",    "Complete a chore on New Year's Day",              "🎆", "calendar_date",     0,   1, "01-01"),
+    ("no_life",          "No Life (But Clean)",      "Complete 15 chores in a single day",              "💀", "daily_completions", 15,  1, ""),
+    ("friday_night",     "No Plans Friday Night",    "Complete a chore after 11 PM on a Friday",        "🍕", "friday_night",      1,   1, ""),
+    ("monday_hero",      "Monday Morning Motivation","Complete a chore before 7 AM on a Monday",        "☕", "monday_early",      1,   1, ""),
+    ("sunday_scaries",   "Sunday Scaries, Defeated", "Complete a chore before 9 AM on a Sunday",       "😤", "sunday_early",      1,   1, ""),
+    ("completionist",    "The Completionist",        "Earn 15 other badges",                            "🎖️", "badge_count",       15,  1, ""),
+    ("speed_runner",     "Any% Completion",          "Complete 3 chores within 10 minutes",             "🎮", "speed_run",         3,   1, ""),
+    ("redemption_arc",   "Redemption Arc",           "Complete 10 overdue chores",                      "📈", "late_complete",     10,  1, ""),
+    ("anniversary",      "Annual Service Award",     "Complete chores consistently for an entire year", "🎂", "days_since_first",  365, 1, ""),
+    ("midnight_special", "The Midnight Special",     "Complete a chore within 5 minutes of midnight",   "🌌", "midnight_window",   1,   1, ""),
 ]
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Apply schema migrations for columns added after initial release."""
+    for col, defn in [
+        ("hidden",          "INTEGER DEFAULT 0"),
+        ("condition_extra", "TEXT DEFAULT ''"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE badges ADD COLUMN {col} {defn}")
+            conn.commit()
+            logger.info("Migration: added column 'badges.%s'", col)
+        except Exception:
+            pass  # Column already exists
 
 
 def _seed_badges(conn: sqlite3.Connection) -> None:
     """Insert predefined badges if they don't exist."""
-    for badge_id, name, desc, icon, ctype, cval in SEED_BADGES:
+    for badge_id, name, desc, icon, ctype, cval, hidden, cextra in SEED_BADGES:
         conn.execute(
-            """INSERT OR IGNORE INTO badges (id, name, description, icon, condition_type, condition_value)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (badge_id, name, desc, icon, ctype, cval),
+            """INSERT OR IGNORE INTO badges
+               (id, name, description, icon, condition_type, condition_value, hidden, condition_extra)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (badge_id, name, desc, icon, ctype, cval, hidden, cextra),
         )
     conn.commit()

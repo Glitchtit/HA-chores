@@ -1,3 +1,11 @@
+## 0.2.7
+
+- Achievements expanded from 10 to 35 badges
+- 22 visible badges: full progression ladders for completions (1→500), streaks (3→100), levels (5→20), daily speed, claims, plus Early Bird, Night Owl, Weekend Warrior, Better Late Than Never
+- 13 hidden badges revealed as mystery boxes until earned, including: Vampire Hours (1–3 AM), They Sleep I Sweep (midnight completions), Silent Night Cleaning (Dec 25), Any% Completion (speed run), The Completionist (earn 15 badges), and more
+- Hidden badges show as ❓ with "???" description until earned, then reveal with purple glow
+- Backend: new condition types — hour_before, hour_after, hour_range, midnight_count, calendar_date, weekend_both, friday_night, monday_early, sunday_early, speed_run, late_complete, days_since_first, midnight_window, badge_count
+
 ## 0.2.6
 
 - Fix: chore instances now generated immediately when a chore is created (not just on scheduler tick)
