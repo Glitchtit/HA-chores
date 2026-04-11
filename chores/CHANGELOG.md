@@ -1,3 +1,9 @@
+## 0.2.5
+
+- Difficulty now auto-sets XP reward when creating a chore (Easy=5, Medium=10, Hard=20)
+- XP Reward field moved to edit mode only (accessible via new ✏️ button)
+- Added ✏️ edit button next to deactivate/delete buttons on each chore card
+
 ## 0.2.4
 
 - Fix: API calls fail under HA ingress when nginx sub_filter cannot inject meta tag
