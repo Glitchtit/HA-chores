@@ -1,6 +1,7 @@
 """Chores – DataUpdateCoordinator for polling the add-on API."""
 
 from __future__ import annotations
+import asyncio
 import logging
 from datetime import timedelta
 
@@ -23,22 +24,29 @@ class ChoresCoordinator(DataUpdateCoordinator):
         try:
             async with httpx.AsyncClient(timeout=15) as client:
                 # Fetch all needed data in parallel
-                health_resp, persons_resp, leaderboard_resp, instances_resp = (
-                    await client.get(f"{self.addon_url}/api/health"),
-                    await client.get(f"{self.addon_url}/api/persons/"),
-                    await client.get(f"{self.addon_url}/api/gamification/leaderboard"),
-                    await client.get(
+                results = await asyncio.gather(
+                    client.get(f"{self.addon_url}/api/health"),
+                    client.get(f"{self.addon_url}/api/persons/"),
+                    client.get(f"{self.addon_url}/api/gamification/leaderboard"),
+                    client.get(
                         f"{self.addon_url}/api/assignments/",
                         params={"status": "pending,claimed,overdue"},
                     ),
+                    return_exceptions=True,
                 )
 
-                health = health_resp.json()
-                persons = persons_resp.json()
-                leaderboard = leaderboard_resp.json()
-                instances = instances_resp.json()
+                # Check for connection errors
+                for r in results:
+                    if isinstance(r, Exception):
+                        raise r
 
-                # Count overdue
+                health_resp, persons_resp, leaderboard_resp, instances_resp = results
+
+                persons = persons_resp.json() if persons_resp.status_code == 200 else []
+                leaderboard = leaderboard_resp.json() if leaderboard_resp.status_code == 200 else {}
+                instances = instances_resp.json() if instances_resp.status_code == 200 else []
+                health = health_resp.json() if health_resp.status_code == 200 else {}
+
                 overdue_count = sum(1 for i in instances if i.get("status") == "overdue")
 
                 return {
@@ -48,5 +56,10 @@ class ChoresCoordinator(DataUpdateCoordinator):
                     "instances": instances,
                     "overdue_count": overdue_count,
                 }
+        except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
+            raise UpdateFailed(
+                f"Cannot connect to Chores add-on at {self.addon_url}. "
+                f"Check the URL in the integration settings. Error: {exc}"
+            ) from exc
         except Exception as exc:
             raise UpdateFailed(f"Error fetching chores data: {exc}") from exc

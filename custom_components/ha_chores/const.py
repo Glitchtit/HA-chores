@@ -3,7 +3,11 @@
 DOMAIN = "ha_chores"
 
 CONF_ADDON_URL = "addon_url"
-DEFAULT_ADDON_URL = "http://a0a9ed235_ha_chores:8099"
+# Supervisor internal hostname: http://<slug>:port — slug is the add-on slug without dashes
+DEFAULT_ADDON_URL = "http://homeassistant.local:8099"
+
+ADDON_SLUG = "ha_chores"
+SUPERVISOR_ADDON_API = f"http://supervisor/addons/{ADDON_SLUG}/info"
 
 PANEL_TITLE = "Chores"
 PANEL_ICON = "mdi:broom"
