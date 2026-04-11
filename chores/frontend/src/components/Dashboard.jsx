@@ -142,7 +142,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                 </div>
                 <div>
                   {ci.status === 'completed' ? null
-                    : ci.chore_assignment_mode === 'claim' && ci.status === 'pending' ? (
+                    : ci.chore_assignment_mode === 'claim' && ci.status === 'pending' && ci.assigned_to !== activePerson ? (
                       <button
                         onClick={() => handleClaim(ci.id)}
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"

@@ -1,3 +1,7 @@
+## 0.2.14
+
+- Fix: chores directly assigned to a person now show the green "Done ✓" button instead of the blue "Claim" button on their dashboard
+
 ## 0.2.13
 
 - Change: 👤 Assign button now appears on all active chores regardless of assignment mode — lets you create a one-time assigned copy of any scheduled chore on demand
