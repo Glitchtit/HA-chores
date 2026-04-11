@@ -1,6 +1,16 @@
 import axios from 'axios';
 
-const INGRESS_PATH = document.querySelector('meta[name="ingress-path"]')?.content ?? '';
+// Derive ingress base path from current URL — works even if nginx sub_filter
+// fails to inject the meta tag. Under HA ingress the pathname is
+// /api/hassio_ingress/{token}[/...]; outside HA it is just '/'.
+function getIngressPath() {
+  const meta = document.querySelector('meta[name="ingress-path"]')?.content;
+  if (meta) return meta;
+  const match = window.location.pathname.match(/^(\/api\/hassio_ingress\/[^/]+)/);
+  return match ? match[1] : '';
+}
+
+const INGRESS_PATH = getIngressPath();
 const api = axios.create({ baseURL: `${INGRESS_PATH}/api` });
 
 // ── Health ──────────────────────────────────────────────────────────────────

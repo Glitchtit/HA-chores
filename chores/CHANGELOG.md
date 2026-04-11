@@ -1,3 +1,8 @@
+## 0.2.4
+
+- Fix: API calls fail under HA ingress when nginx sub_filter cannot inject meta tag
+- Derive ingress base path from window.location.pathname as reliable fallback
+
 ## 0.2.3
 
 - Fix: white page under HA ingress (Vite relative asset paths)

@@ -1,10 +1,15 @@
 {
   "domain": "ha_chores",
   "name": "Chores",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "documentation": "https://github.com/Glitchtit/HA-chores",
-  "requirements": ["httpx>=0.28.0"],
-  "dependencies": ["frontend", "http"],
+  "requirements": [
+    "httpx>=0.28.0"
+  ],
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
   "iot_class": "local_polling",
   "config_flow": true
 }
