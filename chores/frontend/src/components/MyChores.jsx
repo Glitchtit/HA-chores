@@ -16,9 +16,12 @@ export default function MyChores({ activePerson, persons, addToast }) {
         : 'pending,claimed,overdue,completed,skipped';
       const data = await api.getInstances({
         status: statusFilter,
-        person: filter === 'active' ? activePerson : undefined,
+        person: activePerson,
       });
-      setInstances(data);
+      // Only show chores actually assigned/claimed/completed by this person
+      setInstances(data.filter(ci =>
+        ci.assigned_to === activePerson || ci.completed_by === activePerson
+      ));
     } catch { /* ignore */ }
     setLoading(false);
   }, [activePerson, filter]);
