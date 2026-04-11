@@ -17,8 +17,20 @@ from fastapi.responses import JSONResponse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import database
-from scheduler import generate_instances, mark_overdue
+from scheduler import (
+    generate_instances,
+    mark_overdue,
+    get_streak_at_risk_persons,
+    get_weekly_summary_data,
+    check_perfect_week,
+)
 from routers.persons import sync_persons_from_ha
+from notifications import (
+    notify_chore_overdue,
+    notify_streak_warning,
+    notify_weekly_summary,
+    notify_badge_earned,
+)
 
 logger = logging.getLogger("chores")
 
@@ -34,12 +46,70 @@ except Exception:
 
 
 # ── Background scheduler ────────────────────────────────────────────────────
+
+_last_streak_check_date: str = ""
+_last_weekly_summary_date: str = ""
+
+
 async def _scheduler_loop():
-    """Periodically generate instances, mark overdue, sync persons."""
+    """Periodically generate instances, mark overdue, send notifications."""
+    global _last_streak_check_date, _last_weekly_summary_date
+
     while True:
         try:
             generate_instances(days_ahead=7)
-            mark_overdue()
+
+            # Mark overdue and send notifications
+            count, overdue_targets = mark_overdue()
+            for target in overdue_targets:
+                try:
+                    await notify_chore_overdue(target["person"], target["chore_name"])
+                except Exception as e:
+                    logger.error("Overdue notification failed: %s", e)
+
+            # Streak warnings — once per day in the evening (after 18:00)
+            from datetime import datetime
+            now = datetime.now()
+            today_str = now.strftime("%Y-%m-%d")
+            if now.hour >= 18 and _last_streak_check_date != today_str:
+                _last_streak_check_date = today_str
+                at_risk = get_streak_at_risk_persons()
+                for person in at_risk:
+                    try:
+                        await notify_streak_warning(person["entity_id"], person["streak"])
+                    except Exception as e:
+                        logger.error("Streak warning failed: %s", e)
+                if at_risk:
+                    logger.info("Sent streak warnings to %d persons", len(at_risk))
+
+                # Check perfect_week badge on same evening pass
+                from database import get_connection
+                from gamification import check_and_award_badges
+                conn = get_connection()
+                persons = conn.execute("SELECT entity_id FROM persons").fetchall()
+                for p in persons:
+                    if check_perfect_week(p["entity_id"]):
+                        conn.execute(
+                            "INSERT OR IGNORE INTO person_badges (person_id, badge_id) VALUES (?, 'perfect_week')",
+                            (p["entity_id"],),
+                        )
+                conn.commit()
+
+            # Weekly summary — once per week on Monday
+            if now.weekday() == 0 and now.hour >= 9 and _last_weekly_summary_date != today_str:
+                _last_weekly_summary_date = today_str
+                summaries = get_weekly_summary_data()
+                for s in summaries:
+                    try:
+                        await notify_weekly_summary(
+                            s["entity_id"], s["completed"], s["total"],
+                            s["xp_earned"], s["leader_name"], s["leader_xp"],
+                        )
+                    except Exception as e:
+                        logger.error("Weekly summary notification failed: %s", e)
+                if summaries:
+                    logger.info("Sent weekly summaries to %d persons", len(summaries))
+
         except Exception as e:
             logger.error("Scheduler error: %s", e)
         await asyncio.sleep(900)  # Every 15 minutes
@@ -68,8 +138,8 @@ async def lifespan(app: FastAPI):
     # Generate initial instances
     try:
         created = generate_instances(days_ahead=7)
-        mark_overdue()
-        logger.info("Generated %d initial chore instances", created)
+        count, _ = mark_overdue()
+        logger.info("Generated %d initial chore instances, marked %d overdue", created, count)
     except Exception as e:
         logger.warning("Initial instance generation failed: %s", e)
 

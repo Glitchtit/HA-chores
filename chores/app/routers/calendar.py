@@ -1,8 +1,9 @@
-"""Chores – Calendar sync endpoints."""
+"""Chores – Calendar sync and conflict detection endpoints."""
 
 from __future__ import annotations
 from fastapi import APIRouter
 from database import get_connection
+from ha_client import get_calendar_events
 
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
@@ -48,3 +49,67 @@ async def get_events(start: str | None = None, end: str | None = None):
             "assigned_to": row["assigned_to"],
         })
     return events
+
+
+@router.get("/conflicts")
+async def check_conflicts(
+    calendar_entity: str,
+    date: str,
+    person: str | None = None,
+):
+    """Check HA calendar for events that might conflict with chores on a given date.
+
+    Returns any HA calendar events on the target date so the UI can warn
+    the user before scheduling a chore.
+    """
+    ha_events = await get_calendar_events(
+        calendar_entity=calendar_entity,
+        start=f"{date}T00:00:00",
+        end=f"{date}T23:59:59",
+    )
+
+    # Get chore instances already scheduled for that date
+    conn = get_connection()
+    query = "SELECT ci.*, c.name as chore_name FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id WHERE ci.due_date = ?"
+    params = [date]
+    if person:
+        query += " AND ci.assigned_to = ?"
+        params.append(person)
+
+    existing_chores = conn.execute(query, params).fetchall()
+
+    return {
+        "date": date,
+        "ha_calendar_events": [
+            {
+                "summary": e.get("summary", ""),
+                "start": e.get("start", {}).get("dateTime", e.get("start", {}).get("date", "")),
+                "end": e.get("end", {}).get("dateTime", e.get("end", {}).get("date", "")),
+            }
+            for e in ha_events
+        ],
+        "scheduled_chores": [
+            {"id": c["id"], "name": c["chore_name"], "assigned_to": c["assigned_to"]}
+            for c in existing_chores
+        ],
+        "has_conflicts": len(ha_events) > 0 and len(existing_chores) > 0,
+    }
+
+
+@router.get("/ha-calendars")
+async def list_ha_calendars():
+    """List available HA calendar entities for conflict detection."""
+    import httpx
+    import os
+
+    token = os.environ.get("SUPERVISOR_TOKEN", "")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(
+                "http://supervisor/core/api/calendars",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            resp.raise_for_status()
+            return resp.json()
+    except Exception:
+        return []

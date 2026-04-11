@@ -1,3 +1,11 @@
+## 0.2.0
+
+- Wire overdue, streak warning, and weekly summary notifications into scheduler
+- Add perfect_week badge checking in evening scheduler pass
+- Calendar conflict detection API (check HA calendars for scheduling conflicts)
+- List HA calendars endpoint
+- 53 passing tests (up from 46)
+
 ## 0.1.0
 
 - Initial release
