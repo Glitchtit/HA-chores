@@ -21,7 +21,12 @@ async def leaderboard():
     ).fetchall()
 
     entries = []
-    for rank, row in enumerate(rows, 1):
+    prev_xp = None
+    rank = 0
+    for i, row in enumerate(rows):
+        if row["xp_total"] != prev_xp:
+            rank = i + 1  # standard competition ranking: skip ranks on tie
+            prev_xp = row["xp_total"]
         entries.append(LeaderboardEntry(
             entity_id=row["entity_id"],
             name=row["name"],
