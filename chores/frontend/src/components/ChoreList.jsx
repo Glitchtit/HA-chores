@@ -7,6 +7,8 @@ const DIFFICULTY_COLORS = {
   hard: 'bg-red-600',
 };
 
+const DIFFICULTY_XP = { easy: 5, medium: 10, hard: 20 };
+
 const RECURRENCE_OPTIONS = [
   { value: '', label: 'One-time' },
   { value: 'daily', label: 'Daily' },
@@ -160,12 +162,20 @@ export default function ChoreList({ persons, addToast }) {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-gray-400">Difficulty</label>
                   <select
                     value={form.difficulty}
-                    onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))}
+                    onChange={e => {
+                      const diff = e.target.value;
+                      setForm(f => ({
+                        ...f,
+                        difficulty: diff,
+                        // Only auto-set XP when creating; in edit mode the user controls it
+                        ...(!editId && { xp_reward: DIFFICULTY_XP[diff] }),
+                      }));
+                    }}
                     className="w-full bg-gray-700 rounded px-2 py-2"
                   >
                     <option value="easy">Easy (5 XP)</option>
@@ -173,14 +183,29 @@ export default function ChoreList({ persons, addToast }) {
                     <option value="hard">Hard (20 XP)</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-400">XP Reward</label>
-                  <input
-                    type="number" min="1" value={form.xp_reward}
-                    onChange={e => setForm(f => ({ ...f, xp_reward: e.target.value }))}
-                    className="w-full bg-gray-700 rounded px-2 py-2"
-                  />
-                </div>
+                {editId ? (
+                  <div>
+                    <label className="text-xs text-gray-400">XP Reward</label>
+                    <input
+                      type="number" min="1" value={form.xp_reward}
+                      onChange={e => setForm(f => ({ ...f, xp_reward: e.target.value }))}
+                      className="w-full bg-gray-700 rounded px-2 py-2"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs text-gray-400">Est. min</label>
+                    <input
+                      type="number" min="1" value={form.estimated_minutes}
+                      onChange={e => setForm(f => ({ ...f, estimated_minutes: e.target.value }))}
+                      className="w-full bg-gray-700 rounded px-2 py-2"
+                      placeholder="15"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {editId && (
                 <div>
                   <label className="text-xs text-gray-400">Est. min</label>
                   <input
@@ -190,7 +215,7 @@ export default function ChoreList({ persons, addToast }) {
                     placeholder="15"
                   />
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="text-xs text-gray-400">Schedule</label>
@@ -271,9 +296,9 @@ export default function ChoreList({ persons, addToast }) {
             <div key={c.id}
               className={`bg-gray-800 rounded-lg p-4 ${!c.active ? 'opacity-50' : ''}`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3" onClick={() => openEdit(c)}>
-                  <span className="text-2xl cursor-pointer">{c.icon}</span>
-                  <div className="cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{c.icon}</span>
+                  <div>
                     <div className="font-medium">{c.name}</div>
                     <div className="flex gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[c.difficulty]}`}>
@@ -288,6 +313,11 @@ export default function ChoreList({ persons, addToast }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <button onClick={() => openEdit(c)}
+                    className="p-2 hover:bg-gray-700 rounded text-sm"
+                    title="Edit">
+                    ✏️
+                  </button>
                   <button onClick={() => handleToggleActive(c)}
                     className="p-2 hover:bg-gray-700 rounded text-sm"
                     title={c.active ? 'Deactivate' : 'Activate'}>
