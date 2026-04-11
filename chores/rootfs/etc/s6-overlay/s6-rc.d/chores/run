@@ -1,0 +1,35 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Chores nginx – Reverse proxy for the React SPA + API
+# ==============================================================================
+
+bashio::log.info "Starting Chores nginx..."
+
+# ── Debug-aware logging ──────────────────────────────────────────────────────
+if bashio::config.true 'debug'; then
+    export NGINX_LOG_ROUTINE=1
+else
+    export NGINX_LOG_ROUTINE=0
+fi
+
+# ── Generate nginx config from template ──────────────────────────────────────
+envsubst '${NGINX_LOG_ROUTINE}' \
+    < /etc/nginx/nginx.conf.template \
+    > /etc/nginx/nginx.conf
+
+# ── Wait for FastAPI to be ready ─────────────────────────────────────────────
+bashio::log.info "Waiting for Chores API..."
+for i in $(seq 1 30); do
+    if curl -sf http://127.0.0.1:8100/api/health > /dev/null 2>&1; then
+        bashio::log.info "Chores API ready (attempt ${i})"
+        break
+    fi
+    if [ "${i}" -eq 30 ]; then
+        bashio::log.warning "Chores API not ready after 30 attempts, starting nginx anyway"
+    fi
+    sleep 2
+done
+
+# ── Start nginx ──────────────────────────────────────────────────────────────
+exec nginx -g "daemon off;"

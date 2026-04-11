@@ -1,0 +1,26 @@
+{
+  "name": "Chores",
+  "version": "0.1.0",
+  "slug": "ha_chores",
+  "description": "Gamified household chore management with HA integration",
+  "url": "https://github.com/Glitchtit/HA-chores",
+  "arch": ["aarch64", "amd64", "armhf", "armv7", "i386"],
+  "startup": "application",
+  "boot": "auto",
+  "admin": false,
+  "panel_admin": false,
+  "hassio_api": true,
+  "homeassistant_api": true,
+  "ingress": true,
+  "ingress_port": 8099,
+  "init": false,
+  "panel_icon": "mdi:broom",
+  "panel_title": "Chores",
+  "map": ["share:rw"],
+  "options": {
+    "debug": false
+  },
+  "schema": {
+    "debug": "bool?"
+  }
+}
