@@ -386,7 +386,7 @@ export default function ChoreList({ persons, addToast }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  {c.assignment_mode === 'manual' && c.active && (
+                  {c.active && (
                     <button onClick={() => openAssign(c)}
                       className="p-2 hover:bg-gray-700 rounded text-sm"
                       title="Assign to person">
