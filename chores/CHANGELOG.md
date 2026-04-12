@@ -1,3 +1,6 @@
+## 0.2.53
+Change Done button emoji from ❓ to ❔ (white/visible on orange background).
+
 ## 0.2.52
 Change "Done ✓" button from green to orange with ❓ icon to make it clearer it's an action requiring user confirmation.
 
