@@ -114,6 +114,7 @@ export default function ChoreList({ persons, activePerson, addToast }) {
 
   const handleQuickDone = async (chore) => {
     if (!activePerson) { addToast('No active person selected', 'error'); return; }
+    if (!confirm(`Mark "${chore.name}" as done right now?`)) return;
     try {
       const today = new Date().toISOString().slice(0, 10);
       const instance = await api.createInstance({
