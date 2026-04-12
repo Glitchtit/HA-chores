@@ -104,6 +104,9 @@ async def reset_person_progress(entity_id: str):
     # Remove all badges
     conn.execute("DELETE FROM person_badges WHERE person_id = ?", (entity_id,))
 
+    # Remove all power-ups
+    conn.execute("DELETE FROM person_powerups WHERE person_id = ?", (entity_id,))
+
     # Strip both completed_by and assigned_to on completed instances so they
     # no longer appear in the person's "My Chores" completed list
     conn.execute(
