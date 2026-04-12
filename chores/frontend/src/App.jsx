@@ -163,24 +163,24 @@ export default function App() {
       </header>
 
       {/* Content */}
-      <main className="flex-1 overflow-auto p-4">
+      <main className="flex-1 overflow-auto p-4 pb-20" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
         {renderTab()}
       </main>
 
       {/* Tab bar */}
-      <nav className="bg-gray-800 border-t border-gray-700 flex justify-around py-2">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-gray-800 border-t border-gray-700 flex justify-around py-2">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 transition-all ${
               tab === t.id
-                ? 'text-amber-400'
-                : 'text-gray-500 hover:text-gray-300'
+                ? 'grayscale-0 opacity-100 text-amber-400'
+                : 'grayscale opacity-50 text-gray-400 hover:opacity-75'
             }`}
           >
-            <span className="text-lg">{t.icon}</span>
-            <span>{t.label}</span>
+            <span className="text-2xl sm:text-lg">{t.icon}</span>
+            <span className="hidden sm:block text-xs">{t.label}</span>
           </button>
         ))}
       </nav>
