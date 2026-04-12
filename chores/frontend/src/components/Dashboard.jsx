@@ -101,7 +101,12 @@ export default function Dashboard({ activePerson, persons, addToast }) {
             <div className={stats.current_streak >= 3 ? 'animate-streak-glow rounded-lg p-2' : 'p-2'}>
               <div className="text-2xl">🔥</div>
               <div className="text-lg font-bold">{stats.current_streak}</div>
-              <div className="text-xs text-gray-500">Streak</div>
+              <div className="text-xs text-gray-500">
+                Streak
+                {stats.current_streak > 0 && (
+                  <span className="text-amber-400 ml-1">(+{Math.min(stats.current_streak * 10, 100)}%)</span>
+                )}
+              </div>
             </div>
             <div className="p-2">
               <div className="text-2xl">✅</div>
