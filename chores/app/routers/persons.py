@@ -84,7 +84,37 @@ async def sync_persons():
     return await list_persons()
 
 
-@router.post("/{entity_id}/test-notification")
+@router.post("/{entity_id}/reset-progress")
+async def reset_person_progress(entity_id: str):
+    """Reset a person's XP, level, streak, badges, and completed chore instances."""
+    conn = get_connection()
+    row = conn.execute("SELECT entity_id FROM persons WHERE entity_id = ?", (entity_id,)).fetchone()
+    if not row:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Person not found")
+
+    # Reset gamification stats
+    conn.execute(
+        """UPDATE persons SET xp_total = 0, level = 1, current_streak = 0,
+           longest_streak = 0, last_completion_date = NULL
+           WHERE entity_id = ?""",
+        (entity_id,),
+    )
+
+    # Remove all badges
+    conn.execute("DELETE FROM person_badges WHERE person_id = ?", (entity_id,))
+
+    # Unmark chore instances completed by this person (reset to pending)
+    conn.execute(
+        """UPDATE chore_instances
+           SET status = 'pending', completed_by = NULL, completed_at = NULL, notes = ''
+           WHERE completed_by = ? AND status = 'completed'""",
+        (entity_id,),
+    )
+
+    conn.commit()
+    _log.info("Reset progress for person %s", entity_id)
+    return {"ok": True, "entity_id": entity_id}
 async def test_notification(entity_id: str):
     """Send a test push notification to a person's devices."""
     from ha_client import send_notification
