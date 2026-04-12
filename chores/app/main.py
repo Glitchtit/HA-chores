@@ -91,6 +91,13 @@ async def _scheduler_loop():
                 _reminder_sent_today.clear()
                 _streak_warned_today.clear()
                 _weekly_sent_today.clear()
+                from gamification import decay_streaks
+                try:
+                    decayed = decay_streaks()
+                    if decayed:
+                        logger.info("Midnight streak decay applied to %d person(s)", decayed)
+                except Exception as e:
+                    logger.error("Streak decay failed: %s", e)
 
             from database import get_connection
             conn = get_connection()

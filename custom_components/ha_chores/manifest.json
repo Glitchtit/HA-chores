@@ -1,7 +1,7 @@
 {
   "domain": "ha_chores",
   "name": "Chores",
-  "version": "0.2.46",
+  "version": "0.2.47",
   "documentation": "https://github.com/Glitchtit/HA-chores",
   "requirements": [
     "httpx>=0.28.0"
