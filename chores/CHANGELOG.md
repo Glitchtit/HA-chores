@@ -1,3 +1,6 @@
+## 0.2.46
+Streak loss is now decremental instead of a hard reset. Each missed day reduces streak by 1 (minimum 0). Completing after a gap: missed_days = delta-1, new streak = max(0, current-missed) + 1. Example: streak of 5, missed 2 days → streak becomes 4. Streak can never go negative.
+
 ## 0.2.45
 Fix reset-progress: clear assigned_to on completed instances too, so they no longer appear in the person's My Chores completed list (My Chores filters by assigned_to OR completed_by).
 

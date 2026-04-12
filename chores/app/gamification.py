@@ -54,7 +54,13 @@ def calculate_xp(
 # ── Streak management ────────────────────────────────────────────────────────
 
 def update_streak(person_entity_id: str) -> tuple[int, int]:
-    """Update a person's streak after a completion. Returns (new_streak, longest_streak)."""
+    """Update a person's streak after a completion. Returns (new_streak, longest_streak).
+
+    Streak rules:
+    - Completing today: no change (already counted today)
+    - Completing the next day: streak +1
+    - Completing after N missed days: streak decreases by N missed days (min 0), then +1 for today
+    """
     conn = get_connection()
     row = conn.execute(
         "SELECT current_streak, longest_streak, last_completion_date FROM persons WHERE entity_id = ?",
@@ -72,13 +78,12 @@ def update_streak(person_entity_id: str) -> tuple[int, int]:
         last_date = date.fromisoformat(last_date_str)
         delta = (today - last_date).days
         if delta == 0:
-            # Already completed today, streak stays
+            # Already completed today — streak unchanged
             pass
-        elif delta == 1:
-            current_streak += 1
         else:
-            # Streak broken
-            current_streak = 1
+            # missed_days = days between last completion and today (not counting today itself)
+            missed_days = delta - 1
+            current_streak = max(0, current_streak - missed_days) + 1
     else:
         current_streak = 1
 
