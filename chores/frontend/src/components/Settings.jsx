@@ -1,9 +1,96 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import * as api from '../api';
+
+const HOURS = Array.from({ length: 24 }, (_, i) => ({
+  value: i,
+  label: `${String(i).padStart(2, '0')}:00`,
+}));
+
+const WEEKDAYS = [
+  { value: 0, label: 'Monday' },
+  { value: 1, label: 'Tuesday' },
+  { value: 2, label: 'Wednesday' },
+  { value: 3, label: 'Thursday' },
+  { value: 4, label: 'Friday' },
+  { value: 5, label: 'Saturday' },
+  { value: 6, label: 'Sunday' },
+];
+
+const NOTIF_DEFAULTS = {
+  notif_assigned: { enabled: true },
+  notif_overdue:  { enabled: true },
+  notif_badge:    { enabled: true },
+  notif_levelup:  { enabled: true },
+  notif_reminder: { enabled: true, when: 'day_of', hour: 8 },
+  notif_streak:   { enabled: true, hour: 18 },
+  notif_weekly:   { enabled: true, weekday: 0, hour: 9 },
+};
+
+function Toggle({ checked, onChange }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+        checked ? 'bg-amber-500' : 'bg-gray-600'
+      }`}
+    >
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+        checked ? 'translate-x-6' : 'translate-x-1'
+      }`} />
+    </button>
+  );
+}
+
+function NotifRow({ icon, label, description, cfgKey, cfg, onChange }) {
+  const enabled = cfg?.enabled ?? true;
+  return (
+    <div className="py-3 space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-lg shrink-0">{icon}</span>
+          <div className="min-w-0">
+            <div className="text-sm font-medium">{label}</div>
+            {description && <div className="text-xs text-gray-500">{description}</div>}
+          </div>
+        </div>
+        <Toggle checked={enabled} onChange={v => onChange({ ...cfg, enabled: v })} />
+      </div>
+    </div>
+  );
+}
 
 export default function Settings({ persons, activePerson, setActivePerson, addToast }) {
   const [syncing, setSyncing] = useState(false);
   const [testingNotify, setTestingNotify] = useState(false);
+  const [notifCfg, setNotifCfg] = useState(NOTIF_DEFAULTS);
+  const saveTimers = useRef({});
+
+  // Load all notification config on mount
+  useEffect(() => {
+    api.getConfig().then(rows => {
+      const loaded = { ...NOTIF_DEFAULTS };
+      for (const row of rows) {
+        if (row.key in NOTIF_DEFAULTS) {
+          try { loaded[row.key] = { ...NOTIF_DEFAULTS[row.key], ...JSON.parse(row.value) }; }
+          catch { /* use default */ }
+        }
+      }
+      setNotifCfg(loaded);
+    }).catch(() => {});
+  }, []);
+
+  // Debounced auto-save on config change
+  const updateNotifCfg = useCallback((key, value) => {
+    setNotifCfg(prev => ({ ...prev, [key]: value }));
+    clearTimeout(saveTimers.current[key]);
+    saveTimers.current[key] = setTimeout(async () => {
+      try {
+        await api.setConfigValue(key, JSON.stringify(value));
+      } catch {
+        addToast('Failed to save notification setting', 'error');
+      }
+    }, 600);
+  }, [addToast]);
 
   const handleSyncPersons = useCallback(async () => {
     setSyncing(true);
@@ -27,6 +114,8 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
     }
     setTestingNotify(false);
   }, [activePerson, addToast]);
+
+  const sel = 'bg-gray-700 rounded px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-amber-500';
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -67,6 +156,127 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
               )}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Notification Settings */}
+      <div className="bg-gray-800 rounded-xl p-5">
+        <h3 className="font-medium mb-1">🔔 Notifications</h3>
+        <p className="text-xs text-gray-500 mb-3">Changes save automatically.</p>
+
+        {/* Immediate notifications */}
+        <div className="divide-y divide-gray-700">
+          <NotifRow icon="🧹" label="Chore Assigned" description="When a chore is assigned to you"
+            cfgKey="notif_assigned" cfg={notifCfg.notif_assigned}
+            onChange={v => updateNotifCfg('notif_assigned', v)} />
+          <NotifRow icon="⏰" label="Chore Overdue" description="When a chore passes its due date"
+            cfgKey="notif_overdue" cfg={notifCfg.notif_overdue}
+            onChange={v => updateNotifCfg('notif_overdue', v)} />
+          <NotifRow icon="🏆" label="Achievement Unlocked" description="When you earn a new badge"
+            cfgKey="notif_badge" cfg={notifCfg.notif_badge}
+            onChange={v => updateNotifCfg('notif_badge', v)} />
+          <NotifRow icon="📈" label="Level Up" description="When you reach a new level"
+            cfgKey="notif_levelup" cfg={notifCfg.notif_levelup}
+            onChange={v => updateNotifCfg('notif_levelup', v)} />
+        </div>
+
+        {/* Divider */}
+        <div className="mt-3 mb-1 text-xs text-gray-500 uppercase tracking-wider">Reminders</div>
+        <div className="divide-y divide-gray-700">
+
+          {/* Chore Reminder */}
+          <div className="py-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg shrink-0">🔔</span>
+                <span className="text-sm font-medium">Chore Reminder</span>
+              </div>
+              <Toggle
+                checked={notifCfg.notif_reminder.enabled}
+                onChange={v => updateNotifCfg('notif_reminder', { ...notifCfg.notif_reminder, enabled: v })}
+              />
+            </div>
+            {notifCfg.notif_reminder.enabled && (
+              <div className="flex items-center gap-2 pl-8 flex-wrap">
+                <select
+                  value={notifCfg.notif_reminder.when}
+                  onChange={e => updateNotifCfg('notif_reminder', { ...notifCfg.notif_reminder, when: e.target.value })}
+                  className={sel}
+                >
+                  <option value="day_of">Day of</option>
+                  <option value="day_before">Day before</option>
+                </select>
+                <span className="text-xs text-gray-500">at</span>
+                <select
+                  value={notifCfg.notif_reminder.hour}
+                  onChange={e => updateNotifCfg('notif_reminder', { ...notifCfg.notif_reminder, hour: Number(e.target.value) })}
+                  className={sel}
+                >
+                  {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Streak Warning */}
+          <div className="py-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg shrink-0">🔥</span>
+                <span className="text-sm font-medium">Streak Warning</span>
+              </div>
+              <Toggle
+                checked={notifCfg.notif_streak.enabled}
+                onChange={v => updateNotifCfg('notif_streak', { ...notifCfg.notif_streak, enabled: v })}
+              />
+            </div>
+            {notifCfg.notif_streak.enabled && (
+              <div className="flex items-center gap-2 pl-8 flex-wrap">
+                <span className="text-xs text-gray-500">Send at</span>
+                <select
+                  value={notifCfg.notif_streak.hour}
+                  onChange={e => updateNotifCfg('notif_streak', { ...notifCfg.notif_streak, hour: Number(e.target.value) })}
+                  className={sel}
+                >
+                  {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Weekly Summary */}
+          <div className="py-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg shrink-0">📊</span>
+                <span className="text-sm font-medium">Weekly Summary</span>
+              </div>
+              <Toggle
+                checked={notifCfg.notif_weekly.enabled}
+                onChange={v => updateNotifCfg('notif_weekly', { ...notifCfg.notif_weekly, enabled: v })}
+              />
+            </div>
+            {notifCfg.notif_weekly.enabled && (
+              <div className="flex items-center gap-2 pl-8 flex-wrap">
+                <span className="text-xs text-gray-500">Every</span>
+                <select
+                  value={notifCfg.notif_weekly.weekday}
+                  onChange={e => updateNotifCfg('notif_weekly', { ...notifCfg.notif_weekly, weekday: Number(e.target.value) })}
+                  className={sel}
+                >
+                  {WEEKDAYS.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                </select>
+                <span className="text-xs text-gray-500">at</span>
+                <select
+                  value={notifCfg.notif_weekly.hour}
+                  onChange={e => updateNotifCfg('notif_weekly', { ...notifCfg.notif_weekly, hour: Number(e.target.value) })}
+                  className={sel}
+                >
+                  {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -111,3 +321,4 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
     </div>
   );
 }
+

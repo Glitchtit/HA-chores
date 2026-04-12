@@ -30,6 +30,8 @@ from notifications import (
     notify_streak_warning,
     notify_weekly_summary,
     notify_badge_earned,
+    notify_chore_reminder,
+    get_notif_config,
 )
 
 logger = logging.getLogger("chores")
@@ -49,11 +51,13 @@ except Exception:
 
 _last_streak_check_date: str = ""
 _last_weekly_summary_date: str = ""
+_last_reminder_check_date: str = ""
+_reminder_sent_today: set[str] = set()  # "person_id:instance_id"
 
 
 async def _scheduler_loop():
     """Periodically generate instances, mark overdue, send notifications."""
-    global _last_streak_check_date, _last_weekly_summary_date
+    global _last_streak_check_date, _last_weekly_summary_date, _last_reminder_check_date, _reminder_sent_today
 
     while True:
         try:
@@ -67,11 +71,46 @@ async def _scheduler_loop():
                 except Exception as e:
                     logger.error("Overdue notification failed: %s", e)
 
-            # Streak warnings — once per day in the evening (after 18:00)
-            from datetime import datetime
+            from datetime import datetime, timedelta
             now = datetime.now()
             today_str = now.strftime("%Y-%m-%d")
-            if now.hour >= 18 and _last_streak_check_date != today_str:
+
+            # Reset reminder tracking at day rollover
+            if _last_reminder_check_date != today_str:
+                _reminder_sent_today.clear()
+                _last_reminder_check_date = today_str
+
+            # Chore reminders — fire once per day at configured hour
+            reminder_cfg = get_notif_config("notif_reminder", {"enabled": True, "when": "day_of", "hour": 8})
+            if reminder_cfg.get("enabled") and now.hour >= reminder_cfg.get("hour", 8):
+                from database import get_connection
+                conn = get_connection()
+                when = reminder_cfg.get("when", "day_of")
+                target_date = today_str if when == "day_of" else (now + timedelta(days=1)).strftime("%Y-%m-%d")
+                due_instances = conn.execute(
+                    """SELECT ci.id, ci.due_date, ci.assigned_to, c.name as chore_name
+                       FROM chore_instances ci
+                       JOIN chores c ON c.id = ci.chore_id
+                       WHERE ci.due_date = ? AND ci.assigned_to IS NOT NULL
+                         AND ci.status IN ('pending', 'claimed')""",
+                    (target_date,),
+                ).fetchall()
+                for inst in due_instances:
+                    key = f"{inst['assigned_to']}:{inst['id']}"
+                    if key not in _reminder_sent_today:
+                        try:
+                            await notify_chore_reminder(
+                                inst["assigned_to"], inst["chore_name"],
+                                inst["due_date"], day_before=(when == "day_before"),
+                            )
+                            _reminder_sent_today.add(key)
+                        except Exception as e:
+                            logger.error("Reminder notification failed: %s", e)
+
+            # Streak warnings — once per day at configured hour
+            streak_cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18})
+            streak_hour = streak_cfg.get("hour", 18)
+            if now.hour >= streak_hour and _last_streak_check_date != today_str:
                 _last_streak_check_date = today_str
                 at_risk = get_streak_at_risk_persons()
                 for person in at_risk:
@@ -86,8 +125,8 @@ async def _scheduler_loop():
                 from database import get_connection
                 from gamification import check_and_award_badges
                 conn = get_connection()
-                persons = conn.execute("SELECT entity_id FROM persons").fetchall()
-                for p in persons:
+                persons_rows = conn.execute("SELECT entity_id FROM persons").fetchall()
+                for p in persons_rows:
                     if check_perfect_week(p["entity_id"]):
                         conn.execute(
                             "INSERT OR IGNORE INTO person_badges (person_id, badge_id) VALUES (?, 'perfect_week')",
@@ -95,8 +134,11 @@ async def _scheduler_loop():
                         )
                 conn.commit()
 
-            # Weekly summary — once per week on Monday
-            if now.weekday() == 0 and now.hour >= 9 and _last_weekly_summary_date != today_str:
+            # Weekly summary — once per week on configured weekday at configured hour
+            weekly_cfg = get_notif_config("notif_weekly", {"enabled": True, "weekday": 0, "hour": 9})
+            weekly_day = weekly_cfg.get("weekday", 0)
+            weekly_hour = weekly_cfg.get("hour", 9)
+            if now.weekday() == weekly_day and now.hour >= weekly_hour and _last_weekly_summary_date != today_str:
                 _last_weekly_summary_date = today_str
                 summaries = get_weekly_summary_data()
                 for s in summaries:
