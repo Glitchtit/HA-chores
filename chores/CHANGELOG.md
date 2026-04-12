@@ -1,3 +1,6 @@
+## 0.2.23
+Overdue and reminder notifications now broadcast to all persons when a chore has no assignee. Assigned chores still only notify the assigned person.
+
 ## 0.2.22
 Settings: configurable notifications — per-type toggles, reminder timing (day of/day before + hour), streak warning hour, weekly summary day+hour. All changes auto-save. New chore reminder notification type.
 
