@@ -35,8 +35,8 @@ _log = _logging.getLogger(__name__)
 @router.get("/me", response_model=Optional[Person])
 async def whoami(request: Request):
     """Return the person matching the current HA user, or null if not found."""
-    ha_user_id = request.headers.get("X-Hass-User-ID", "")
-    _log.info("GET /me — X-Hass-User-ID header: %r", ha_user_id)
+    ha_user_id = request.headers.get("X-Remote-User-Id", "")
+    _log.info("GET /me — X-Remote-User-Id header: %r", ha_user_id)
     if not ha_user_id:
         return None
     conn = get_connection()
@@ -64,8 +64,8 @@ async def whoami_debug(request: Request):
     conn = get_connection()
     persons_db = conn.execute("SELECT entity_id, name, ha_user_id FROM persons").fetchall()
     return {
-        "received_x_hass_user_id": ha_user_id,
-        "all_ingress_headers": {k: v for k, v in request.headers.items() if "hass" in k.lower() or "ingress" in k.lower() or "x-" in k.lower()},
+        "received_x_remote_user_id": request.headers.get("X-Remote-User-Id", ""),
+        "all_ingress_headers": {k: v for k, v in request.headers.items() if "hass" in k.lower() or "ingress" in k.lower() or "remote" in k.lower() or "x-" in k.lower()},
         "persons_in_db": [{"entity_id": r["entity_id"], "name": r["name"], "ha_user_id": r["ha_user_id"]} for r in persons_db],
     }
 
