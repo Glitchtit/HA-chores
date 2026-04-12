@@ -1,4 +1,7 @@
-## 0.2.46
+## 0.2.47
+Midnight streak decay scheduler: streaks are now decremented by a background job at each day rollover (rather than lazily on the next completion). The scheduler tracks `last_streak_decay_date` in the config table so it correctly catches up on any missed days after a server restart. `update_streak` is simplified back to always +1 on first completion of the day. New `decay_streaks()` function in gamification.py with idempotent, catch-up-aware logic.
+
+
 Streak loss is now decremental instead of a hard reset. Each missed day reduces streak by 1 (minimum 0). Completing after a gap: missed_days = delta-1, new streak = max(0, current-missed) + 1. Example: streak of 5, missed 2 days → streak becomes 4. Streak can never go negative.
 
 ## 0.2.45

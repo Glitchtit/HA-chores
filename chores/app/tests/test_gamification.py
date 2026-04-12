@@ -80,7 +80,8 @@ class TestStreaks:
         assert streak == 4
         assert longest == 5
 
-    def test_streak_decrements_after_gap(self, tmp_db):
+    def test_streak_increments_after_gap(self, tmp_db):
+        """update_streak always does +1; decay_streaks handles the decrement at midnight."""
         from gamification import update_streak
         from datetime import date, timedelta
 
@@ -92,25 +93,98 @@ class TestStreaks:
         )
         tmp_db.commit()
         streak, longest = update_streak("person.test")
-        # 3-day gap = 2 missed days: max(0, 5-2) + 1 = 4
-        assert streak == 4
+        # Decay (5→3) has already happened via decay_streaks; update_streak just adds 1
+        assert streak == 6  # 5 + 1 (background job not involved here)
         assert longest == 10
 
-    def test_streak_bottoms_at_zero(self, tmp_db):
+    def test_streak_no_change_when_already_today(self, tmp_db):
+        """Completing twice on the same day should not increment the streak."""
         from gamification import update_streak
-        from datetime import date, timedelta
+        from datetime import date
 
-        ten_days_ago = (date.today() - timedelta(days=10)).isoformat()
+        today = date.today().isoformat()
         tmp_db.execute(
             """INSERT INTO persons (entity_id, name, current_streak, longest_streak, last_completion_date)
-               VALUES ('person.test', 'Test', 3, 10, ?)""",
-            (ten_days_ago,),
+               VALUES ('person.test', 'Test', 3, 5, ?)""",
+            (today,),
         )
         tmp_db.commit()
         streak, longest = update_streak("person.test")
-        # 10-day gap = 9 missed days: max(0, 3-9) + 1 = 1
-        assert streak == 1
-        assert longest == 10
+        assert streak == 3
+        assert longest == 5
+
+
+class TestDecayStreaks:
+    def test_decay_decrements_for_missed_day(self, tmp_db):
+        from gamification import decay_streaks
+        from datetime import date, timedelta
+
+        two_days_ago = (date.today() - timedelta(days=2)).isoformat()
+        tmp_db.execute(
+            """INSERT INTO persons (entity_id, name, current_streak, last_completion_date)
+               VALUES ('person.test', 'Test', 5, ?)""",
+            (two_days_ago,),
+        )
+        tmp_db.commit()
+        affected = decay_streaks()
+        assert affected == 1
+        row = tmp_db.execute("SELECT current_streak FROM persons WHERE entity_id='person.test'").fetchone()
+        assert row[0] == 4  # 5 - 1 missed day (yesterday)
+
+    def test_decay_no_change_when_completed_yesterday(self, tmp_db):
+        from gamification import decay_streaks
+        from datetime import date, timedelta
+
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        tmp_db.execute(
+            """INSERT INTO persons (entity_id, name, current_streak, last_completion_date)
+               VALUES ('person.test', 'Test', 5, ?)""",
+            (yesterday,),
+        )
+        tmp_db.commit()
+        affected = decay_streaks()
+        assert affected == 0
+        row = tmp_db.execute("SELECT current_streak FROM persons WHERE entity_id='person.test'").fetchone()
+        assert row[0] == 5  # unchanged
+
+    def test_decay_bottoms_at_zero(self, tmp_db):
+        """Streak bottoms at 0 after enough accumulated missed days."""
+        from gamification import decay_streaks
+        from datetime import date, timedelta
+
+        # Simulate: decay last ran 8 days ago, person last completed 10 days ago
+        eight_days_ago = (date.today() - timedelta(days=8)).isoformat()
+        ten_days_ago = (date.today() - timedelta(days=10)).isoformat()
+        tmp_db.execute(
+            """INSERT INTO persons (entity_id, name, current_streak, last_completion_date)
+               VALUES ('person.test', 'Test', 5, ?)""",
+            (ten_days_ago,),
+        )
+        tmp_db.execute(
+            "INSERT INTO config (key, value) VALUES ('last_streak_decay_date', ?)",
+            (eight_days_ago,),
+        )
+        tmp_db.commit()
+        affected = decay_streaks()
+        assert affected == 1
+        row = tmp_db.execute("SELECT current_streak FROM persons WHERE entity_id='person.test'").fetchone()
+        # days_to_process = 7 (8_days_ago+1 through yesterday), person missed all 7 → max(0, 5-7) = 0
+        assert row[0] == 0
+
+    def test_decay_idempotent_when_called_twice(self, tmp_db):
+        from gamification import decay_streaks
+        from datetime import date, timedelta
+
+        two_days_ago = (date.today() - timedelta(days=2)).isoformat()
+        tmp_db.execute(
+            """INSERT INTO persons (entity_id, name, current_streak, last_completion_date)
+               VALUES ('person.test', 'Test', 5, ?)""",
+            (two_days_ago,),
+        )
+        tmp_db.commit()
+        decay_streaks()
+        affected2 = decay_streaks()
+        assert affected2 == 0  # second call is a no-op
 
 
 class TestBadges:
