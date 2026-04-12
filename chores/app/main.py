@@ -91,13 +91,17 @@ async def _scheduler_loop():
                 _reminder_sent_today.clear()
                 _streak_warned_today.clear()
                 _weekly_sent_today.clear()
-                from gamification import decay_streaks
+                from gamification import decay_streaks, expire_old_powerups
                 try:
                     decayed = decay_streaks()
                     if decayed:
                         logger.info("Midnight streak decay applied to %d person(s)", decayed)
                 except Exception as e:
                     logger.error("Streak decay failed: %s", e)
+                try:
+                    expire_old_powerups()
+                except Exception as e:
+                    logger.error("Power-up expiry failed: %s", e)
 
             from database import get_connection
             conn = get_connection()
@@ -248,7 +252,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Register routers ────────────────────────────────────────────────────────
-from routers import health, chores, persons, assignments, gamification, config, calendar
+from routers import health, chores, persons, assignments, gamification, config, calendar, powerups
 
 app.include_router(health.router)
 app.include_router(chores.router)
@@ -257,6 +261,7 @@ app.include_router(assignments.router)
 app.include_router(gamification.router)
 app.include_router(config.router)
 app.include_router(calendar.router)
+app.include_router(powerups.router)
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────

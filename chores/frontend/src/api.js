@@ -59,6 +59,12 @@ export const getPersonStats = (entityId) =>
 export const getCalendarEvents = (start, end) =>
   api.get('/calendar/events', { params: { start, end } }).then(r => r.data);
 
+// ── Power-ups ───────────────────────────────────────────────────────────────
+export const getActivePowerups = (entityId) =>
+  api.get(`/powerups/${entityId}`).then(r => r.data);
+export const discardPowerup = (powerupId) =>
+  api.delete(`/powerups/${powerupId}`);
+
 // ── Config ──────────────────────────────────────────────────────────────────
 export const getConfig = () => api.get('/config/').then(r => r.data);
 export const getConfigValue = (key) => api.get(`/config/${key}`).then(r => r.data);
