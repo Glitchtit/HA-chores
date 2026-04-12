@@ -65,32 +65,40 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
   const [notifCfg, setNotifCfg] = useState(NOTIF_DEFAULTS);
   const saveTimers = useRef({});
 
-  // Load all notification config on mount
+  // Load notification config for the active person whenever they change
   useEffect(() => {
+    if (!activePerson) { setNotifCfg(NOTIF_DEFAULTS); return; }
     api.getConfig().then(rows => {
       const loaded = { ...NOTIF_DEFAULTS };
       for (const row of rows) {
-        if (row.key in NOTIF_DEFAULTS) {
-          try { loaded[row.key] = { ...NOTIF_DEFAULTS[row.key], ...JSON.parse(row.value) }; }
-          catch { /* use default */ }
+        // Keys are stored as "{cfgKey}:{person_entity_id}"
+        const suffix = `:${activePerson}`;
+        if (row.key.endsWith(suffix)) {
+          const baseKey = row.key.slice(0, -suffix.length);
+          if (baseKey in NOTIF_DEFAULTS) {
+            try { loaded[baseKey] = { ...NOTIF_DEFAULTS[baseKey], ...JSON.parse(row.value) }; }
+            catch { /* use default */ }
+          }
         }
       }
       setNotifCfg(loaded);
     }).catch(() => {});
-  }, []);
+  }, [activePerson]);
 
-  // Debounced auto-save on config change
+  // Debounced auto-save — key is scoped to the active person
   const updateNotifCfg = useCallback((key, value) => {
+    if (!activePerson) return;
     setNotifCfg(prev => ({ ...prev, [key]: value }));
-    clearTimeout(saveTimers.current[key]);
-    saveTimers.current[key] = setTimeout(async () => {
+    const scopedKey = `${key}:${activePerson}`;
+    clearTimeout(saveTimers.current[scopedKey]);
+    saveTimers.current[scopedKey] = setTimeout(async () => {
       try {
-        await api.setConfigValue(key, JSON.stringify(value));
+        await api.setConfigValue(scopedKey, JSON.stringify(value));
       } catch {
         addToast('Failed to save notification setting', 'error');
       }
     }, 600);
-  }, [addToast]);
+  }, [activePerson, addToast]);
 
   const handleSyncPersons = useCallback(async () => {
     setSyncing(true);
@@ -162,7 +170,15 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
       {/* Notification Settings */}
       <div className="bg-gray-800 rounded-xl p-5">
         <h3 className="font-medium mb-1">🔔 Notifications</h3>
-        <p className="text-xs text-gray-500 mb-3">Changes save automatically.</p>
+        <p className="text-xs text-gray-500 mb-3">
+          {activePerson
+            ? <>Settings for <span className="text-amber-400">{persons.find(p => p.entity_id === activePerson)?.name ?? activePerson}</span>. Changes save automatically.</>
+            : 'Select a person above to configure their notification preferences.'}
+        </p>
+
+        {!activePerson ? (
+          <p className="text-sm text-gray-500 italic">No person selected.</p>
+        ) : (<>
 
         {/* Immediate notifications */}
         <div className="divide-y divide-gray-700">
@@ -278,6 +294,7 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
             )}
           </div>
         </div>
+        </>)}
       </div>
 
       {/* HA Sync */}

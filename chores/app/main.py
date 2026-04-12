@@ -49,16 +49,16 @@ except Exception:
 
 # ── Background scheduler ────────────────────────────────────────────────────
 
-_last_streak_check_date: str = ""
-_last_weekly_summary_date: str = ""
-_last_reminder_check_date: str = ""
+_current_day: str = ""  # tracks current day for clearing daily sets
 _reminder_sent_today: set[str] = set()  # "person_id:instance_id"
+_streak_warned_today: set[str] = set()  # person_id
+_weekly_sent_today: set[str] = set()    # person_id
 _last_person_sync_hour: int = -1  # tracks last hour persons were re-synced
 
 
 async def _scheduler_loop():
     """Periodically generate instances, mark overdue, send notifications."""
-    global _last_streak_check_date, _last_weekly_summary_date, _last_reminder_check_date, _reminder_sent_today, _last_person_sync_hour
+    global _current_day, _reminder_sent_today, _streak_warned_today, _weekly_sent_today, _last_person_sync_hour
 
     while True:
         try:
@@ -85,89 +85,86 @@ async def _scheduler_loop():
 
             today_str = now.strftime("%Y-%m-%d")
 
-            # Reset reminder tracking at day rollover
-            if _last_reminder_check_date != today_str:
+            # Reset all per-person daily tracking sets at day rollover
+            if _current_day != today_str:
+                _current_day = today_str
                 _reminder_sent_today.clear()
-                _last_reminder_check_date = today_str
+                _streak_warned_today.clear()
+                _weekly_sent_today.clear()
 
-            # Chore reminders — fire once per day at configured hour
-            reminder_cfg = get_notif_config("notif_reminder", {"enabled": True, "when": "day_of", "hour": 8})
-            if reminder_cfg.get("enabled") and now.hour >= reminder_cfg.get("hour", 8):
-                from database import get_connection
-                conn = get_connection()
-                when = reminder_cfg.get("when", "day_of")
+            from database import get_connection
+            conn = get_connection()
+            all_persons = conn.execute("SELECT entity_id FROM persons").fetchall()
+
+            # ── Chore reminders — per-person timing ──
+            for person_row in all_persons:
+                p_id = person_row["entity_id"]
+                r_cfg = get_notif_config("notif_reminder", {"enabled": True, "when": "day_of", "hour": 8}, p_id)
+                if not r_cfg.get("enabled") or now.hour < r_cfg.get("hour", 8):
+                    continue
+                when = r_cfg.get("when", "day_of")
                 target_date = today_str if when == "day_of" else (now + timedelta(days=1)).strftime("%Y-%m-%d")
                 due_instances = conn.execute(
                     """SELECT ci.id, ci.due_date, ci.assigned_to, c.name as chore_name
                        FROM chore_instances ci
                        JOIN chores c ON c.id = ci.chore_id
                        WHERE ci.due_date = ?
-                         AND ci.status IN ('pending', 'claimed')""",
-                    (target_date,),
+                         AND ci.status IN ('pending', 'claimed')
+                         AND (ci.assigned_to = ? OR ci.assigned_to IS NULL OR ci.assigned_to = '')""",
+                    (target_date, p_id),
                 ).fetchall()
-                all_persons = conn.execute("SELECT entity_id FROM persons").fetchall()
                 for inst in due_instances:
-                    recipients = (
-                        [inst["assigned_to"]]
-                        if inst["assigned_to"]
-                        else [p["entity_id"] for p in all_persons]
-                    )
-                    for person_id in recipients:
-                        key = f"{person_id}:{inst['id']}"
-                        if key not in _reminder_sent_today:
-                            try:
-                                await notify_chore_reminder(
-                                    person_id, inst["chore_name"],
-                                    inst["due_date"], day_before=(when == "day_before"),
-                                )
-                                _reminder_sent_today.add(key)
-                            except Exception as e:
-                                logger.error("Reminder notification failed: %s", e)
+                    key = f"{p_id}:{inst['id']}"
+                    if key not in _reminder_sent_today:
+                        try:
+                            await notify_chore_reminder(p_id, inst["chore_name"], inst["due_date"], day_before=(when == "day_before"))
+                            _reminder_sent_today.add(key)
+                        except Exception as e:
+                            logger.error("Reminder notification failed: %s", e)
 
-            # Streak warnings — once per day at configured hour
-            streak_cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18})
-            streak_hour = streak_cfg.get("hour", 18)
-            if now.hour >= streak_hour and _last_streak_check_date != today_str:
-                _last_streak_check_date = today_str
-                at_risk = get_streak_at_risk_persons()
-                for person in at_risk:
+            # ── Streak warnings — per-person timing ──
+            at_risk_map = {p["entity_id"]: p for p in get_streak_at_risk_persons()}
+            for person_row in all_persons:
+                p_id = person_row["entity_id"]
+                if p_id in _streak_warned_today:
+                    continue
+                s_cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18}, p_id)
+                if not s_cfg.get("enabled") or now.hour < s_cfg.get("hour", 18):
+                    continue
+                _streak_warned_today.add(p_id)
+                if p_id in at_risk_map:
                     try:
-                        await notify_streak_warning(person["entity_id"], person["streak"])
+                        await notify_streak_warning(p_id, at_risk_map[p_id]["streak"])
                     except Exception as e:
-                        logger.error("Streak warning failed: %s", e)
-                if at_risk:
-                    logger.info("Sent streak warnings to %d persons", len(at_risk))
+                        logger.error("Streak warning failed for %s: %s", p_id, e)
 
-                # Check perfect_week badge on same evening pass
-                from database import get_connection
+                # Check perfect_week badge on same evening pass (once per person per day)
                 from gamification import check_and_award_badges
-                conn = get_connection()
-                persons_rows = conn.execute("SELECT entity_id FROM persons").fetchall()
-                for p in persons_rows:
-                    if check_perfect_week(p["entity_id"]):
-                        conn.execute(
-                            "INSERT OR IGNORE INTO person_badges (person_id, badge_id) VALUES (?, 'perfect_week')",
-                            (p["entity_id"],),
-                        )
-                conn.commit()
+                if check_perfect_week(p_id):
+                    conn.execute(
+                        "INSERT OR IGNORE INTO person_badges (person_id, badge_id) VALUES (?, 'perfect_week')",
+                        (p_id,),
+                    )
+            conn.commit()
 
-            # Weekly summary — once per week on configured weekday at configured hour
-            weekly_cfg = get_notif_config("notif_weekly", {"enabled": True, "weekday": 0, "hour": 9})
-            weekly_day = weekly_cfg.get("weekday", 0)
-            weekly_hour = weekly_cfg.get("hour", 9)
-            if now.weekday() == weekly_day and now.hour >= weekly_hour and _last_weekly_summary_date != today_str:
-                _last_weekly_summary_date = today_str
-                summaries = get_weekly_summary_data()
-                for s in summaries:
+            # ── Weekly summary — per-person timing ──
+            summaries_map = {s["entity_id"]: s for s in get_weekly_summary_data()}
+            for person_row in all_persons:
+                p_id = person_row["entity_id"]
+                if p_id in _weekly_sent_today:
+                    continue
+                w_cfg = get_notif_config("notif_weekly", {"enabled": True, "weekday": 0, "hour": 9}, p_id)
+                if (not w_cfg.get("enabled")
+                        or now.weekday() != w_cfg.get("weekday", 0)
+                        or now.hour < w_cfg.get("hour", 9)):
+                    continue
+                _weekly_sent_today.add(p_id)
+                if p_id in summaries_map:
+                    s = summaries_map[p_id]
                     try:
-                        await notify_weekly_summary(
-                            s["entity_id"], s["completed"], s["total"],
-                            s["xp_earned"], s["leader_name"], s["leader_xp"],
-                        )
+                        await notify_weekly_summary(p_id, s["completed"], s["total"], s["xp_earned"], s["leader_name"], s["leader_xp"])
                     except Exception as e:
-                        logger.error("Weekly summary notification failed: %s", e)
-                if summaries:
-                    logger.info("Sent weekly summaries to %d persons", len(summaries))
+                        logger.error("Weekly summary failed for %s: %s", p_id, e)
 
         except Exception as e:
             logger.error("Scheduler error: %s", e)

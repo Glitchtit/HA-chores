@@ -9,23 +9,33 @@ from ha_client import send_notification
 logger = logging.getLogger(__name__)
 
 
-def get_notif_config(key: str, default: dict) -> dict:
-    """Read a notification config entry from the DB, merged with defaults."""
+def get_notif_config(key: str, default: dict, person_entity_id: str | None = None) -> dict:
+    """Read a notification config entry from the DB, merged with defaults.
+
+    Looks up ``{key}:{person_entity_id}`` first (per-person), then falls back
+    to the global ``{key}`` entry, then to *default*.
+    """
     try:
         from database import get_connection
-        row = get_connection().execute(
-            "SELECT value FROM config WHERE key = ?", (key,)
-        ).fetchone()
-        if row and row["value"]:
-            stored = json.loads(row["value"])
-            return {**default, **stored}
+        conn = get_connection()
+        lookup_keys = []
+        if person_entity_id:
+            lookup_keys.append(f"{key}:{person_entity_id}")
+        lookup_keys.append(key)
+        for k in lookup_keys:
+            row = conn.execute(
+                "SELECT value FROM config WHERE key = ?", (k,)
+            ).fetchone()
+            if row and row["value"]:
+                stored = json.loads(row["value"])
+                return {**default, **stored}
     except Exception as e:
         logger.warning("Could not read notif config %s: %s", key, e)
     return default
 
 
 async def notify_chore_assigned(person_entity_id: str, chore_name: str, due_date: str) -> None:
-    cfg = get_notif_config("notif_assigned", {"enabled": True})
+    cfg = get_notif_config("notif_assigned", {"enabled": True}, person_entity_id)
     if not cfg.get("enabled"):
         return
     await send_notification(
@@ -36,7 +46,7 @@ async def notify_chore_assigned(person_entity_id: str, chore_name: str, due_date
 
 
 async def notify_chore_overdue(person_entity_id: str, chore_name: str) -> None:
-    cfg = get_notif_config("notif_overdue", {"enabled": True})
+    cfg = get_notif_config("notif_overdue", {"enabled": True}, person_entity_id)
     if not cfg.get("enabled"):
         return
     await send_notification(
@@ -47,7 +57,7 @@ async def notify_chore_overdue(person_entity_id: str, chore_name: str) -> None:
 
 
 async def notify_badge_earned(person_entity_id: str, badge_name: str, badge_icon: str) -> None:
-    cfg = get_notif_config("notif_badge", {"enabled": True})
+    cfg = get_notif_config("notif_badge", {"enabled": True}, person_entity_id)
     if not cfg.get("enabled"):
         return
     await send_notification(
@@ -58,7 +68,7 @@ async def notify_badge_earned(person_entity_id: str, badge_name: str, badge_icon
 
 
 async def notify_streak_warning(person_entity_id: str, streak_days: int) -> None:
-    cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18})
+    cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18}, person_entity_id)
     if not cfg.get("enabled"):
         return
     await send_notification(
@@ -69,7 +79,7 @@ async def notify_streak_warning(person_entity_id: str, streak_days: int) -> None
 
 
 async def notify_level_up(person_entity_id: str, new_level: int) -> None:
-    cfg = get_notif_config("notif_levelup", {"enabled": True})
+    cfg = get_notif_config("notif_levelup", {"enabled": True}, person_entity_id)
     if not cfg.get("enabled"):
         return
     await send_notification(
@@ -87,7 +97,7 @@ async def notify_weekly_summary(
     leader_name: str,
     leader_xp: int,
 ) -> None:
-    cfg = get_notif_config("notif_weekly", {"enabled": True, "weekday": 0, "hour": 9})
+    cfg = get_notif_config("notif_weekly", {"enabled": True, "weekday": 0, "hour": 9}, person_entity_id)
     if not cfg.get("enabled"):
         return
     await send_notification(
@@ -102,7 +112,7 @@ async def notify_weekly_summary(
 
 
 async def notify_chore_reminder(person_entity_id: str, chore_name: str, due_date: str, day_before: bool) -> None:
-    cfg = get_notif_config("notif_reminder", {"enabled": True, "when": "day_of", "hour": 8})
+    cfg = get_notif_config("notif_reminder", {"enabled": True, "when": "day_of", "hour": 8}, person_entity_id)
     if not cfg.get("enabled"):
         return
     timing = "tomorrow" if day_before else "today"
