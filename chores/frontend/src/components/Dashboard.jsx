@@ -278,9 +278,9 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                           ref={el => { doneButtonRefs.current[ci.id] = el; }}
                           onClick={() => handleComplete(ci.id)}
                           disabled={completingId === ci.id}
-                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+                          className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
                         >
-                          {completingId === ci.id ? '⏳' : 'Done ✓'}
+                          {completingId === ci.id ? '⏳' : 'Done ❓'}
                         </button>
                       )
                     }
