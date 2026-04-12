@@ -173,7 +173,8 @@ export default function App() {
       case 'settings':
         return <Settings persons={persons} activePerson={activePerson}
                          setActivePerson={(id) => { setActivePerson(id); setAutoDetected(false); }}
-                         addToast={addToast} />;
+                         addToast={addToast}
+                         onPersonsChange={() => api.getPersons().then(setPersons)} />;
       default:
         return null;
     }

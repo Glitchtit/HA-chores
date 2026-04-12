@@ -1,3 +1,6 @@
+## 0.2.42
+Settings page: add Danger Zone section with a Reset Progress button for each person. Clicking opens a confirmation modal listing exactly what will be deleted (XP/level, streak, badges, completed chores). Confirmed reset calls new POST /api/persons/{entity_id}/reset-progress endpoint which zeroes XP/level/streak, removes all badges, and unmarks completed chore instances back to pending. Person list in Settings refreshes after reset.
+
 ## 0.2.41
 Achievement and level-up toasts now require a tap to dismiss — they no longer auto-disappear. Both are centered on screen with a dark backdrop. Level-up and badge notifications share a single unified queue (level-up shown first, then badges one at a time). Badge cards show a "Tap to continue (N more)" hint when multiple badges are queued.
 
