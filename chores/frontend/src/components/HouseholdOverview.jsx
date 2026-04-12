@@ -12,9 +12,9 @@ export default function HouseholdOverview({ persons, addToast, onSelectPerson })
     try {
       const [lb, chores] = await Promise.all([
         api.getLeaderboard(),
-        api.getTodayInstances(), // no person filter = all instances
+        api.getTodayInstances(),
       ]);
-      setLeaderboard(lb);
+      setLeaderboard(lb.entries || []);
       setTodayChores(chores);
     } catch { /* ignore */ }
     setLoading(false);
@@ -100,7 +100,7 @@ export default function HouseholdOverview({ persons, addToast, onSelectPerson })
                 <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-0.5 flex-wrap">
                   <span className="text-amber-400 font-semibold">Lv {p.level}</span>
                   <span>·</span>
-                  <span>🔥 {p.streak}</span>
+                  <span>🔥 {p.current_streak}</span>
                 </div>
                 <div className="text-xs text-gray-500 mt-0.5">{p.xp_total} XP · #{p.rank}</div>
               </div>

@@ -1,3 +1,6 @@
+## 0.2.29
+Fix blank Household Overview screen: leaderboard API returns {entries:[]} not a plain array; use lb.entries. Also fix streak field name (current_streak, not streak).
+
 ## 0.2.28
 All users can now switch to Household Overview from the person picker dropdown (top-right corner), not only devices in household mode. Selecting "🏡 Household Overview" sets household mode and shows the overview dashboard.
 
