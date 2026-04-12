@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as api from './api';
 import Dashboard from './components/Dashboard';
 import ChoreList from './components/ChoreList';
@@ -45,6 +45,7 @@ export default function App() {
   const [activePerson, setActivePerson] = useState(null);
   const [autoDetected, setAutoDetected] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const pickerRef = useRef(null);
 
   const addToast = useCallback((message, type = 'info') => {
     const id = Date.now();
@@ -78,6 +79,16 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
+  const [showPersonPicker, setShowPersonPicker] = useState(false);
+
+  // Close person picker on outside click
+  useEffect(() => {
+    if (!showPersonPicker) return;
+    const handler = (e) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setShowPersonPicker(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showPersonPicker]);
+
   // Load persons once ready, then auto-detect active person
   useEffect(() => {
     if (!ready) return;
@@ -91,9 +102,10 @@ export default function App() {
           setAutoDetected(true);
         } else if (!activePerson) {
           setActivePerson(p[0].entity_id);
+          setAutoDetected(false);
         }
       } catch {
-        if (!activePerson) setActivePerson(p[0].entity_id);
+        if (!activePerson) { setActivePerson(p[0].entity_id); setAutoDetected(false); }
       }
     }).catch(() => {});
   }, [ready]);
@@ -146,17 +158,37 @@ export default function App() {
       <Toasts toasts={toasts} onDismiss={dismissToast} />
 
       {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
+      <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between relative">
         <h1 className="text-xl font-bold flex items-center gap-2">
           🧹 <span>Chores</span>
         </h1>
         {activePerson && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm text-gray-300">
-              {persons.find(p => p.entity_id === activePerson)?.name || ''}
-            </span>
-            {autoDetected && (
-              <span title="Auto-detected from your HA login" className="text-xs bg-emerald-800/60 text-emerald-400 px-1.5 py-0.5 rounded">you</span>
+          <div className="relative" ref={pickerRef}>
+            <button
+              onClick={() => setShowPersonPicker(v => !v)}
+              className="flex items-center gap-1.5 hover:bg-gray-700 rounded px-2 py-1 transition-colors"
+              title={autoDetected ? "Auto-detected from your HA login" : "Tap to switch profile"}
+            >
+              <span className="text-sm text-gray-300">
+                {persons.find(p => p.entity_id === activePerson)?.name || ''}
+              </span>
+              {autoDetected
+                ? <span className="text-xs bg-emerald-800/60 text-emerald-400 px-1.5 py-0.5 rounded">you</span>
+                : <span className="text-xs bg-amber-800/60 text-amber-400 px-1.5 py-0.5 rounded" title="Could not auto-detect your profile — tap to select">▾</span>
+              }
+            </button>
+            {showPersonPicker && persons.length > 1 && (
+              <div className="absolute right-0 top-full mt-1 bg-gray-700 border border-gray-600 rounded shadow-lg z-50 min-w-32">
+                {persons.map(p => (
+                  <button
+                    key={p.entity_id}
+                    onClick={() => { setActivePerson(p.entity_id); setAutoDetected(false); setShowPersonPicker(false); }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-600 transition-colors ${p.entity_id === activePerson ? 'text-amber-400 font-semibold' : 'text-gray-200'}`}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}

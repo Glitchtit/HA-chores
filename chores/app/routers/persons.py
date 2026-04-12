@@ -38,6 +38,18 @@ async def whoami(request: Request):
     row = conn.execute(
         "SELECT * FROM persons WHERE ha_user_id = ?", (ha_user_id,)
     ).fetchone()
+    if row:
+        return dict(row)
+    # No match — re-sync person list from HA (covers cases where link was
+    # established after startup or ha_user_id was empty on first sync).
+    try:
+        await sync_persons_from_ha()
+        row = conn.execute(
+            "SELECT * FROM persons WHERE ha_user_id = ?", (ha_user_id,)
+        ).fetchone()
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Re-sync in /me failed: %s", e)
     return dict(row) if row else None
 
 
