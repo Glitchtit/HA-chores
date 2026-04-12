@@ -1,3 +1,9 @@
+## 0.2.35
+Notification timing (reminder hour/day-of/day-before, streak warning hour, weekly summary weekday+hour) is now fully per-person. The scheduler checks each person's individual config for both the enabled flag and the timing. Each person independently controls when they receive each type of scheduled notification.
+
+## 0.2.34
+Notification settings are now saved per person. Each household member has their own enabled/disabled toggles and reminder preferences. The notification section shows whose settings are being edited and is disabled in household overview mode. Backend dispatch respects per-person config with fallback to global defaults.
+
 ## 0.2.33
 Add "You could" section to personal Dashboard: lists one-time (non-recurring) chores not yet scheduled today for the current person, with a blue Add button that instantly creates today's instance assigned to you.
 
