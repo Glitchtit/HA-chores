@@ -34,6 +34,7 @@ def initialize() -> int:
     conn.executescript(SCHEMA)
     _migrate(conn)
     _seed_badges(conn)
+    _seed_notif_config(conn)
     tables = conn.execute(
         "SELECT count(*) FROM sqlite_master WHERE type='table'"
     ).fetchone()[0]
@@ -202,5 +203,30 @@ def _seed_badges(conn: sqlite3.Connection) -> None:
                (id, name, description, icon, condition_type, condition_value, hidden, condition_extra)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (badge_id, name, desc, icon, ctype, cval, hidden, cextra),
+        )
+    conn.commit()
+
+
+import json as _json
+
+# Default notification configuration seeded on first run.
+# Stored as JSON values in the config table.
+NOTIF_DEFAULTS = {
+    "notif_assigned": {"enabled": True},
+    "notif_overdue":  {"enabled": True},
+    "notif_badge":    {"enabled": True},
+    "notif_levelup":  {"enabled": True},
+    "notif_reminder": {"enabled": True, "when": "day_of", "hour": 8},
+    "notif_streak":   {"enabled": True, "hour": 18},
+    "notif_weekly":   {"enabled": True, "weekday": 0, "hour": 9},
+}
+
+
+def _seed_notif_config(conn: sqlite3.Connection) -> None:
+    """Insert default notification config entries if they don't exist."""
+    for key, default in NOTIF_DEFAULTS.items():
+        conn.execute(
+            "INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)",
+            (key, _json.dumps(default)),
         )
     conn.commit()
