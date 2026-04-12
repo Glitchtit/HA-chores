@@ -129,6 +129,20 @@ class BadgeResult(BaseModel):
     icon: str
 
 
+class PowerUp(BaseModel):
+    id: int
+    person_id: str
+    powerup_type: str
+    name: str
+    icon: str
+    description: str
+    applies_to: Optional[str]
+    multiplier: float
+    uses_remaining: int
+    expires_at: Optional[str]
+    created_at: str
+
+
 class CompleteResult(BaseModel):
     """Enriched response from POST /assignments/{id}/complete."""
     instance: ChoreInstance
@@ -138,6 +152,8 @@ class CompleteResult(BaseModel):
     new_level: int
     new_streak: int
     new_badges: list[BadgeResult]
+    powerup_consumed: Optional[PowerUp] = None
+    powerup_earned: Optional[PowerUp] = None
 
 
 class PersonBadgeStatus(BaseModel):

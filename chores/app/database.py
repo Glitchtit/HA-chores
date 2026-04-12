@@ -125,6 +125,23 @@ CREATE TABLE IF NOT EXISTS config (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+
+CREATE TABLE IF NOT EXISTS person_powerups (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id       TEXT    NOT NULL REFERENCES persons(entity_id) ON DELETE CASCADE,
+    powerup_type    TEXT    NOT NULL,
+    name            TEXT    NOT NULL,
+    icon            TEXT    DEFAULT '⚡',
+    description     TEXT    DEFAULT '',
+    applies_to      TEXT,
+    multiplier      REAL    DEFAULT 1.0,
+    uses_remaining  INTEGER DEFAULT 1,
+    expires_at      TEXT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_powerups_person
+    ON person_powerups(person_id);
 """
 
 

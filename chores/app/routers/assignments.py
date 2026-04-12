@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 import json
+import logging
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim, CompleteResult, BadgeResult
+from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim, CompleteResult, BadgeResult, PowerUp
 from database import get_connection
-from gamification import calculate_xp, update_streak, add_xp, check_and_award_badges
+from gamification import calculate_xp, update_streak, add_xp, check_and_award_badges, award_levelup_powerup, apply_powerup_to_xp
 from notifications import (
     notify_chore_assigned,
     notify_badge_earned,
     notify_level_up,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/assignments", tags=["assignments"])
 
 
@@ -31,7 +33,7 @@ async def list_instances(
     """List chore instances with optional filters."""
     conn = get_connection()
     query = """
-        SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
+        SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode, c.xp_reward as chore_xp_reward
         FROM chore_instances ci
         JOIN chores c ON ci.chore_id = c.id
         WHERE 1=1
@@ -125,7 +127,7 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
     """Mark a chore instance as completed, awarding XP and checking badges."""
     conn = get_connection()
     row = conn.execute(
-        """SELECT ci.*, c.xp_reward, c.assignment_mode
+        """SELECT ci.*, c.xp_reward, c.assignment_mode, c.difficulty as chore_difficulty
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),
@@ -152,6 +154,12 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
         claimed=claimed,
     )
 
+    # Apply any active power-up multiplier
+    difficulty = row["chore_difficulty"] or "medium"
+    powerup_multiplier, consumed_powerup = apply_powerup_to_xp(body.completed_by, difficulty)
+    if powerup_multiplier != 1.0:
+        xp = max(1, int(xp * powerup_multiplier))
+
     now = datetime.now().isoformat()
     conn.execute(
         """UPDATE chore_instances
@@ -165,6 +173,14 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
     # Update streak and add XP
     new_streak, _ = update_streak(body.completed_by)
     new_total, new_level, leveled_up = add_xp(body.completed_by, xp)
+
+    # Award a power-up on level-up
+    earned_powerup = None
+    if leveled_up:
+        try:
+            earned_powerup = award_levelup_powerup(body.completed_by, new_level)
+        except Exception as e:
+            logger.warning("Failed to award level-up power-up: %s", e)
 
     # Check for new badges
     new_badges = check_and_award_badges(body.completed_by)
@@ -189,6 +205,8 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
         "new_level": new_level,
         "new_streak": new_streak,
         "new_badges": [BadgeResult(**b) for b in new_badges],
+        "powerup_consumed": PowerUp(**consumed_powerup) if consumed_powerup else None,
+        "powerup_earned": PowerUp(**earned_powerup) if earned_powerup else None,
     }
 
 

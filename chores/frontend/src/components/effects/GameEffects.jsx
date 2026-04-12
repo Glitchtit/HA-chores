@@ -295,6 +295,45 @@ function BadgeEarnedCard({ badge, remaining, onDone }) {
   );
 }
 
+/* ── PowerUpEarnedCard ───────────────────────────────────────────────────── */
+
+function PowerUpEarnedCard({ powerup, remaining, onDone }) {
+  const [exiting, setExiting] = useState(false);
+
+  const dismiss = useCallback(() => {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(onDone, 400);
+  }, [exiting, onDone]);
+
+  return (
+    <div
+      className="fixed inset-0 z-[205] flex items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer pointer-events-auto"
+      onClick={dismiss}
+    >
+      <div
+        className={`relative ${exiting ? 'animate-powerup-exit' : 'animate-powerup-enter'}`}
+        style={{ width: 'min(340px, 90vw)' }}
+      >
+        <div className="animate-rainbow-shimmer relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl p-5 text-center">
+          <div className="text-xs font-bold text-purple-300 uppercase tracking-widest mb-2">
+            ⚡ Power-up Unlocked!
+          </div>
+          <div className="text-6xl mb-3">{powerup.icon}</div>
+          <div className="text-xl font-bold text-white mb-1">{powerup.name}</div>
+          <div className="text-sm text-gray-300 mb-2">{powerup.description}</div>
+          <div className="text-xs text-gray-500 mt-1">
+            Valid for {powerup.uses_remaining} use{powerup.uses_remaining !== 1 ? 's' : ''} · Expires in 7 days
+          </div>
+          <div className="text-xs text-gray-600 mt-3">
+            {remaining > 1 ? `Tap to continue (${remaining - 1} more)` : 'Tap to dismiss'}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Provider ────────────────────────────────────────────────────────────── */
 
 export function GameEffectsProvider({ children }) {
@@ -319,7 +358,7 @@ export function GameEffectsProvider({ children }) {
   }, []);
 
   const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress) => {
-    const { xp_awarded, leveled_up, old_level, new_level, new_badges } = result;
+    const { xp_awarded, leveled_up, old_level, new_level, new_badges, powerup_earned } = result;
 
     // Floating XP number
     if (buttonEl && xp_awarded > 0) {
@@ -335,13 +374,16 @@ export function GameEffectsProvider({ children }) {
       setXpSparkle({ barEl: xpBarEl, fromProgress: oldXPProgress, toProgress: leveled_up ? 100 : newXPProgress });
     }
 
-    // Build modal queue entries: level-up first, then badges
+    // Build modal queue entries: level-up first, then badges, then power-up
     const entries = [];
     if (leveled_up) {
       entries.push({ type: 'levelup', oldLevel: old_level, newLevel: new_level });
     }
     if (new_badges?.length > 0) {
       new_badges.forEach(b => entries.push({ type: 'badge', ...b }));
+    }
+    if (powerup_earned) {
+      entries.push({ type: 'powerup', ...powerup_earned });
     }
     if (entries.length > 0) {
       // Delay so XP sparkle plays first
@@ -390,6 +432,15 @@ export function GameEffectsProvider({ children }) {
         <BadgeEarnedCard
           key={`badge-${currentModal.id}-${modalQueue.length}`}
           badge={currentModal}
+          remaining={modalQueue.length}
+          onDone={dismissModal}
+        />
+      )}
+
+      {currentModal?.type === 'powerup' && (
+        <PowerUpEarnedCard
+          key={`powerup-${currentModal.id}`}
+          powerup={currentModal}
           remaining={modalQueue.length}
           onDone={dismissModal}
         />

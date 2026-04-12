@@ -134,6 +134,35 @@ def decay_streaks() -> int:
         if missed <= 0:
             continue
 
+        # Check for streak_shield power-up; absorb up to all missed days
+        now_iso = datetime.now().isoformat()
+        shield = conn.execute(
+            """SELECT id, uses_remaining FROM person_powerups
+               WHERE person_id = ? AND powerup_type = 'streak_shield'
+                 AND uses_remaining > 0
+                 AND (expires_at IS NULL OR expires_at > ?)""",
+            (p["entity_id"], now_iso),
+        ).fetchone()
+        if shield:
+            # Each shield use absorbs 1 missed day
+            absorb = min(shield["uses_remaining"], missed)
+            missed -= absorb
+            remaining = shield["uses_remaining"] - absorb
+            if remaining <= 0:
+                conn.execute("DELETE FROM person_powerups WHERE id = ?", (shield["id"],))
+            else:
+                conn.execute(
+                    "UPDATE person_powerups SET uses_remaining = ? WHERE id = ?",
+                    (remaining, shield["id"]),
+                )
+            logger.info(
+                "Streak shield absorbed %d missed day(s) for %s (%d uses left)",
+                absorb, p["entity_id"], remaining,
+            )
+
+        if missed <= 0:
+            continue
+
         new_streak = max(0, p["current_streak"] - missed)
         conn.execute(
             "UPDATE persons SET current_streak = ? WHERE entity_id = ?",
@@ -153,8 +182,194 @@ def decay_streaks() -> int:
     return affected
 
 
+# ── Power-up system ──────────────────────────────────────────────────────────
 
-def check_streak_at_risk(person_entity_id: str) -> bool:
+import random as _random
+
+POWERUP_CATALOG = [
+    {
+        "powerup_type": "xp_double_hard",
+        "name": "Hard Mode Bonus",
+        "description": "2× XP on your next Hard chore",
+        "icon": "💥",
+        "applies_to": "hard",
+        "multiplier": 2.0,
+        "uses": 1,
+        "expires_days": 7,
+    },
+    {
+        "powerup_type": "xp_boost_any",
+        "name": "XP Boost",
+        "description": "1.5× XP on your next chore",
+        "icon": "⚡",
+        "applies_to": "any",
+        "multiplier": 1.5,
+        "uses": 1,
+        "expires_days": 7,
+    },
+    {
+        "powerup_type": "xp_double_medium",
+        "name": "Medium Surge",
+        "description": "2× XP on your next Medium chore",
+        "icon": "🌊",
+        "applies_to": "medium",
+        "multiplier": 2.0,
+        "uses": 1,
+        "expires_days": 7,
+    },
+    {
+        "powerup_type": "triple_boost",
+        "name": "Triple Boost",
+        "description": "1.5× XP on your next 3 chores",
+        "icon": "🔥",
+        "applies_to": "any",
+        "multiplier": 1.5,
+        "uses": 3,
+        "expires_days": 7,
+    },
+    {
+        "powerup_type": "easy_blitz",
+        "name": "Easy Blitz",
+        "description": "3× XP on your next Easy chore",
+        "icon": "🎯",
+        "applies_to": "easy",
+        "multiplier": 3.0,
+        "uses": 1,
+        "expires_days": 7,
+    },
+    {
+        "powerup_type": "streak_shield",
+        "name": "Streak Shield",
+        "description": "Protects your streak from one missed day",
+        "icon": "🛡️",
+        "applies_to": None,
+        "multiplier": 1.0,
+        "uses": 1,
+        "expires_days": 14,
+    },
+]
+
+# Weight each power-up by level tier it's most appropriate for
+_POWERUP_WEIGHTS = {
+    "xp_boost_any":      10,  # Common — always useful
+    "xp_double_medium":  8,
+    "streak_shield":     7,
+    "triple_boost":      6,
+    "xp_double_hard":    5,
+    "easy_blitz":        4,
+}
+
+
+def award_levelup_powerup(person_entity_id: str, new_level: int) -> dict | None:
+    """Award a random power-up to a person on level-up. Returns the new powerup row or None."""
+    conn = get_connection()
+    now = datetime.now()
+
+    # Choose a power-up weighted randomly; higher levels unlock harder-reward ones
+    pool = list(POWERUP_CATALOG)
+    weights = [_POWERUP_WEIGHTS.get(p["powerup_type"], 5) for p in pool]
+    chosen = _random.choices(pool, weights=weights, k=1)[0]
+
+    expires_at = (now + timedelta(days=chosen["expires_days"])).isoformat()
+    cursor = conn.execute(
+        """INSERT INTO person_powerups
+             (person_id, powerup_type, name, icon, description, applies_to,
+              multiplier, uses_remaining, expires_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            person_entity_id,
+            chosen["powerup_type"],
+            chosen["name"],
+            chosen["icon"],
+            chosen["description"],
+            chosen["applies_to"],
+            chosen["multiplier"],
+            chosen["uses"],
+            expires_at,
+        ),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT * FROM person_powerups WHERE id = ?", (cursor.lastrowid,)
+    ).fetchone()
+    logger.info("Awarded power-up '%s' to %s at level %d", chosen["name"], person_entity_id, new_level)
+    return dict(row)
+
+
+def get_active_powerups(person_entity_id: str) -> list[dict]:
+    """Return all active (unexpired, uses > 0) power-ups for a person."""
+    conn = get_connection()
+    now = datetime.now().isoformat()
+    rows = conn.execute(
+        """SELECT * FROM person_powerups
+           WHERE person_id = ?
+             AND uses_remaining > 0
+             AND (expires_at IS NULL OR expires_at > ?)
+           ORDER BY created_at ASC""",
+        (person_entity_id, now),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def apply_powerup_to_xp(person_entity_id: str, difficulty: str) -> tuple[float, dict | None]:
+    """Find and consume the best applicable XP-multiplier power-up.
+
+    Returns (multiplier, consumed_powerup_dict). If no power-up applies, returns (1.0, None).
+    Among multiple applicable power-ups, the one with the highest multiplier is used first;
+    ties broken by difficulty specificity (specific > 'any').
+    """
+    conn = get_connection()
+    now = datetime.now().isoformat()
+
+    candidates = conn.execute(
+        """SELECT * FROM person_powerups
+           WHERE person_id = ?
+             AND powerup_type != 'streak_shield'
+             AND uses_remaining > 0
+             AND (expires_at IS NULL OR expires_at > ?)
+             AND (applies_to = ? OR applies_to = 'any')
+           ORDER BY
+             CASE WHEN applies_to = ? THEN 0 ELSE 1 END,
+             multiplier DESC
+           LIMIT 1""",
+        (person_entity_id, now, difficulty, difficulty),
+    ).fetchone()
+
+    if not candidates:
+        return 1.0, None
+
+    powerup = dict(candidates)
+    remaining = powerup["uses_remaining"] - 1
+    if remaining <= 0:
+        conn.execute("DELETE FROM person_powerups WHERE id = ?", (powerup["id"],))
+    else:
+        conn.execute(
+            "UPDATE person_powerups SET uses_remaining = ? WHERE id = ?",
+            (remaining, powerup["id"]),
+        )
+    conn.commit()
+    logger.info(
+        "Applied power-up '%s' (%.1f×) for %s on %s chore (%d use(s) left)",
+        powerup["name"], powerup["multiplier"], person_entity_id, difficulty, remaining,
+    )
+    return powerup["multiplier"], powerup
+
+
+def expire_old_powerups() -> int:
+    """Delete expired or exhausted power-up rows. Called daily from the scheduler."""
+    conn = get_connection()
+    now = datetime.now().isoformat()
+    cursor = conn.execute(
+        "DELETE FROM person_powerups WHERE uses_remaining <= 0 OR (expires_at IS NOT NULL AND expires_at <= ?)",
+        (now,),
+    )
+    conn.commit()
+    if cursor.rowcount:
+        logger.info("Expired %d power-up(s)", cursor.rowcount)
+    return cursor.rowcount
+
+
+
     """Check if a person's streak is at risk (no completions today)."""
     conn = get_connection()
     row = conn.execute(
