@@ -104,17 +104,9 @@ async def reset_person_progress(entity_id: str):
     # Remove all badges
     conn.execute("DELETE FROM person_badges WHERE person_id = ?", (entity_id,))
 
-    # Unmark chore instances completed by this person (reset to pending)
+    # Strip completed_by attribution without changing status — keeps them out of the pending list
     conn.execute(
-        """UPDATE chore_instances
-           SET status = 'pending', completed_by = NULL, completed_at = NULL, notes = ''
-           WHERE completed_by = ? AND status = 'completed'""",
-        (entity_id,),
-    )
-
-    # Unassign pending chore instances assigned to this person
-    conn.execute(
-        "UPDATE chore_instances SET assigned_to = NULL WHERE assigned_to = ? AND status = 'pending'",
+        "UPDATE chore_instances SET completed_by = NULL WHERE completed_by = ? AND status = 'completed'",
         (entity_id,),
     )
 

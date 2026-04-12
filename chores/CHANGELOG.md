@@ -1,3 +1,6 @@
+## 0.2.44
+Fix reset-progress: completed chores now stay completed (status unchanged), only the completed_by attribution is cleared. This prevents completed chores from reappearing as pending. Pending assigned chores remain assigned.
+
 ## 0.2.43
 Fix reset-progress: also unassign pending chore instances assigned to the person so they no longer appear in the chores list after reset. Fix missing @router decorator on test-notification endpoint (accidentally dropped in v0.2.42). Reset confirmation modal now lists "Assigned chores unassigned".
 
