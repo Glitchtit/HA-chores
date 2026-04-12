@@ -53,15 +53,27 @@ _last_streak_check_date: str = ""
 _last_weekly_summary_date: str = ""
 _last_reminder_check_date: str = ""
 _reminder_sent_today: set[str] = set()  # "person_id:instance_id"
+_last_person_sync_hour: int = -1  # tracks last hour persons were re-synced
 
 
 async def _scheduler_loop():
     """Periodically generate instances, mark overdue, send notifications."""
-    global _last_streak_check_date, _last_weekly_summary_date, _last_reminder_check_date, _reminder_sent_today
+    global _last_streak_check_date, _last_weekly_summary_date, _last_reminder_check_date, _reminder_sent_today, _last_person_sync_hour
 
     while True:
         try:
             generate_instances(days_ahead=7)
+
+            # Re-sync persons from HA every 6 hours to keep ha_user_id fresh
+            from datetime import datetime, timedelta
+            now = datetime.now()
+            if now.hour % 6 == 0 and now.hour != _last_person_sync_hour:
+                _last_person_sync_hour = now.hour
+                try:
+                    await sync_persons_from_ha()
+                    logger.debug("Periodic person re-sync completed")
+                except Exception as e:
+                    logger.warning("Periodic person re-sync failed: %s", e)
 
             # Mark overdue and send notifications
             count, overdue_targets = mark_overdue()
@@ -71,8 +83,6 @@ async def _scheduler_loop():
                 except Exception as e:
                     logger.error("Overdue notification failed: %s", e)
 
-            from datetime import datetime, timedelta
-            now = datetime.now()
             today_str = now.strftime("%Y-%m-%d")
 
             # Reset reminder tracking at day rollover
