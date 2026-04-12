@@ -1,3 +1,6 @@
+## 0.2.50
+Reset progress now also clears all active power-ups for the person.
+
 ## 0.2.49
 Fix NaN XP on powered-up chore cards: `chore_xp_reward` was missing from the `ChoreInstance` Pydantic model so FastAPI stripped it from the API response. Added `chore_xp_reward: Optional[int] = None` to `ChoreInstance` and added a `?? 0` null-safety guard in the frontend.
 
