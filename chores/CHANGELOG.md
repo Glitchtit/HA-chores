@@ -1,3 +1,6 @@
+## 0.2.20
+Quick Done button now requires confirmation to prevent accidental clicks.
+
 ## 0.2.19
 Add Quick Done button (✅) to chore list rows — instantly records chore as completed and awards XP to the active person.
 
