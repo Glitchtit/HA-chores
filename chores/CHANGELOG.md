@@ -1,3 +1,6 @@
+## 0.2.30
+Revert personal Dashboard to single-column portrait layout; landscape two-column grid only applies to Household Overview.
+
 ## 0.2.29
 Fix blank Household Overview screen: leaderboard API returns {entries:[]} not a plain array; use lb.entries. Also fix streak field name (current_streak, not streak).
 
