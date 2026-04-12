@@ -251,7 +251,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                         <span>{ci.chore_difficulty}</span>
                         {activePowerup && (
                           <span className="text-yellow-400 font-black text-sm">
-                            ✨ ~{Math.round(ci.chore_xp_reward * activePowerup.multiplier)} XP
+                            ✨ ~{Math.round((ci.chore_xp_reward ?? 0) * activePowerup.multiplier)} XP
                           </span>
                         )}
                         {ci.chore_assignment_mode === 'claim' && ci.status === 'claimed' && ci.assigned_to !== activePerson && (
