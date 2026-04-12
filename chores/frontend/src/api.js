@@ -44,6 +44,8 @@ export const getMe = () => api.get('/persons/me').then(r => r.data);
 export const syncPersons = () => api.post('/persons/sync').then(r => r.data);
 export const testNotification = (entityId) =>
   api.post(`/persons/${entityId}/test-notification`).then(r => r.data);
+export const resetPersonProgress = (entityId) =>
+  api.post(`/persons/${entityId}/reset-progress`).then(r => r.data);
 
 // ── Gamification ────────────────────────────────────────────────────────────
 export const getLeaderboard = () => api.get('/gamification/leaderboard').then(r => r.data);

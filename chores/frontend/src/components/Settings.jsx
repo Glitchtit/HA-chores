@@ -59,10 +59,54 @@ function NotifRow({ icon, label, description, cfgKey, cfg, onChange }) {
   );
 }
 
-export default function Settings({ persons, activePerson, setActivePerson, addToast }) {
+/* ── Reset Confirmation Modal ──────────────────────────────────────────────── */
+
+function ResetConfirmModal({ person, onConfirm, onCancel, busy }) {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+      <div className="bg-gray-800 border border-red-500/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+        <div className="text-center">
+          <div className="text-4xl mb-3">⚠️</div>
+          <h3 className="text-lg font-bold text-red-400">Reset Progress</h3>
+          <p className="text-sm text-gray-300 mt-2">
+            This will permanently reset all progress for
+            <span className="font-semibold text-white"> {person.name}</span>:
+          </p>
+          <ul className="text-sm text-gray-400 mt-3 space-y-1 text-left list-none">
+            <li className="flex items-center gap-2"><span className="text-red-400">✗</span> XP and level reset to 0 / Lv 1</li>
+            <li className="flex items-center gap-2"><span className="text-red-400">✗</span> Streak reset to 0</li>
+            <li className="flex items-center gap-2"><span className="text-red-400">✗</span> All badges revoked</li>
+            <li className="flex items-center gap-2"><span className="text-red-400">✗</span> Completed chores unmarked</li>
+          </ul>
+          <p className="text-xs text-gray-500 mt-3">This cannot be undone.</p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            className="flex-1 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-sm font-medium disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-sm font-bold disabled:opacity-50"
+          >
+            {busy ? 'Resetting…' : 'Reset'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function Settings({ persons, activePerson, setActivePerson, addToast, onPersonsChange }) {
   const [syncing, setSyncing] = useState(false);
   const [testingNotify, setTestingNotify] = useState(false);
   const [notifCfg, setNotifCfg] = useState(NOTIF_DEFAULTS);
+  const [resetTarget, setResetTarget] = useState(null); // person object to reset
+  const [resetting, setResetting] = useState(false);
   const saveTimers = useRef({});
 
   // Load notification config for the active person whenever they change
@@ -122,6 +166,20 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
     }
     setTestingNotify(false);
   }, [activePerson, addToast]);
+
+  const handleResetConfirm = useCallback(async () => {
+    if (!resetTarget) return;
+    setResetting(true);
+    try {
+      await api.resetPersonProgress(resetTarget.entity_id);
+      addToast(`✅ Progress reset for ${resetTarget.name}`, 'success');
+      setResetTarget(null);
+      if (onPersonsChange) onPersonsChange();
+    } catch {
+      addToast('Failed to reset progress', 'error');
+    }
+    setResetting(false);
+  }, [resetTarget, addToast, onPersonsChange]);
 
   const sel = 'bg-gray-700 rounded px-2 py-1.5 text-sm border border-gray-600 focus:outline-none focus:border-amber-500';
 
@@ -324,6 +382,39 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
         </p>
       </div>
 
+      {/* Danger Zone */}
+      <div className="bg-gray-800 rounded-xl p-5 border border-red-900/40 space-y-3">
+        <h3 className="font-medium text-red-400">⚠️ Danger Zone</h3>
+        <p className="text-sm text-gray-400">
+          Reset an individual person's progress. This is permanent and cannot be undone.
+        </p>
+        <div className="space-y-2">
+          {persons.map(p => (
+            <div key={p.entity_id} className="flex items-center justify-between gap-3 bg-gray-700/50 rounded-lg px-3 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
+                  {p.avatar_url ? (
+                    <img src={p.avatar_url} className="w-full h-full object-cover" alt="" />
+                  ) : (
+                    <span className="text-sm">👤</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium truncate">{p.name}</div>
+                  <div className="text-xs text-gray-500">Lv {p.level} · {p.xp_total} XP</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setResetTarget(p)}
+                className="shrink-0 px-3 py-1.5 bg-red-900/60 hover:bg-red-700 border border-red-700/50 text-red-300 hover:text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* About */}
       <div className="bg-gray-800 rounded-xl p-5">
         <h3 className="font-medium mb-2">ℹ️ About</h3>
@@ -335,6 +426,16 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
           Made with ❤️ for Home Assistant
         </div>
       </div>
+
+      {/* Reset confirmation modal */}
+      {resetTarget && (
+        <ResetConfirmModal
+          person={resetTarget}
+          onConfirm={handleResetConfirm}
+          onCancel={() => setResetTarget(null)}
+          busy={resetting}
+        />
+      )}
     </div>
   );
 }
