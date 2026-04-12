@@ -28,10 +28,15 @@ async def sync_persons_from_ha() -> list[dict]:
     return ha_persons
 
 
+import logging as _logging
+_log = _logging.getLogger(__name__)
+
+
 @router.get("/me", response_model=Optional[Person])
 async def whoami(request: Request):
     """Return the person matching the current HA user, or null if not found."""
     ha_user_id = request.headers.get("X-Hass-User-ID", "")
+    _log.info("GET /me — X-Hass-User-ID header: %r", ha_user_id)
     if not ha_user_id:
         return None
     conn = get_connection()
@@ -48,9 +53,21 @@ async def whoami(request: Request):
             "SELECT * FROM persons WHERE ha_user_id = ?", (ha_user_id,)
         ).fetchone()
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("Re-sync in /me failed: %s", e)
+        _log.warning("Re-sync in /me failed: %s", e)
     return dict(row) if row else None
+
+
+@router.get("/me/debug")
+async def whoami_debug(request: Request):
+    """Debug endpoint: shows received headers and DB person state."""
+    ha_user_id = request.headers.get("X-Hass-User-ID", "")
+    conn = get_connection()
+    persons_db = conn.execute("SELECT entity_id, name, ha_user_id FROM persons").fetchall()
+    return {
+        "received_x_hass_user_id": ha_user_id,
+        "all_ingress_headers": {k: v for k, v in request.headers.items() if "hass" in k.lower() or "ingress" in k.lower() or "x-" in k.lower()},
+        "persons_in_db": [{"entity_id": r["entity_id"], "name": r["name"], "ha_user_id": r["ha_user_id"]} for r in persons_db],
+    }
 
 
 @router.get("/", response_model=list[Person])

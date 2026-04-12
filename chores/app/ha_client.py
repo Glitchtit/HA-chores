@@ -30,11 +30,14 @@ async def get_persons() -> list[dict]:
             for s in states:
                 if s.get("entity_id", "").startswith("person."):
                     attrs = s.get("attributes", {})
+                    user_id = attrs.get("user_id", "")
+                    logger.info("HA person %s → user_id=%r attrs_keys=%s",
+                                s["entity_id"], user_id, list(attrs.keys()))
                     persons.append({
                         "entity_id": s["entity_id"],
                         "name": attrs.get("friendly_name", s["entity_id"]),
                         "avatar_url": attrs.get("entity_picture", ""),
-                        "user_id": attrs.get("user_id", ""),
+                        "user_id": user_id,
                     })
             return persons
     except Exception as e:
