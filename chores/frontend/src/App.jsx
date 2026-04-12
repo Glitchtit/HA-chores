@@ -238,14 +238,12 @@ export default function App() {
               </button>
               {showPersonPicker && (
                 <div className="absolute right-0 top-full mt-1 bg-gray-700 border border-gray-600 rounded shadow-lg z-50 min-w-40">
-                  {isHouseholdMode && (
-                    <button
-                      onClick={() => { setActivePerson(null); setTab('overview'); setShowPersonPicker(false); }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-600 transition-colors text-blue-300 border-b border-gray-600"
-                    >
-                      🏡 Household Overview
-                    </button>
-                  )}
+                  <button
+                    onClick={() => { setActivePerson(null); setIsHouseholdMode(true); setTab('overview'); setShowPersonPicker(false); }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-600 transition-colors text-blue-300 border-b border-gray-600"
+                  >
+                    🏡 Household Overview
+                  </button>
                   {persons.map(p => (
                     <button
                       key={p.entity_id}
