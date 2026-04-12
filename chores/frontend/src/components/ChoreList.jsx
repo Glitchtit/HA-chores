@@ -22,7 +22,7 @@ const RECURRENCE_OPTIONS = [
   { value: 'monthly:1', label: 'Monthly (1st)' },
 ];
 
-export default function ChoreList({ persons, addToast }) {
+export default function ChoreList({ persons, activePerson, addToast }) {
   const [chores, setChores] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
@@ -109,6 +109,22 @@ export default function ChoreList({ persons, addToast }) {
       load();
     } catch {
       addToast('Failed to update', 'error');
+    }
+  };
+
+  const handleQuickDone = async (chore) => {
+    if (!activePerson) { addToast('No active person selected', 'error'); return; }
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const instance = await api.createInstance({
+        chore_id: chore.id,
+        due_date: today,
+        assigned_to: activePerson,
+      });
+      await api.completeInstance(instance.id, activePerson);
+      addToast(`✅ +${chore.xp_reward} XP – ${chore.name} done!`, 'success');
+    } catch {
+      addToast('Failed to record chore', 'error');
     }
   };
 
@@ -386,6 +402,13 @@ export default function ChoreList({ persons, addToast }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
+                  {c.active && (
+                    <button onClick={() => handleQuickDone(c)}
+                      className="p-2 hover:bg-green-800 rounded text-sm"
+                      title="Quick done – mark as completed now">
+                      ✅
+                    </button>
+                  )}
                   {c.active && (
                     <button onClick={() => openAssign(c)}
                       className="p-2 hover:bg-gray-700 rounded text-sm"

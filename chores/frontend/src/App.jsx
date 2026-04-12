@@ -125,7 +125,7 @@ export default function App() {
       case 'dashboard':
         return <Dashboard activePerson={activePerson} persons={persons} addToast={addToast} />;
       case 'chores':
-        return <ChoreList persons={persons} addToast={addToast} />;
+        return <ChoreList persons={persons} activePerson={activePerson} addToast={addToast} />;
       case 'my':
         return <MyChores activePerson={activePerson} persons={persons} addToast={addToast} />;
       case 'leader':
