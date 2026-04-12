@@ -1,3 +1,6 @@
+## 0.2.33
+Add "You could" section to personal Dashboard: lists one-time (non-recurring) chores not yet scheduled today for the current person, with a blue Add button that instantly creates today's instance assigned to you.
+
 ## 0.2.32
 Linear XP curve: every level is exactly 100 XP (was quadratic 50×(N-1)²). Infinite levels. Existing persons' levels are recalculated on startup. XP bar now shows X/100 XP progress within the current level.
 
