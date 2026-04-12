@@ -198,9 +198,9 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
 
   const stars = useRef(
     Array.from({ length: STAR_COUNT }, () => ({
-      x: randomBetween(10, 90),   // % of viewport width
-      sy: randomBetween(60, 90),  // start y%
-      ey: randomBetween(-10, 30), // end y%
+      x: randomBetween(10, 90),
+      sy: randomBetween(60, 90),
+      ey: randomBetween(-10, 30),
       dur: randomBetween(1.0, 2.0),
       delay: randomBetween(0, 0.8),
       size: randomBetween(14, 26),
@@ -208,20 +208,19 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
     }))
   ).current;
 
-  useEffect(() => {
-    const exitT = setTimeout(() => setExiting(true), 2800);
-    const doneT = setTimeout(onDone, 3300);
-    return () => { clearTimeout(exitT); clearTimeout(doneT); };
-  }, [onDone]);
+  const dismiss = useCallback(() => {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(onDone, 400);
+  }, [exiting, onDone]);
 
   return (
     <div
       className={`fixed inset-0 z-[210] flex flex-col items-center justify-center
-                  bg-black/80 backdrop-blur-sm transition-opacity
+                  bg-black/80 backdrop-blur-sm cursor-pointer
                   ${exiting ? 'animate-level-up-exit' : ''}`}
-      onClick={() => { setExiting(true); setTimeout(onDone, 400); }}
+      onClick={dismiss}
     >
-      {/* Star particles */}
       {stars.map((s, i) => (
         <div
           key={i}
@@ -242,10 +241,9 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
         </div>
       ))}
 
-      {/* Main card */}
-      <div className={`animate-level-up-enter text-center px-10 py-8 rounded-3xl
-                       bg-gradient-to-b from-amber-500/20 to-yellow-600/10
-                       border-2 border-amber-400/50 shadow-2xl shadow-amber-500/30`}>
+      <div className="animate-level-up-enter text-center px-10 py-8 rounded-3xl
+                      bg-gradient-to-b from-amber-500/20 to-yellow-600/10
+                      border-2 border-amber-400/50 shadow-2xl shadow-amber-500/30">
         <div className="text-5xl mb-2">🏆</div>
         <div className="text-4xl font-black text-amber-400 mb-1 tracking-wide">LEVEL UP!</div>
         <div className="text-gray-300 text-lg mb-4">
@@ -260,34 +258,38 @@ function LevelUpOverlay({ oldLevel, newLevel, onDone }) {
 
 /* ── BadgeEarnedCard ─────────────────────────────────────────────────────── */
 
-function BadgeEarnedCard({ badge, onDone }) {
+function BadgeEarnedCard({ badge, remaining, onDone }) {
   const [exiting, setExiting] = useState(false);
 
-  useEffect(() => {
-    const exitT = setTimeout(() => setExiting(true), 3600);
-    const doneT = setTimeout(onDone, 4000);
-    return () => { clearTimeout(exitT); clearTimeout(doneT); };
-  }, [onDone]);
+  const dismiss = useCallback(() => {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(onDone, 400);
+  }, [exiting, onDone]);
 
   return (
     <div
-      className={`fixed bottom-24 left-1/2 z-[205] pointer-events-auto cursor-pointer
-                  ${exiting ? 'animate-badge-exit' : 'animate-badge-enter'}`}
-      style={{ width: 'min(320px, 90vw)' }}
-      onClick={() => { setExiting(true); setTimeout(onDone, 400); }}
+      className="fixed inset-0 z-[205] flex items-center justify-center bg-black/60 backdrop-blur-sm cursor-pointer pointer-events-auto"
+      onClick={dismiss}
     >
-      <div className="relative overflow-hidden rounded-2xl border-2 border-amber-400/60
-                      bg-gray-900 shadow-2xl shadow-amber-500/20 p-5 text-center">
-        {/* Shimmer overlay */}
-        <div className="animate-shimmer absolute inset-0 rounded-2xl pointer-events-none" />
+      <div
+        className={`relative ${exiting ? 'animate-badge-exit' : 'animate-badge-enter'}`}
+        style={{ width: 'min(320px, 90vw)' }}
+      >
+        <div className="relative overflow-hidden rounded-2xl border-2 border-amber-400/60
+                        bg-gray-900 shadow-2xl shadow-amber-500/20 p-5 text-center">
+          <div className="animate-shimmer absolute inset-0 rounded-2xl pointer-events-none" />
 
-        <div className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">
-          🎖️ Badge Earned!
+          <div className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-2">
+            🎖️ Badge Earned!
+          </div>
+          <div className="text-6xl mb-3">{badge.icon}</div>
+          <div className="text-xl font-bold text-white mb-1">{badge.name}</div>
+          <div className="text-sm text-gray-400">{badge.description}</div>
+          <div className="text-xs text-gray-600 mt-3">
+            {remaining > 1 ? `Tap to continue (${remaining - 1} more)` : 'Tap to dismiss'}
+          </div>
         </div>
-        <div className="text-6xl mb-3">{badge.icon}</div>
-        <div className="text-xl font-bold text-white mb-1">{badge.name}</div>
-        <div className="text-sm text-gray-400">{badge.description}</div>
-        <div className="text-xs text-gray-600 mt-3">Tap to dismiss</div>
       </div>
     </div>
   );
@@ -299,8 +301,8 @@ export function GameEffectsProvider({ children }) {
   const [floatingXPs, setFloatingXPs] = useState([]);
   const [confettiBursts, setConfettiBursts] = useState([]);
   const [xpSparkle, setXpSparkle] = useState(null);
-  const [levelUp, setLevelUp] = useState(null);
-  const [badgeQueue, setBadgeQueue] = useState([]);
+  // Unified modal queue: items are { type: 'levelup', oldLevel, newLevel } | { type: 'badge', ...badge }
+  const [modalQueue, setModalQueue] = useState([]);
 
   const removeFloating = useCallback((id) => {
     setFloatingXPs(prev => prev.filter(f => f.id !== id));
@@ -312,20 +314,10 @@ export function GameEffectsProvider({ children }) {
 
   const removeXpSparkle = useCallback(() => setXpSparkle(null), []);
 
-  const removeLevelUp = useCallback(() => setLevelUp(null), []);
-
-  const removeTopBadge = useCallback(() => {
-    setBadgeQueue(prev => prev.slice(1));
+  const dismissModal = useCallback(() => {
+    setModalQueue(prev => prev.slice(1));
   }, []);
 
-  /**
-   * Trigger all effects from a complete response.
-   * @param {object} result  — the CompleteResult from the API
-   * @param {Element} buttonEl  — the Done button DOM element (for confetti + XP position)
-   * @param {Element} xpBarEl  — the XP progress bar container element
-   * @param {number} oldXPProgress  — XP bar fill % before completing (0–100)
-   * @param {number} newXPProgress  — XP bar fill % after completing (0–100)
-   */
   const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress) => {
     const { xp_awarded, leveled_up, old_level, new_level, new_badges } = result;
 
@@ -335,49 +327,46 @@ export function GameEffectsProvider({ children }) {
       const x = rect.left + rect.width / 2;
       const y = rect.top;
       setFloatingXPs(prev => [...prev, { id: uid(), xp: xp_awarded, x, y }]);
-
-      // Confetti from button center
       setConfettiBursts(prev => [...prev, { id: uid(), x, y: rect.top + rect.height / 2 }]);
     }
 
     // XP bar sparkle
-    if (xpBarEl && !leveled_up) {
-      setXpSparkle({ barEl: xpBarEl, fromProgress: oldXPProgress, toProgress: newXPProgress });
-    } else if (xpBarEl && leveled_up) {
-      // Fill to 100 then show level-up
-      setXpSparkle({ barEl: xpBarEl, fromProgress: oldXPProgress, toProgress: 100 });
+    if (xpBarEl) {
+      setXpSparkle({ barEl: xpBarEl, fromProgress: oldXPProgress, toProgress: leveled_up ? 100 : newXPProgress });
     }
 
-    // Level up overlay (slight delay so the bar completes first)
+    // Build modal queue entries: level-up first, then badges
+    const entries = [];
     if (leveled_up) {
-      setTimeout(() => {
-        setLevelUp({ oldLevel: old_level, newLevel: new_level });
-      }, 700);
+      entries.push({ type: 'levelup', oldLevel: old_level, newLevel: new_level });
     }
-
-    // Badge queue
     if (new_badges?.length > 0) {
-      setBadgeQueue(prev => [...prev, ...new_badges]);
+      new_badges.forEach(b => entries.push({ type: 'badge', ...b }));
+    }
+    if (entries.length > 0) {
+      // Delay so XP sparkle plays first
+      setTimeout(() => {
+        setModalQueue(prev => [...prev, ...entries]);
+      }, leveled_up ? 700 : 400);
     }
   }, []);
 
   const ctx = { triggerEffects };
 
+  const currentModal = modalQueue[0] ?? null;
+
   return (
     <GameEffectsContext.Provider value={ctx}>
       {children}
 
-      {/* Floating XP labels */}
       {floatingXPs.map(f => (
         <FloatingXP key={f.id} xp={f.xp} x={f.x} y={f.y} onDone={() => removeFloating(f.id)} />
       ))}
 
-      {/* Confetti bursts */}
       {confettiBursts.map(c => (
         <ConfettiBurst key={c.id} x={c.x} y={c.y} onDone={() => removeConfetti(c.id)} />
       ))}
 
-      {/* XP bar sparkle */}
       {xpSparkle && (
         <XPBarSparkle
           key={xpSparkle.barEl?.dataset?.sparkleKey || 'sparkle'}
@@ -388,21 +377,21 @@ export function GameEffectsProvider({ children }) {
         />
       )}
 
-      {/* Level up overlay */}
-      {levelUp && (
+      {currentModal?.type === 'levelup' && (
         <LevelUpOverlay
-          oldLevel={levelUp.oldLevel}
-          newLevel={levelUp.newLevel}
-          onDone={removeLevelUp}
+          key={`lu-${currentModal.newLevel}`}
+          oldLevel={currentModal.oldLevel}
+          newLevel={currentModal.newLevel}
+          onDone={dismissModal}
         />
       )}
 
-      {/* Badge earned (show one at a time) */}
-      {badgeQueue.length > 0 && (
+      {currentModal?.type === 'badge' && (
         <BadgeEarnedCard
-          key={badgeQueue[0].id}
-          badge={badgeQueue[0]}
-          onDone={removeTopBadge}
+          key={`badge-${currentModal.id}-${modalQueue.length}`}
+          badge={currentModal}
+          remaining={modalQueue.length}
+          onDone={dismissModal}
         />
       )}
     </GameEffectsContext.Provider>
