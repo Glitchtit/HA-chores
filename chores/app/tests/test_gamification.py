@@ -80,7 +80,7 @@ class TestStreaks:
         assert streak == 4
         assert longest == 5
 
-    def test_streak_resets_after_gap(self, tmp_db):
+    def test_streak_decrements_after_gap(self, tmp_db):
         from gamification import update_streak
         from datetime import date, timedelta
 
@@ -92,6 +92,23 @@ class TestStreaks:
         )
         tmp_db.commit()
         streak, longest = update_streak("person.test")
+        # 3-day gap = 2 missed days: max(0, 5-2) + 1 = 4
+        assert streak == 4
+        assert longest == 10
+
+    def test_streak_bottoms_at_zero(self, tmp_db):
+        from gamification import update_streak
+        from datetime import date, timedelta
+
+        ten_days_ago = (date.today() - timedelta(days=10)).isoformat()
+        tmp_db.execute(
+            """INSERT INTO persons (entity_id, name, current_streak, longest_streak, last_completion_date)
+               VALUES ('person.test', 'Test', 3, 10, ?)""",
+            (ten_days_ago,),
+        )
+        tmp_db.commit()
+        streak, longest = update_streak("person.test")
+        # 10-day gap = 9 missed days: max(0, 3-9) + 1 = 1
         assert streak == 1
         assert longest == 10
 
