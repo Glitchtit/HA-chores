@@ -13,17 +13,17 @@ logger = logging.getLogger(__name__)
 # ── Level calculation ────────────────────────────────────────────────────────
 
 def xp_for_level(level: int) -> int:
-    """Return the minimum XP required for a given level."""
+    """Return the minimum XP required for a given level (linear: 100 XP per level)."""
     if level <= 1:
         return 0
-    return 50 * (level - 1) ** 2
+    return (level - 1) * 100
 
 
 def level_from_xp(xp: int) -> int:
-    """Compute level from total XP: level = floor(sqrt(xp/50)) + 1."""
+    """Compute level from total XP: 100 XP per level, infinite levels."""
     if xp <= 0:
         return 1
-    return int(math.sqrt(xp / 50)) + 1
+    return xp // 100 + 1
 
 
 # ── XP calculation ───────────────────────────────────────────────────────────
