@@ -1,3 +1,6 @@
+## 0.2.19
+Add Quick Done button (✅) to chore list rows — instantly records chore as completed and awards XP to the active person.
+
 ## 0.2.18
 Mobile layout: chore list rows now stack buttons below info on narrow screens.
 
