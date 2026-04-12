@@ -1,3 +1,6 @@
+## 0.2.25
+Debug: added /api/persons/me/debug endpoint (shows X-Hass-User-ID header + DB ha_user_id values), INFO logging to /me and person sync to diagnose auto-profile detection.
+
 ## 0.2.24
 Fix auto-profile switching: /me endpoint now re-syncs persons from HA on cache miss (so user-person links made after startup are picked up). Scheduler re-syncs persons every 6 hours. Header now shows a ▾ indicator when auto-detect failed, and tapping the name opens a profile picker dropdown.
 
