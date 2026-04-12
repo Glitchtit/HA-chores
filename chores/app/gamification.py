@@ -395,6 +395,7 @@ def check_and_award_badges(person_entity_id: str) -> list[dict]:
             newly_earned.append({
                 "id": badge["id"],
                 "name": badge["name"],
+                "description": badge["description"] or "",
                 "icon": badge["icon"],
             })
 
@@ -414,6 +415,7 @@ def check_and_award_badges(person_entity_id: str) -> list[dict]:
             newly_earned.append({
                 "id": badge["id"],
                 "name": badge["name"],
+                "description": badge["description"] or "",
                 "icon": badge["icon"],
             })
 

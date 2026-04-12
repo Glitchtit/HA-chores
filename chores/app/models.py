@@ -121,6 +121,25 @@ class BadgeEarned(BaseModel):
     earned_at: str
 
 
+class BadgeResult(BaseModel):
+    """Minimal badge info returned in a complete response."""
+    id: str
+    name: str
+    description: str = ""
+    icon: str
+
+
+class CompleteResult(BaseModel):
+    """Enriched response from POST /assignments/{id}/complete."""
+    instance: ChoreInstance
+    xp_awarded: int
+    leveled_up: bool
+    old_level: int
+    new_level: int
+    new_streak: int
+    new_badges: list[BadgeResult]
+
+
 class PersonBadgeStatus(BaseModel):
     badge: Badge
     earned: bool
