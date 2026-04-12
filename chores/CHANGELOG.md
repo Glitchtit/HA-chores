@@ -1,3 +1,6 @@
+## 0.2.52
+Change "Done ✓" button from green to orange with ❓ icon to make it clearer it's an action requiring user confirmation.
+
 ## 0.2.51
 Fix badge earned modal misaligned to the left: removed stray `translateX(-50%)` from badge-enter and badge-exit keyframes (a leftover from when the card was absolutely positioned; it's now centered by flexbox).
 
