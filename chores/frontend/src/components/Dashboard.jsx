@@ -1,19 +1,28 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as api from '../api';
 
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function Dashboard({ activePerson, persons, addToast }) {
   const [todayChores, setTodayChores] = useState([]);
+  const [optionalChores, setOptionalChores] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     try {
-      const [chores, personStats] = await Promise.all([
+      const [chores, personStats, allChores] = await Promise.all([
         api.getTodayInstances(activePerson),
         activePerson ? api.getPersonStats(activePerson) : null,
+        api.getChores(),
       ]);
       setTodayChores(chores);
       setStats(personStats);
+      // One-time chores not already scheduled today for this person
+      const scheduledIds = new Set(chores.map(c => c.chore_id));
+      setOptionalChores(allChores.filter(c => !c.recurrence && !scheduledIds.has(c.id)));
     } catch { /* ignore */ }
     setLoading(false);
   }, [activePerson]);
@@ -37,6 +46,16 @@ export default function Dashboard({ activePerson, persons, addToast }) {
       load();
     } catch (e) {
       addToast('Failed to claim chore', 'error');
+    }
+  };
+
+  const handleAdd = async (chore) => {
+    try {
+      await api.createInstance({ chore_id: chore.id, due_date: todayISO(), assigned_to: activePerson });
+      addToast(`📋 "${chore.name}" added to today!`, 'success');
+      load();
+    } catch {
+      addToast('Failed to add chore', 'error');
     }
   };
 
@@ -168,6 +187,39 @@ export default function Dashboard({ activePerson, persons, addToast }) {
           </div>
         )}
       </div>
+
+      {/* You could — optional one-time chores */}
+      {optionalChores.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            💡 You could
+            <span className="text-sm font-normal text-gray-500">({optionalChores.length})</span>
+          </h3>
+          <div className="space-y-2">
+            {optionalChores.map(c => (
+              <div key={c.id} className="bg-gray-800 rounded-lg p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{c.icon || '🧹'}</span>
+                  <div>
+                    <div className="font-medium">{c.name}</div>
+                    <div className="text-xs text-gray-500 flex gap-1.5 items-center">
+                      <span className="capitalize">{c.difficulty}</span>
+                      <span>·</span>
+                      <span>{c.xp_reward} XP</span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleAdd(c)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
