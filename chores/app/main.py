@@ -91,21 +91,28 @@ async def _scheduler_loop():
                     """SELECT ci.id, ci.due_date, ci.assigned_to, c.name as chore_name
                        FROM chore_instances ci
                        JOIN chores c ON c.id = ci.chore_id
-                       WHERE ci.due_date = ? AND ci.assigned_to IS NOT NULL
+                       WHERE ci.due_date = ?
                          AND ci.status IN ('pending', 'claimed')""",
                     (target_date,),
                 ).fetchall()
+                all_persons = conn.execute("SELECT entity_id FROM persons").fetchall()
                 for inst in due_instances:
-                    key = f"{inst['assigned_to']}:{inst['id']}"
-                    if key not in _reminder_sent_today:
-                        try:
-                            await notify_chore_reminder(
-                                inst["assigned_to"], inst["chore_name"],
-                                inst["due_date"], day_before=(when == "day_before"),
-                            )
-                            _reminder_sent_today.add(key)
-                        except Exception as e:
-                            logger.error("Reminder notification failed: %s", e)
+                    recipients = (
+                        [inst["assigned_to"]]
+                        if inst["assigned_to"]
+                        else [p["entity_id"] for p in all_persons]
+                    )
+                    for person_id in recipients:
+                        key = f"{person_id}:{inst['id']}"
+                        if key not in _reminder_sent_today:
+                            try:
+                                await notify_chore_reminder(
+                                    person_id, inst["chore_name"],
+                                    inst["due_date"], day_before=(when == "day_before"),
+                                )
+                                _reminder_sent_today.add(key)
+                            except Exception as e:
+                                logger.error("Reminder notification failed: %s", e)
 
             # Streak warnings — once per day at configured hour
             streak_cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18})
