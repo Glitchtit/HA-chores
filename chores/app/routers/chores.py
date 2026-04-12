@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from models import ChoreCreate, ChoreUpdate, Chore
 from database import get_connection
 from scheduler import generate_instances
+from gamification import validate_and_revoke_badges
 
 router = APIRouter(prefix="/api/chores", tags=["chores"])
 
@@ -59,6 +60,7 @@ async def create_chore(body: ChoreCreate):
     )
     conn.commit()
     generate_instances(days_ahead=7)
+    validate_and_revoke_badges()  # new chore may invalidate all_types badges
     return await get_chore(cursor.lastrowid)
 
 
@@ -86,6 +88,10 @@ async def update_chore(chore_id: int, body: ChoreUpdate):
             values,
         )
         conn.commit()
+
+    # Revalidate revocable badges since active chore count may have changed
+    if "active" in (body.model_dump(exclude_unset=True)):
+        validate_and_revoke_badges()
 
     return await get_chore(chore_id)
 

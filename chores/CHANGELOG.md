@@ -1,3 +1,9 @@
+## 0.2.38
+General badge validator: introduced REVOCABLE_CONDITIONS set and validate_and_revoke_badges() in gamification.py. All badge condition logic extracted into _eval_badge_condition() shared by both award and revoke paths. Validator runs on startup and whenever a chore is created or its active state toggled — so badges like "Master Cleaner" (all_types) are automatically revoked if a new chore is added that the person hasn't completed. Replaces the one-off speed_runner fix from v0.2.37.
+
+## 0.2.37
+Fix "Any% Completion" (speed_runner) badge incorrectly awarding when 3 chores were completed in a day but not within 10 minutes. Root cause: SQLite's datetime('now') returns UTC but completed_at stores local time, making the window up to 190 minutes wide in UTC+3. Fixed by computing the cutoff in Python. On startup, incorrectly awarded badges are automatically revoked.
+
 ## 0.2.36
 Show streak XP bonus percentage in amber below the streak counter on the personal Dashboard (e.g. "+30%" for a 3-day streak, capped at +100%).
 

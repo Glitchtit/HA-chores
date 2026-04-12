@@ -36,6 +36,9 @@ def initialize() -> int:
     _seed_badges(conn)
     _seed_notif_config(conn)
     _recalc_levels(conn)
+    # Run general badge validator to fix any incorrectly awarded revocable badges
+    from gamification import validate_and_revoke_badges
+    validate_and_revoke_badges()
     tables = conn.execute(
         "SELECT count(*) FROM sqlite_master WHERE type='table'"
     ).fetchone()[0]
