@@ -117,8 +117,14 @@ def check_streak_at_risk(person_entity_id: str) -> bool:
 REVOCABLE_CONDITIONS: frozenset[str] = frozenset({"all_types", "speed_run"})
 
 
-def _eval_badge_condition(badge, person_entity_id: str, conn, *, person=None) -> bool:
-    """Evaluate a single badge condition for a person. Returns True if met."""
+def _eval_badge_condition(badge, person_entity_id: str, conn, *, person=None, for_revoke: bool = False) -> bool:
+    """Evaluate a single badge condition for a person. Returns True if met.
+
+    for_revoke=True  → called from validate_and_revoke_badges; unknown/snapshot
+                        types return True (preserve badge).
+    for_revoke=False → called from check_and_award_badges; unknown/snapshot
+                        types return False (don't award speculatively).
+    """
     ctype  = badge["condition_type"]
     cval   = badge["condition_value"]
     try:
@@ -219,10 +225,12 @@ def _eval_badge_condition(badge, person_entity_id: str, conn, *, person=None) ->
         return cnt >= cval
 
     if ctype == "calendar_date":
-        # Only valid on the specific calendar date — treat as permanent once earned
+        # Only valid on the specific calendar date (MM-DD stored in cextra).
+        # For revoke path: never revoke once earned (it was earned on the right day).
+        # For award path: only award when today IS the matching date.
         today_mmdd = today_dt.strftime("%m-%d")
         if today_mmdd != cextra:
-            return True  # Don't revoke snapshot badges on other days
+            return for_revoke  # revoke=True → preserve; award=False → don't award
         cnt = conn.execute(
             """SELECT COUNT(*) FROM chore_instances
                WHERE completed_by = ? AND status = 'completed'
@@ -316,8 +324,18 @@ def _eval_badge_condition(badge, person_entity_id: str, conn, *, person=None) ->
         ).fetchone()[0]
         return cnt > 0
 
-    # Unknown condition type — leave badge as-is
-    return True
+    if ctype == "perfect_week":
+        # At least one chore completed on each of the last 7 calendar days.
+        cnt = conn.execute(
+            """SELECT COUNT(DISTINCT date(completed_at)) FROM chore_instances
+               WHERE completed_by = ? AND status = 'completed'
+               AND date(completed_at) >= date('now', '-6 days')""",
+            (person_entity_id,),
+        ).fetchone()[0]
+        return cnt >= 7
+
+    # Unknown condition type
+    return for_revoke  # revoke=True → preserve; award=False → don't award
 
 
 def validate_and_revoke_badges(person_entity_id: str | None = None) -> int:
@@ -343,13 +361,78 @@ def validate_and_revoke_badges(person_entity_id: str | None = None) -> int:
             (p_id,),
         ).fetchall()
         for badge in earned:
-            if not _eval_badge_condition(badge, p_id, conn):
+            if not _eval_badge_condition(badge, p_id, conn, for_revoke=True):
                 conn.execute(
                     "DELETE FROM person_badges WHERE person_id = ? AND badge_id = ?",
                     (p_id, badge["badge_id"]),
                 )
                 revoked += 1
                 logger.info("Revoked badge '%s' from %s (condition no longer met)", badge["badge_id"], p_id)
+    if revoked:
+        conn.commit()
+    return revoked
+
+
+def revoke_incorrectly_awarded_badges() -> int:
+    """One-time cleanup: revoke badges that were awarded due to the for_revoke bug.
+
+    Specifically:
+    - calendar_date badges awarded on the wrong date (today != the badge's date
+      and the badge was earned today, meaning the bug awarded it)
+    - perfect_week badges awarded before the condition was actually implemented
+      (re-evaluate now with the real check)
+    """
+    conn = get_connection()
+    revoked = 0
+    today = date.today()
+    today_mmdd = today.strftime("%m-%d")
+
+    # Revoke calendar_date badges earned on the wrong date
+    calendar_badges = conn.execute(
+        """SELECT pb.person_id, pb.badge_id, pb.earned_at, b.condition_extra
+           FROM person_badges pb
+           JOIN badges b ON b.id = pb.badge_id
+           WHERE b.condition_type = 'calendar_date'"""
+    ).fetchall()
+    for row in calendar_badges:
+        # If earned_at date's MM-DD doesn't match the badge's condition_extra, it was wrongly awarded
+        try:
+            earned_dt = datetime.fromisoformat(row["earned_at"])
+            earned_mmdd = earned_dt.strftime("%m-%d")
+        except Exception:
+            earned_mmdd = ""
+        if earned_mmdd != row["condition_extra"]:
+            conn.execute(
+                "DELETE FROM person_badges WHERE person_id = ? AND badge_id = ?",
+                (row["person_id"], row["badge_id"]),
+            )
+            revoked += 1
+            logger.info("Revoked incorrectly awarded calendar_date badge '%s' from %s", row["badge_id"], row["person_id"])
+
+    # Revoke perfect_week badges that don't pass the real check
+    pids = [r["entity_id"] for r in conn.execute("SELECT entity_id FROM persons").fetchall()]
+    for p_id in pids:
+        has_badge = conn.execute(
+            "SELECT 1 FROM person_badges pb JOIN badges b ON b.id = pb.badge_id WHERE pb.person_id = ? AND b.condition_type = 'perfect_week'",
+            (p_id,),
+        ).fetchone()
+        if not has_badge:
+            continue
+        # Re-check using the real condition
+        cnt = conn.execute(
+            """SELECT COUNT(DISTINCT date(completed_at)) FROM chore_instances
+               WHERE completed_by = ? AND status = 'completed'
+               AND date(completed_at) >= date('now', '-6 days')""",
+            (p_id,),
+        ).fetchone()[0]
+        if cnt < 7:
+            conn.execute(
+                "DELETE FROM person_badges WHERE person_id = ? AND badge_id IN (SELECT id FROM badges WHERE condition_type = 'perfect_week')",
+                (p_id,),
+            )
+            revoked += 1
+            logger.info("Revoked incorrectly awarded perfect_week badge from %s", p_id)
+
     if revoked:
         conn.commit()
     return revoked
