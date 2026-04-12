@@ -1,3 +1,6 @@
+## 0.2.51
+Fix badge earned modal misaligned to the left: removed stray `translateX(-50%)` from badge-enter and badge-exit keyframes (a leftover from when the card was absolutely positioned; it's now centered by flexbox).
+
 ## 0.2.50
 Reset progress now also clears all active power-ups for the person.
 
