@@ -77,6 +77,7 @@ function ResetConfirmModal({ person, onConfirm, onCancel, busy }) {
             <li className="flex items-center gap-2"><span className="text-red-400">✗</span> Streak reset to 0</li>
             <li className="flex items-center gap-2"><span className="text-red-400">✗</span> All badges revoked</li>
             <li className="flex items-center gap-2"><span className="text-red-400">✗</span> Completed chores unmarked</li>
+            <li className="flex items-center gap-2"><span className="text-red-400">✗</span> Assigned chores unassigned</li>
           </ul>
           <p className="text-xs text-gray-500 mt-3">This cannot be undone.</p>
         </div>

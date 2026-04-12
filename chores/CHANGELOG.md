@@ -1,3 +1,6 @@
+## 0.2.43
+Fix reset-progress: also unassign pending chore instances assigned to the person so they no longer appear in the chores list after reset. Fix missing @router decorator on test-notification endpoint (accidentally dropped in v0.2.42). Reset confirmation modal now lists "Assigned chores unassigned".
+
 ## 0.2.42
 Settings page: add Danger Zone section with a Reset Progress button for each person. Clicking opens a confirmation modal listing exactly what will be deleted (XP/level, streak, badges, completed chores). Confirmed reset calls new POST /api/persons/{entity_id}/reset-progress endpoint which zeroes XP/level/streak, removes all badges, and unmarks completed chore instances back to pending. Person list in Settings refreshes after reset.
 
