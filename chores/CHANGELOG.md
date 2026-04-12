@@ -1,3 +1,6 @@
+## 0.2.31
+Remove Done button from Household Overview chore list; only Claim is shown for unclaimed claim-mode chores.
+
 ## 0.2.30
 Revert personal Dashboard to single-column portrait layout; landscape two-column grid only applies to Household Overview.
 
