@@ -6,11 +6,20 @@ import MyChores from './components/MyChores';
 import Leaderboard from './components/Leaderboard';
 import Achievements from './components/Achievements';
 import Settings from './components/Settings';
+import HouseholdOverview from './components/HouseholdOverview';
 
-const TABS = [
+const PERSONAL_TABS = [
   { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
   { id: 'chores',    icon: '📋', label: 'Chores' },
   { id: 'my',        icon: '✅', label: 'My Chores' },
+  { id: 'leader',    icon: '🏆', label: 'Leaderboard' },
+  { id: 'badges',    icon: '🎖️', label: 'Achievements' },
+  { id: 'settings',  icon: '⚙️', label: 'Settings' },
+];
+
+const HOUSEHOLD_TABS = [
+  { id: 'overview',  icon: '🏡', label: 'Overview' },
+  { id: 'chores',    icon: '📋', label: 'Chores' },
   { id: 'leader',    icon: '🏆', label: 'Leaderboard' },
   { id: 'badges',    icon: '🎖️', label: 'Achievements' },
   { id: 'settings',  icon: '⚙️', label: 'Settings' },
@@ -44,6 +53,7 @@ export default function App() {
   const [persons, setPersons] = useState([]);
   const [activePerson, setActivePerson] = useState(null);
   const [autoDetected, setAutoDetected] = useState(false);
+  const [isHouseholdMode, setIsHouseholdMode] = useState(false);
   const [toasts, setToasts] = useState([]);
   const pickerRef = useRef(null);
 
@@ -100,12 +110,19 @@ export default function App() {
         if (me && p.some(person => person.entity_id === me.entity_id)) {
           setActivePerson(me.entity_id);
           setAutoDetected(true);
-        } else if (!activePerson) {
-          setActivePerson(p[0].entity_id);
+          setIsHouseholdMode(false);
+        } else {
+          // No HA user matched — household/shared device mode
+          setIsHouseholdMode(true);
+          setActivePerson(null);
           setAutoDetected(false);
+          setTab('overview');
         }
       } catch {
-        if (!activePerson) { setActivePerson(p[0].entity_id); setAutoDetected(false); }
+        setIsHouseholdMode(true);
+        setActivePerson(null);
+        setAutoDetected(false);
+        setTab('overview');
       }
     }).catch(() => {});
   }, [ready]);
@@ -134,6 +151,14 @@ export default function App() {
 
   const renderTab = () => {
     switch (tab) {
+      case 'overview':
+        return (
+          <HouseholdOverview
+            persons={persons}
+            addToast={addToast}
+            onSelectPerson={(id) => { setActivePerson(id); setAutoDetected(false); setTab('dashboard'); }}
+          />
+        );
       case 'dashboard':
         return <Dashboard activePerson={activePerson} persons={persons} addToast={addToast} />;
       case 'chores':
@@ -153,69 +178,97 @@ export default function App() {
     }
   };
 
+  // Active tab set: show household tabs when no person is selected in household mode
+  const TABS = (isHouseholdMode && !activePerson) ? HOUSEHOLD_TABS : PERSONAL_TABS;
+
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col lg:flex-row">
       <Toasts toasts={toasts} onDismiss={dismissToast} />
 
-      {/* Header */}
-      <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between relative">
-        <h1 className="text-xl font-bold flex items-center gap-2">
-          🧹 <span>Chores</span>
-        </h1>
-        {activePerson && (
-          <div className="relative" ref={pickerRef}>
-            <button
-              onClick={() => setShowPersonPicker(v => !v)}
-              className="flex items-center gap-1.5 hover:bg-gray-700 rounded px-2 py-1 transition-colors"
-              title={autoDetected ? "Auto-detected from your HA login" : "Tap to switch profile"}
-            >
-              <span className="text-sm text-gray-300">
-                {persons.find(p => p.entity_id === activePerson)?.name || ''}
-              </span>
-              {autoDetected
-                ? <span className="text-xs bg-emerald-800/60 text-emerald-400 px-1.5 py-0.5 rounded">you</span>
-                : <span className="text-xs bg-amber-800/60 text-amber-400 px-1.5 py-0.5 rounded" title="Could not auto-detect your profile — tap to select">▾</span>
-              }
-            </button>
-            {showPersonPicker && persons.length > 1 && (
-              <div className="absolute right-0 top-full mt-1 bg-gray-700 border border-gray-600 rounded shadow-lg z-50 min-w-32">
-                {persons.map(p => (
-                  <button
-                    key={p.entity_id}
-                    onClick={() => { setActivePerson(p.entity_id); setAutoDetected(false); setShowPersonPicker(false); }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-600 transition-colors ${p.entity_id === activePerson ? 'text-amber-400 font-semibold' : 'text-gray-200'}`}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </header>
-
-      {/* Content */}
-      <main className="flex-1 overflow-auto p-4 pb-20" style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}>
-        {renderTab()}
-      </main>
-
-      {/* Tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-gray-800 border-t border-gray-700 flex justify-around py-2">
+      {/* Sidebar nav — visible on lg screens as left rail */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-gray-800 border-t border-gray-700 flex justify-around py-2
+                      lg:top-0 lg:bottom-0 lg:right-auto lg:w-20 lg:flex-col lg:justify-start lg:pt-16 lg:border-t-0 lg:border-r lg:border-gray-700 lg:gap-1">
         {TABS.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1 transition-all ${
-              tab === t.id
-                ? 'grayscale-0 opacity-100 text-amber-400'
-                : 'grayscale opacity-50 text-gray-400 hover:opacity-75'
-            }`}
+            className={`flex flex-col items-center gap-0.5 px-2 py-1 transition-all
+                        lg:w-full lg:py-3 lg:px-0 lg:rounded-none
+                        ${tab === t.id
+                          ? 'grayscale-0 opacity-100 text-amber-400'
+                          : 'grayscale opacity-50 text-gray-400 hover:opacity-75'
+                        }`}
           >
-            <span className="text-2xl sm:text-lg">{t.icon}</span>
-            <span className="hidden sm:block text-xs">{t.label}</span>
+            <span className="text-2xl lg:text-2xl">{t.icon}</span>
+            <span className="hidden sm:block text-xs lg:block lg:text-[10px]">{t.label}</span>
           </button>
         ))}
       </nav>
+
+      {/* Right-side content area */}
+      <div className="flex-1 flex flex-col lg:ml-20 min-w-0">
+        {/* Header */}
+        <header className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between relative">
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            🧹 <span>Chores</span>
+          </h1>
+
+          {/* Household mode — no person active */}
+          {isHouseholdMode && !activePerson && (
+            <span className="text-sm text-gray-400 bg-gray-700 px-2 py-1 rounded">
+              🏡 Household
+            </span>
+          )}
+
+          {/* Person picker (personal mode or household mode with a person selected) */}
+          {activePerson && (
+            <div className="relative" ref={pickerRef}>
+              <button
+                onClick={() => setShowPersonPicker(v => !v)}
+                className="flex items-center gap-1.5 hover:bg-gray-700 rounded px-2 py-1 transition-colors"
+                title={autoDetected ? "Auto-detected from your HA login" : "Tap to switch profile"}
+              >
+                <span className="text-sm text-gray-300">
+                  {persons.find(p => p.entity_id === activePerson)?.name || ''}
+                </span>
+                {autoDetected
+                  ? <span className="text-xs bg-emerald-800/60 text-emerald-400 px-1.5 py-0.5 rounded">you</span>
+                  : <span className="text-xs bg-amber-800/60 text-amber-400 px-1.5 py-0.5 rounded" title="Could not auto-detect your profile — tap to select">▾</span>
+                }
+              </button>
+              {showPersonPicker && (
+                <div className="absolute right-0 top-full mt-1 bg-gray-700 border border-gray-600 rounded shadow-lg z-50 min-w-40">
+                  {isHouseholdMode && (
+                    <button
+                      onClick={() => { setActivePerson(null); setTab('overview'); setShowPersonPicker(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-600 transition-colors text-blue-300 border-b border-gray-600"
+                    >
+                      🏡 Household Overview
+                    </button>
+                  )}
+                  {persons.map(p => (
+                    <button
+                      key={p.entity_id}
+                      onClick={() => { setActivePerson(p.entity_id); setAutoDetected(false); setShowPersonPicker(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-600 transition-colors ${p.entity_id === activePerson ? 'text-amber-400 font-semibold' : 'text-gray-200'}`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </header>
+
+        {/* Content */}
+        <main
+          className="flex-1 overflow-auto p-4 pb-20 lg:pb-6"
+          style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
+        >
+          {renderTab()}
+        </main>
+      </div>
     </div>
   );
 }

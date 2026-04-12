@@ -48,7 +48,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   const xpProgress = stats ? ((stats.xp_total - 50 * (stats.level - 1) ** 2) / (xpForNext - 50 * (stats.level - 1) ** 2)) * 100 : 0;
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
       {/* Stats card */}
       {stats && (
         <div className="bg-gray-800 rounded-xl p-5 space-y-4">

@@ -1,3 +1,6 @@
+## 0.2.27
+Household Overview mode: when accessed from a device whose HA user is not matched to any person (e.g. wall-mounted tablet), the app now shows a household-wide dashboard instead of defaulting to the first person. The overview shows person cards (name, level, streak, XP, pending chore count), all today's chores with who they're assigned to (or "Unclaimed"), and a daily progress bar. Claim and Done actions on the overview open a person picker modal asking who is performing the action. Clicking a person card switches to their personal dashboard. Landscape/wide-screen layout: navigation moves from a bottom bar to a left side rail on screens 1024px+ wide; content area widens and Dashboard shows a two-column layout on wide screens.
+
 ## 0.2.26
 Fix auto-profile detection: use correct HA ingress headers X-Remote-User-Id/X-Remote-User-Name/X-Remote-User-Display-Name (not X-Hass-User-ID). Update nginx to forward these headers.
 
