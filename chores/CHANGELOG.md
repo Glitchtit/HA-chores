@@ -1,3 +1,6 @@
+## 0.2.21
+Mobile nav: fixed overlay at bottom, icons-only on narrow screens (larger icons), active tab colored and inactive greyscale, content scrolls above nav.
+
 ## 0.2.20
 Quick Done button now requires confirmation to prevent accidental clicks.
 
