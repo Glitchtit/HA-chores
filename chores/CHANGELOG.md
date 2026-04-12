@@ -1,3 +1,6 @@
+## 0.2.45
+Fix reset-progress: clear assigned_to on completed instances too, so they no longer appear in the person's My Chores completed list (My Chores filters by assigned_to OR completed_by).
+
 ## 0.2.44
 Fix reset-progress: completed chores now stay completed (status unchanged), only the completed_by attribution is cleared. This prevents completed chores from reappearing as pending. Pending assigned chores remain assigned.
 
