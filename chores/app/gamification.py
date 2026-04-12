@@ -56,10 +56,8 @@ def calculate_xp(
 def update_streak(person_entity_id: str) -> tuple[int, int]:
     """Update a person's streak after a completion. Returns (new_streak, longest_streak).
 
-    Streak rules:
-    - Completing today: no change (already counted today)
-    - Completing the next day: streak +1
-    - Completing after N missed days: streak decreases by N missed days (min 0), then +1 for today
+    Streak increment is always +1 if completing for the first time today.
+    Decrement for missed days is handled by decay_streaks() at midnight.
     """
     conn = get_connection()
     row = conn.execute(
@@ -74,19 +72,11 @@ def update_streak(person_entity_id: str) -> tuple[int, int]:
     last_date_str = row["last_completion_date"]
     today = date.today()
 
-    if last_date_str:
-        last_date = date.fromisoformat(last_date_str)
-        delta = (today - last_date).days
-        if delta == 0:
-            # Already completed today — streak unchanged
-            pass
-        else:
-            # missed_days = days between last completion and today (not counting today itself)
-            missed_days = delta - 1
-            current_streak = max(0, current_streak - missed_days) + 1
-    else:
-        current_streak = 1
+    if last_date_str and date.fromisoformat(last_date_str) == today:
+        # Already completed today — no change
+        return current_streak, longest_streak
 
+    current_streak += 1
     longest_streak = max(longest_streak, current_streak)
 
     conn.execute(
@@ -97,6 +87,71 @@ def update_streak(person_entity_id: str) -> tuple[int, int]:
     )
     conn.commit()
     return current_streak, longest_streak
+
+
+def decay_streaks() -> int:
+    """Decrement streak by 1 for each day a person missed completing any chore.
+
+    Tracks last run date in the config table so it catches up on days missed
+    during downtime (e.g. after a server restart).
+
+    Should be called once per day at midnight from the scheduler.
+    Returns total number of person-day decrements applied.
+    """
+    conn = get_connection()
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    row = conn.execute(
+        "SELECT value FROM config WHERE key = 'last_streak_decay_date'"
+    ).fetchone()
+    last_decay = date.fromisoformat(row["value"]) if row else yesterday - timedelta(days=1)
+
+    if last_decay >= yesterday:
+        return 0  # Already ran today
+
+    # Days to apply decay: (last_decay, yesterday] inclusive
+    days_to_process = (yesterday - last_decay).days  # number of new days
+
+    persons = conn.execute(
+        "SELECT entity_id, current_streak, last_completion_date FROM persons WHERE current_streak > 0"
+    ).fetchall()
+
+    affected = 0
+    for p in persons:
+        last_date = date.fromisoformat(p["last_completion_date"]) if p["last_completion_date"] else date.min
+
+        if last_date >= yesterday:
+            continue  # Completed yesterday or today — no decay
+
+        # How many of the unprocessed days did this person miss?
+        first_unprocessed = last_decay + timedelta(days=1)
+        if last_date < first_unprocessed:
+            missed = days_to_process
+        else:
+            missed = (yesterday - last_date).days
+
+        if missed <= 0:
+            continue
+
+        new_streak = max(0, p["current_streak"] - missed)
+        conn.execute(
+            "UPDATE persons SET current_streak = ? WHERE entity_id = ?",
+            (new_streak, p["entity_id"]),
+        )
+        logger.info(
+            "Streak decay: %s %d → %d (%d missed day(s))",
+            p["entity_id"], p["current_streak"], new_streak, missed,
+        )
+        affected += 1
+
+    conn.execute(
+        "INSERT OR REPLACE INTO config (key, value) VALUES ('last_streak_decay_date', ?)",
+        (yesterday.isoformat(),),
+    )
+    conn.commit()
+    return affected
+
 
 
 def check_streak_at_risk(person_entity_id: str) -> bool:
