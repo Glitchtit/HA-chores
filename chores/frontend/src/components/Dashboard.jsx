@@ -44,8 +44,8 @@ export default function Dashboard({ activePerson, persons, addToast }) {
     return <div className="text-center py-12 text-gray-500">Loading...</div>;
   }
 
-  const xpForNext = stats ? (50 * stats.level * stats.level) : 0;
-  const xpProgress = stats ? ((stats.xp_total - 50 * (stats.level - 1) ** 2) / (xpForNext - 50 * (stats.level - 1) ** 2)) * 100 : 0;
+  const xpIntoLevel = stats ? stats.xp_total % 100 : 0;
+  const xpProgress = xpIntoLevel; // each level is exactly 100 XP, so % is the progress 0–100
 
   return (
     <div className="space-y-6 max-w-lg mx-auto">
@@ -67,7 +67,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
           <div>
             <div className="flex justify-between text-xs text-gray-500 mb-1">
               <span>Level {stats.level}</span>
-              <span>Level {stats.level + 1}</span>
+              <span>{xpIntoLevel}/100 XP · Level {stats.level + 1}</span>
             </div>
             <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
               <div

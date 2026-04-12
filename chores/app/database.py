@@ -35,6 +35,7 @@ def initialize() -> int:
     _migrate(conn)
     _seed_badges(conn)
     _seed_notif_config(conn)
+    _recalc_levels(conn)
     tables = conn.execute(
         "SELECT count(*) FROM sqlite_master WHERE type='table'"
     ).fetchone()[0]
@@ -175,6 +176,20 @@ SEED_BADGES = [
     ("anniversary",      "Annual Service Award",     "Complete chores consistently for an entire year", "🎂", "days_since_first",  365, 1, ""),
     ("midnight_special", "The Midnight Special",     "Complete a chore within 5 minutes of midnight",   "🌌", "midnight_window",   1,   1, ""),
 ]
+
+
+def _recalc_levels(conn: sqlite3.Connection) -> None:
+    """Recalculate every person's level from their current XP (linear curve: 100 XP/level)."""
+    rows = conn.execute("SELECT entity_id, xp_total FROM persons").fetchall()
+    for row in rows:
+        new_level = max(1, row["xp_total"] // 100 + 1)
+        conn.execute(
+            "UPDATE persons SET level = ? WHERE entity_id = ?",
+            (new_level, row["entity_id"]),
+        )
+    if rows:
+        conn.commit()
+        logger.info("Recalculated levels for %d persons (linear 100 XP/level)", len(rows))
 
 
 def _migrate(conn: sqlite3.Connection) -> None:

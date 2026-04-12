@@ -1,3 +1,6 @@
+## 0.2.32
+Linear XP curve: every level is exactly 100 XP (was quadratic 50×(N-1)²). Infinite levels. Existing persons' levels are recalculated on startup. XP bar now shows X/100 XP progress within the current level.
+
 ## 0.2.31
 Remove Done button from Household Overview chore list; only Claim is shown for unclaimed claim-mode chores.
 
