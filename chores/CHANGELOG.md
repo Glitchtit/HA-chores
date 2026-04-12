@@ -1,3 +1,6 @@
+## 0.2.39
+Candy Crush-style game effects: floating "+XP" numbers rise from the Done button on completion, confetti burst fires from the chore card, sparkle particles shoot from the tip of the XP bar as it fills, a full-screen Level Up overlay appears on level change, and a badge earned card slides in from the bottom with shimmer for each new badge. Backend /complete endpoint now returns a CompleteResult (instance + xp_awarded + leveled_up + old_level + new_level + new_streak + new_badges) instead of just ChoreInstance. Badge descriptions included in complete response.
+
 ## 0.2.38
 General badge validator: introduced REVOCABLE_CONDITIONS set and validate_and_revoke_badges() in gamification.py. All badge condition logic extracted into _eval_badge_condition() shared by both award and revoke paths. Validator runs on startup and whenever a chore is created or its active state toggled — so badges like "Master Cleaner" (all_types) are automatically revoked if a new chore is added that the person hasn't completed. Replaces the one-off speed_runner fix from v0.2.37.
 

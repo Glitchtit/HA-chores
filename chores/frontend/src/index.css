@@ -43,3 +43,110 @@
 .animate-level-up {
   animation: level-up 0.8s ease-in-out;
 }
+
+/* ── Game Effects ─────────────────────────────────────────────────────────── */
+
+/* Floating XP number */
+@keyframes float-xp {
+  0%   { transform: translateY(0)   scale(1);    opacity: 1; }
+  60%  { transform: translateY(-60px) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-100px) scale(0.9); opacity: 0; }
+}
+.animate-float-xp {
+  animation: float-xp 1.1s ease-out forwards;
+  pointer-events: none;
+}
+
+/* Confetti individual particle */
+@keyframes confetti-fly {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  100% { transform: var(--confetti-end); opacity: 0; }
+}
+.animate-confetti {
+  animation: confetti-fly var(--confetti-duration, 0.8s) ease-out forwards;
+  pointer-events: none;
+}
+
+/* XP bar sparkle particle */
+@keyframes sparkle-burst {
+  0%   { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: var(--sparkle-end, translate(0, -20px)) scale(0); opacity: 0; }
+}
+.animate-sparkle {
+  animation: sparkle-burst var(--sparkle-dur, 0.6s) ease-out forwards;
+  pointer-events: none;
+}
+
+/* Level-up overlay entrance */
+@keyframes level-up-enter {
+  0%   { transform: scale(0.5) translateY(40px); opacity: 0; }
+  60%  { transform: scale(1.1) translateY(-8px);  opacity: 1; }
+  100% { transform: scale(1)   translateY(0);      opacity: 1; }
+}
+.animate-level-up-enter {
+  animation: level-up-enter 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Level-up overlay exit */
+@keyframes level-up-exit {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.9) translateY(-20px); }
+}
+.animate-level-up-exit {
+  animation: level-up-exit 0.4s ease-in forwards;
+}
+
+/* Badge earned entrance (slides up from bottom) */
+@keyframes badge-enter {
+  0%   { transform: translateX(-50%) translateY(120px) scale(0.8); opacity: 0; }
+  60%  { transform: translateX(-50%) translateY(-10px)  scale(1.05); opacity: 1; }
+  100% { transform: translateX(-50%) translateY(0)      scale(1);    opacity: 1; }
+}
+.animate-badge-enter {
+  animation: badge-enter 0.55s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Badge exit */
+@keyframes badge-exit {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(80px) scale(0.9); }
+}
+.animate-badge-exit {
+  animation: badge-exit 0.35s ease-in forwards;
+}
+
+/* Shimmer sweep for badge card */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg,
+    transparent 0%, rgba(255,255,255,0.15) 40%,
+    rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.15) 60%,
+    transparent 100%);
+  background-size: 200% auto;
+  animation: shimmer 1.8s linear infinite;
+}
+
+/* Spinning star particles for level-up screen */
+@keyframes star-spin {
+  0%   { transform: translate(var(--sx, 0), var(--sy, 0)) rotate(0deg)   scale(1); opacity: 1; }
+  80%  { opacity: 1; }
+  100% { transform: translate(var(--ex, 0), var(--ey, -120px)) rotate(540deg) scale(0); opacity: 0; }
+}
+.animate-star {
+  animation: star-spin var(--star-dur, 1.4s) ease-out forwards;
+  pointer-events: none;
+}
+
+/* Chore card complete flash */
+@keyframes complete-flash {
+  0%   { background-color: rgb(31, 41, 55); } /* gray-800 */
+  30%  { background-color: rgb(6, 78, 59); }  /* emerald-900 */
+  100% { background-color: rgb(31, 41, 55); }
+}
+.animate-complete-flash {
+  animation: complete-flash 0.6s ease-out forwards;
+}
+

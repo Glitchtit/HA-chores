@@ -93,7 +93,7 @@ class TestAssignments:
         })
         assert resp.status_code == 200
         data = resp.json()
-        assert data["status"] == "completed"
+        assert data["instance"]["status"] == "completed"
         assert data["xp_awarded"] > 0
 
     def test_claim_instance(self, client, tmp_db):
