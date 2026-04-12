@@ -1,3 +1,6 @@
+## 0.2.36
+Show streak XP bonus percentage in amber below the streak counter on the personal Dashboard (e.g. "+30%" for a 3-day streak, capped at +100%).
+
 ## 0.2.35
 Notification timing (reminder hour/day-of/day-before, streak warning hour, weekly summary weekday+hour) is now fully per-person. The scheduler checks each person's individual config for both the enabled flag and the timing. Each person independently controls when they receive each type of scheduled notification.
 
