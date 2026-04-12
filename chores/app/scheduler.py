@@ -176,6 +176,19 @@ def mark_overdue() -> int:
         (today,),
     ).fetchall()
 
+    # Collect unassigned overdue instances — notify all persons
+    unassigned_overdue = conn.execute(
+        """SELECT c.name as chore_name
+           FROM chore_instances ci
+           JOIN chores c ON ci.chore_id = c.id
+           WHERE ci.status IN ('pending', 'claimed')
+           AND ci.due_date < ?
+           AND ci.assigned_to IS NULL""",
+        (today,),
+    ).fetchall()
+
+    all_persons = conn.execute("SELECT entity_id FROM persons").fetchall() if unassigned_overdue else []
+
     cursor = conn.execute(
         """UPDATE chore_instances
            SET status = 'overdue'
@@ -188,11 +201,12 @@ def mark_overdue() -> int:
     if count > 0:
         logger.info("Marked %d instances as overdue", count)
 
-    # Return overdue notification targets for the async caller
-    return count, [
-        {"person": r["assigned_to"], "chore_name": r["chore_name"]}
-        for r in about_to_be_overdue
-    ]
+    targets = [{"person": r["assigned_to"], "chore_name": r["chore_name"]} for r in about_to_be_overdue]
+    for inst in unassigned_overdue:
+        for p in all_persons:
+            targets.append({"person": p["entity_id"], "chore_name": inst["chore_name"]})
+
+    return count, targets
 
 
 def get_streak_at_risk_persons() -> list[dict]:
