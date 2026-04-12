@@ -112,9 +112,18 @@ async def reset_person_progress(entity_id: str):
         (entity_id,),
     )
 
+    # Unassign pending chore instances assigned to this person
+    conn.execute(
+        "UPDATE chore_instances SET assigned_to = NULL WHERE assigned_to = ? AND status = 'pending'",
+        (entity_id,),
+    )
+
     conn.commit()
     _log.info("Reset progress for person %s", entity_id)
     return {"ok": True, "entity_id": entity_id}
+
+
+@router.post("/{entity_id}/test-notification")
 async def test_notification(entity_id: str):
     """Send a test push notification to a person's devices."""
     from ha_client import send_notification
