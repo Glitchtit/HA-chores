@@ -239,3 +239,85 @@ class TestAddXP:
         assert new_total == 55
         assert new_level == 2
         assert leveled_up is True
+
+
+class TestPowerUps:
+    def test_award_levelup_powerup_returns_row(self, tmp_db):
+        from gamification import award_levelup_powerup
+
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.tester', 'Tester')")
+        tmp_db.commit()
+
+        pu = award_levelup_powerup("person.tester", 2)
+        assert pu is not None
+        assert pu["person_id"] == "person.tester"
+        assert pu["uses_remaining"] >= 1
+        assert pu["multiplier"] >= 1.0
+
+    def test_get_active_powerups_returns_awarded(self, tmp_db):
+        from gamification import award_levelup_powerup, get_active_powerups
+
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.tester', 'Tester')")
+        tmp_db.commit()
+
+        award_levelup_powerup("person.tester", 2)
+        powerups = get_active_powerups("person.tester")
+        assert len(powerups) >= 1
+
+    def test_apply_powerup_to_xp_consumes_use(self, tmp_db):
+        from gamification import get_active_powerups, apply_powerup_to_xp
+        from datetime import datetime, timedelta
+
+        expires_at = (datetime.now() + timedelta(days=7)).isoformat()
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.tester', 'Tester')")
+        tmp_db.execute(
+            """INSERT INTO person_powerups
+               (person_id, powerup_type, name, icon, description, applies_to, multiplier, uses_remaining, expires_at)
+               VALUES ('person.tester', 'xp_double_hard', 'Hard Bonus', '💥', 'test', 'hard', 2.0, 1, ?)""",
+            (expires_at,),
+        )
+        tmp_db.commit()
+
+        multiplier, consumed = apply_powerup_to_xp("person.tester", "hard")
+        assert multiplier == 2.0
+        assert consumed is not None
+        assert consumed["powerup_type"] == "xp_double_hard"
+        # After consuming single use, power-up should be gone
+        remaining = get_active_powerups("person.tester")
+        assert len(remaining) == 0
+
+    def test_apply_powerup_no_match_returns_one(self, tmp_db):
+        from gamification import apply_powerup_to_xp
+        from datetime import datetime, timedelta
+
+        expires_at = (datetime.now() + timedelta(days=7)).isoformat()
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.tester', 'Tester')")
+        tmp_db.execute(
+            """INSERT INTO person_powerups
+               (person_id, powerup_type, name, icon, description, applies_to, multiplier, uses_remaining, expires_at)
+               VALUES ('person.tester', 'xp_double_hard', 'Hard Bonus', '💥', 'test', 'hard', 2.0, 1, ?)""",
+            (expires_at,),
+        )
+        tmp_db.commit()
+
+        multiplier, consumed = apply_powerup_to_xp("person.tester", "easy")
+        assert multiplier == 1.0
+        assert consumed is None
+
+    def test_streak_shield_not_applied_as_xp_multiplier(self, tmp_db):
+        from gamification import apply_powerup_to_xp
+        from datetime import datetime, timedelta
+
+        expires_at = (datetime.now() + timedelta(days=14)).isoformat()
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.tester', 'Tester')")
+        tmp_db.execute(
+            """INSERT INTO person_powerups
+               (person_id, powerup_type, name, icon, description, applies_to, multiplier, uses_remaining, expires_at)
+               VALUES ('person.tester', 'streak_shield', 'Shield', '🛡️', 'test', NULL, 1.0, 1, ?)""",
+            (expires_at,),
+        )
+        tmp_db.commit()
+
+        multiplier, consumed = apply_powerup_to_xp("person.tester", "easy")
+        assert multiplier == 1.0
+        assert consumed is None
