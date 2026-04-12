@@ -1,6 +1,7 @@
 """Chores – Notification dispatch via Home Assistant."""
 
 from __future__ import annotations
+import json
 import logging
 
 from ha_client import send_notification
@@ -8,7 +9,25 @@ from ha_client import send_notification
 logger = logging.getLogger(__name__)
 
 
+def get_notif_config(key: str, default: dict) -> dict:
+    """Read a notification config entry from the DB, merged with defaults."""
+    try:
+        from database import get_connection
+        row = get_connection().execute(
+            "SELECT value FROM config WHERE key = ?", (key,)
+        ).fetchone()
+        if row and row["value"]:
+            stored = json.loads(row["value"])
+            return {**default, **stored}
+    except Exception as e:
+        logger.warning("Could not read notif config %s: %s", key, e)
+    return default
+
+
 async def notify_chore_assigned(person_entity_id: str, chore_name: str, due_date: str) -> None:
+    cfg = get_notif_config("notif_assigned", {"enabled": True})
+    if not cfg.get("enabled"):
+        return
     await send_notification(
         person_entity_id,
         title="🧹 New Chore Assigned",
@@ -17,6 +36,9 @@ async def notify_chore_assigned(person_entity_id: str, chore_name: str, due_date
 
 
 async def notify_chore_overdue(person_entity_id: str, chore_name: str) -> None:
+    cfg = get_notif_config("notif_overdue", {"enabled": True})
+    if not cfg.get("enabled"):
+        return
     await send_notification(
         person_entity_id,
         title="⏰ Chore Overdue",
@@ -25,6 +47,9 @@ async def notify_chore_overdue(person_entity_id: str, chore_name: str) -> None:
 
 
 async def notify_badge_earned(person_entity_id: str, badge_name: str, badge_icon: str) -> None:
+    cfg = get_notif_config("notif_badge", {"enabled": True})
+    if not cfg.get("enabled"):
+        return
     await send_notification(
         person_entity_id,
         title="🏆 Achievement Unlocked!",
@@ -33,6 +58,9 @@ async def notify_badge_earned(person_entity_id: str, badge_name: str, badge_icon
 
 
 async def notify_streak_warning(person_entity_id: str, streak_days: int) -> None:
+    cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18})
+    if not cfg.get("enabled"):
+        return
     await send_notification(
         person_entity_id,
         title="🔥 Streak at Risk!",
@@ -41,6 +69,9 @@ async def notify_streak_warning(person_entity_id: str, streak_days: int) -> None
 
 
 async def notify_level_up(person_entity_id: str, new_level: int) -> None:
+    cfg = get_notif_config("notif_levelup", {"enabled": True})
+    if not cfg.get("enabled"):
+        return
     await send_notification(
         person_entity_id,
         title="📈 Level Up!",
@@ -56,6 +87,9 @@ async def notify_weekly_summary(
     leader_name: str,
     leader_xp: int,
 ) -> None:
+    cfg = get_notif_config("notif_weekly", {"enabled": True, "weekday": 0, "hour": 9})
+    if not cfg.get("enabled"):
+        return
     await send_notification(
         person_entity_id,
         title="📊 Weekly Chores Summary",
@@ -64,4 +98,16 @@ async def notify_weekly_summary(
             f"You earned {xp_earned} XP! "
             f"{leader_name} leads with {leader_xp} XP total."
         ),
+    )
+
+
+async def notify_chore_reminder(person_entity_id: str, chore_name: str, due_date: str, day_before: bool) -> None:
+    cfg = get_notif_config("notif_reminder", {"enabled": True, "when": "day_of", "hour": 8})
+    if not cfg.get("enabled"):
+        return
+    timing = "tomorrow" if day_before else "today"
+    await send_notification(
+        person_entity_id,
+        title="🔔 Chore Reminder",
+        message=f"Don't forget: {chore_name} is due {timing} ({due_date})",
     )
