@@ -1,3 +1,6 @@
+## 0.2.40
+Fix incorrectly awarded badges: calendar_date badges (Silent Night, New Year) were being awarded on any day due to _eval_badge_condition returning True when the date did not match (designed for the revoke path, not the award path). perfect_week (Consistency King) had no condition handler and fell through to the same True fallback. Fixed by adding for_revoke parameter to _eval_badge_condition — award path uses for_revoke=False (strict), revoke path uses for_revoke=True (preserve snapshot badges). Implemented perfect_week as 7 distinct completion days in the last 7 calendar days. Added revoke_incorrectly_awarded_badges() which runs on startup to clean up badges already wrongly awarded.
+
 ## 0.2.39
 Candy Crush-style game effects: floating "+XP" numbers rise from the Done button on completion, confetti burst fires from the chore card, sparkle particles shoot from the tip of the XP bar as it fills, a full-screen Level Up overlay appears on level change, and a badge earned card slides in from the bottom with shimmer for each new badge. Backend /complete endpoint now returns a CompleteResult (instance + xp_awarded + leveled_up + old_level + new_level + new_streak + new_badges) instead of just ChoreInstance. Badge descriptions included in complete response.
 
