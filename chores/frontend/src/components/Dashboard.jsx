@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as api from '../api';
+import { useGameEffects } from './effects/GameEffects';
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -10,6 +11,10 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   const [optionalChores, setOptionalChores] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [completingId, setCompletingId] = useState(null);
+  const { triggerEffects } = useGameEffects();
+  const xpBarRef = useRef(null);
+  const doneButtonRefs = useRef({});
 
   const load = useCallback(async () => {
     try {
@@ -20,7 +25,6 @@ export default function Dashboard({ activePerson, persons, addToast }) {
       ]);
       setTodayChores(chores);
       setStats(personStats);
-      // One-time chores not already scheduled today for this person
       const scheduledIds = new Set(chores.map(c => c.chore_id));
       setOptionalChores(allChores.filter(c => !c.recurrence && !scheduledIds.has(c.id)));
     } catch { /* ignore */ }
@@ -30,12 +34,29 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   useEffect(() => { load(); }, [load]);
 
   const handleComplete = async (instanceId) => {
+    setCompletingId(instanceId);
     try {
-      await api.completeInstance(instanceId, activePerson);
-      addToast('✅ Chore completed! +XP', 'success');
+      const result = await api.completeInstance(instanceId, activePerson);
+      addToast(`✅ +${result.xp_awarded} XP${result.leveled_up ? ' · LEVEL UP! 🎉' : ''}`, 'success');
+
+      // Compute XP bar progress before reload
+      const oldXPIntoLevel = stats ? stats.xp_total % 100 : 0;
+      const newXP = (stats ? stats.xp_total : 0) + result.xp_awarded;
+      const newXPIntoLevel = result.leveled_up ? newXP % 100 : newXP % 100;
+
+      triggerEffects(
+        result,
+        doneButtonRefs.current[instanceId],
+        xpBarRef.current,
+        oldXPIntoLevel,
+        newXPIntoLevel,
+      );
+
       load();
     } catch (e) {
       addToast('Failed to complete chore', 'error');
+    } finally {
+      setCompletingId(null);
     }
   };
 
@@ -64,7 +85,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   }
 
   const xpIntoLevel = stats ? stats.xp_total % 100 : 0;
-  const xpProgress = xpIntoLevel; // each level is exactly 100 XP, so % is the progress 0–100
+  const xpProgress = xpIntoLevel;
 
   return (
     <div className="space-y-6 max-w-lg mx-auto">
@@ -88,7 +109,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
               <span>Level {stats.level}</span>
               <span>{xpIntoLevel}/100 XP · Level {stats.level + 1}</span>
             </div>
-            <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div ref={xpBarRef} className="h-3 bg-gray-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full animate-xp-fill"
                 style={{ width: `${Math.min(Math.max(xpProgress, 0), 100)}%` }}
@@ -147,9 +168,9 @@ export default function Dashboard({ activePerson, persons, addToast }) {
             {todayChores.map(ci => (
               <div
                 key={ci.id}
-                className={`bg-gray-800 rounded-lg p-4 flex items-center justify-between ${
+                className={`bg-gray-800 rounded-lg p-4 flex items-center justify-between transition-colors ${
                   ci.status === 'overdue' ? 'border border-red-500/50' : ''
-                }`}
+                } ${completingId === ci.id ? 'animate-complete-flash' : ''}`}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{ci.chore_icon || '🧹'}</span>
@@ -179,10 +200,12 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                       </span>
                     ) : (
                       <button
+                        ref={el => { doneButtonRefs.current[ci.id] = el; }}
                         onClick={() => handleComplete(ci.id)}
-                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
+                        disabled={completingId === ci.id}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
                       >
-                        Done ✓
+                        {completingId === ci.id ? '⏳' : 'Done ✓'}
                       </button>
                     )
                   }

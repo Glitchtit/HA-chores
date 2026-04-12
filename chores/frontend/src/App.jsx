@@ -7,6 +7,7 @@ import Leaderboard from './components/Leaderboard';
 import Achievements from './components/Achievements';
 import Settings from './components/Settings';
 import HouseholdOverview from './components/HouseholdOverview';
+import { GameEffectsProvider } from './components/effects/GameEffects';
 
 const PERSONAL_TABS = [
   { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
@@ -182,8 +183,9 @@ export default function App() {
   const TABS = (isHouseholdMode && !activePerson) ? HOUSEHOLD_TABS : PERSONAL_TABS;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col lg:flex-row">
-      <Toasts toasts={toasts} onDismiss={dismissToast} />
+    <GameEffectsProvider>
+      <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col lg:flex-row">
+        <Toasts toasts={toasts} onDismiss={dismissToast} />
 
       {/* Sidebar nav — visible on lg screens as left rail */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 bg-gray-800 border-t border-gray-700 flex justify-around py-2
@@ -268,5 +270,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </GameEffectsProvider>
   );
 }

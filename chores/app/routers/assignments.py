@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim
+from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim, CompleteResult, BadgeResult
 from database import get_connection
 from gamification import calculate_xp, update_streak, add_xp, check_and_award_badges
 from notifications import (
@@ -120,7 +120,7 @@ async def claim_instance(instance_id: int, body: InstanceClaim):
     return _row_to_instance(updated)
 
 
-@router.post("/{instance_id}/complete", response_model=ChoreInstance)
+@router.post("/{instance_id}/complete", response_model=CompleteResult)
 async def complete_instance(instance_id: int, body: InstanceComplete, bg: BackgroundTasks):
     """Mark a chore instance as completed, awarding XP and checking badges."""
     conn = get_connection()
@@ -135,11 +135,12 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
     if row["status"] == "completed":
         raise HTTPException(400, "Already completed")
 
-    # Get person's current streak for XP calculation
+    # Get person's current streak and level for XP calculation
     person = conn.execute(
         "SELECT * FROM persons WHERE entity_id = ?", (body.completed_by,)
     ).fetchone()
     streak = person["current_streak"] if person else 0
+    old_level = person["level"] if person else 1
 
     # Calculate XP with bonuses
     early = date.fromisoformat(row["due_date"]) > date.today()
@@ -180,7 +181,15 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
            WHERE ci.id = ?""",
         (instance_id,),
     ).fetchone()
-    return _row_to_instance(updated)
+    return {
+        "instance": _row_to_instance(updated),
+        "xp_awarded": xp,
+        "leveled_up": leveled_up,
+        "old_level": old_level,
+        "new_level": new_level,
+        "new_streak": new_streak,
+        "new_badges": [BadgeResult(**b) for b in new_badges],
+    }
 
 
 @router.post("/{instance_id}/skip", response_model=ChoreInstance)
