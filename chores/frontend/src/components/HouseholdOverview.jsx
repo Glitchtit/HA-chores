@@ -154,21 +154,13 @@ export default function HouseholdOverview({ persons, addToast, onSelectPerson })
                       )}
                     </div>
                   </div>
-                  {!isCompleted && (
+                  {!isCompleted && isUnclaimedClaimMode && (
                     <div className="flex gap-2 shrink-0">
-                      {isUnclaimedClaimMode && (
-                        <button
-                          onClick={() => setPickerModal({ instanceId: ci.id, action: 'claim' })}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          Claim 🙋
-                        </button>
-                      )}
                       <button
-                        onClick={() => setPickerModal({ instanceId: ci.id, action: 'complete' })}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-sm font-medium transition-colors"
+                        onClick={() => setPickerModal({ instanceId: ci.id, action: 'claim' })}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
                       >
-                        Done ✓
+                        Claim 🙋
                       </button>
                     </div>
                   )}
