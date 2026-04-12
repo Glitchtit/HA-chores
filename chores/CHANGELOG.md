@@ -1,3 +1,6 @@
+## 0.2.18
+Mobile layout: chore list rows now stack buttons below info on narrow screens.
+
 ## 0.2.17
 
 - Fix: notifications now work for devices whose tracker doesn't contain "mobile_app" in the name (e.g. device_tracker.cph2621 → notify.mobile_app_cph2621)

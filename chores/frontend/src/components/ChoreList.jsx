@@ -368,12 +368,12 @@ export default function ChoreList({ persons, addToast }) {
           {chores.map(c => (
             <div key={c.id}
               className={`bg-gray-800 rounded-lg p-4 ${!c.active ? 'opacity-50' : ''}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{c.icon}</span>
-                  <div>
-                    <div className="font-medium">{c.name}</div>
-                    <div className="flex gap-2 mt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-2xl shrink-0">{c.icon}</span>
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{c.name}</div>
+                    <div className="flex flex-wrap gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[c.difficulty]}`}>
                         {c.difficulty}
                       </span>
@@ -385,7 +385,7 @@ export default function ChoreList({ persons, addToast }) {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
                   {c.active && (
                     <button onClick={() => openAssign(c)}
                       className="p-2 hover:bg-gray-700 rounded text-sm"
