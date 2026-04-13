@@ -59,11 +59,24 @@ async def list_instances(
 
 @router.get("/today", response_model=list[ChoreInstance])
 async def today_instances(person: str | None = None):
-    """Get today's chore instances."""
+    """Get today's chore instances, including overdue ones from previous days."""
     today = date.today().isoformat()
-    return await list_instances(
-        status="pending,claimed,overdue", person=person, due_date=today
-    )
+    conn = get_connection()
+    query = """
+        SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty,
+               c.assignment_mode as chore_assignment_mode, c.xp_reward as chore_xp_reward
+        FROM chore_instances ci
+        JOIN chores c ON ci.chore_id = c.id
+        WHERE ci.status IN ('pending', 'claimed', 'overdue')
+          AND ci.due_date <= ?
+    """
+    params: list = [today]
+    if person:
+        query += " AND (ci.assigned_to = ? OR ci.assigned_to IS NULL)"
+        params.append(person)
+    query += " ORDER BY ci.due_date ASC, c.name ASC"
+    rows = conn.execute(query, params).fetchall()
+    return [_row_to_instance(r) for r in rows]
 
 
 @router.post("/", response_model=ChoreInstance, status_code=201)

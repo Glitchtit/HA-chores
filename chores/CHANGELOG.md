@@ -1,3 +1,6 @@
+## 0.2.54
+Overdue chores from previous days now appear in "Today's Chores". The `/assignments/today` endpoint now queries `due_date <= today` instead of an exact date match, so any pending/claimed/overdue instance from past days surfaces alongside today's chores (sorted oldest-first).
+
 ## 0.2.53
 Change Done button emoji from ❓ to ❔ (white/visible on orange background).
 
