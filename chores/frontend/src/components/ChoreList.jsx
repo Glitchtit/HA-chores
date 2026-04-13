@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as api from '../api';
+import { useGameEffects } from './effects/GameEffects';
 
 const DIFFICULTY_COLORS = {
   easy: 'bg-emerald-600',
@@ -26,6 +27,8 @@ export default function ChoreList({ persons, activePerson, addToast }) {
   const [chores, setChores] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
+  const { triggerEffects } = useGameEffects();
+  const doneButtonRefs = useRef({});
   const [form, setForm] = useState({
     name: '', description: '', icon: '🧹', xp_reward: 10,
     difficulty: 'medium', recurrence: '', estimated_minutes: '',
@@ -117,13 +120,20 @@ export default function ChoreList({ persons, activePerson, addToast }) {
     if (!confirm(`Mark "${chore.name}" as done right now?`)) return;
     try {
       const today = new Date().toISOString().slice(0, 10);
+      const statsBeforePromise = api.getPersonStats(activePerson).catch(() => null);
       const instance = await api.createInstance({
         chore_id: chore.id,
         due_date: today,
         assigned_to: activePerson,
       });
-      await api.completeInstance(instance.id, activePerson);
-      addToast(`✅ +${chore.xp_reward} XP – ${chore.name} done!`, 'success');
+      const [result, statsBefore] = await Promise.all([
+        api.completeInstance(instance.id, activePerson),
+        statsBeforePromise,
+      ]);
+      addToast(`✅ +${result.xp_awarded} XP${result.leveled_up ? ' · LEVEL UP! 🎉' : ''}`, 'success');
+      const oldXP = statsBefore ? statsBefore.xp_total % 100 : 0;
+      const newXP = ((statsBefore ? statsBefore.xp_total : 0) + result.xp_awarded) % 100;
+      triggerEffects(result, doneButtonRefs.current[chore.id], null, oldXP, newXP);
     } catch {
       addToast('Failed to record chore', 'error');
     }
@@ -406,6 +416,7 @@ export default function ChoreList({ persons, activePerson, addToast }) {
               <div className="flex gap-2">
                 {c.active && (
                   <button onClick={() => handleQuickDone(c)}
+                    ref={el => { doneButtonRefs.current[c.id] = el; }}
                     className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 rounded-lg text-base font-medium transition-colors"
                     title="Quick done – mark as completed now">
                     ✅ Done
