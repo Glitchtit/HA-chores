@@ -1,3 +1,6 @@
+## 0.2.59
+Reduce golden sparkle glow size by half — peak box-shadow reduced from 16px/28px to 8px/14px for a subtler shimmer.
+
 ## 0.2.58
 Replace dizzying rainbow border on powered-up chore cards and power-up panels with a calm golden sparkle/glitter effect. The new animation cycles through amber and gold tones only, with a varying box-shadow that simulates light catching glitter. Speed reduced from 2.5 s to 3.5 s with ease-in-out timing.
 
