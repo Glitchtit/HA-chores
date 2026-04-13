@@ -1,3 +1,6 @@
+## 0.2.56
+Fix: overdue unclaimed chores in "Today's Chores" now correctly show the "Claim 🙋" button instead of jumping straight to "Done ❔". The claim condition previously only checked `status === 'pending'`; overdue chores have `status === 'overdue'`, so both are now accepted.
+
 ## 0.2.55
 Fix timezone bug: chores created around midnight were getting yesterday's date because the add-on container runs in UTC. At startup the app now resolves the correct timezone using this priority order: 1) `TZ` env var, 2) `timezone` field in `/data/options.json` (add-on config option), 3) HA Core `/api/config` `time_zone` field via Supervisor API. The resolved timezone is applied via `os.environ["TZ"]` + `time.tzset()` so all `date.today()` and `datetime.now()` calls throughout the app use local time. A `timezone` option (e.g. `"Europe/Helsinki"`) is now also exposed in the add-on config schema for manual override.
 
