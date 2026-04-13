@@ -385,54 +385,54 @@ export default function ChoreList({ persons, activePerson, addToast }) {
           {chores.map(c => (
             <div key={c.id}
               className={`bg-gray-800 rounded-lg p-4 ${!c.active ? 'opacity-50' : ''}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-2xl shrink-0">{c.icon}</span>
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{c.name}</div>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[c.difficulty]}`}>
-                        {c.difficulty}
-                      </span>
-                      <span className="text-xs text-gray-500">{c.xp_reward} XP</span>
-                      {c.recurrence && (
-                        <span className="text-xs text-blue-400">🔄 {c.recurrence}</span>
-                      )}
-                      <span className="text-xs text-gray-500">{c.assignment_mode}</span>
-                    </div>
+              {/* Chore info */}
+              <div className="flex items-center gap-3 min-w-0 mb-3">
+                <span className="text-3xl shrink-0">{c.icon}</span>
+                <div className="min-w-0">
+                  <div className="font-semibold text-base truncate">{c.name}</div>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[c.difficulty]}`}>
+                      {c.difficulty}
+                    </span>
+                    <span className="text-xs text-gray-500">{c.xp_reward} XP</span>
+                    {c.recurrence && (
+                      <span className="text-xs text-blue-400">🔄 {c.recurrence}</span>
+                    )}
+                    <span className="text-xs text-gray-500">{c.assignment_mode}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0 self-end sm:self-auto">
-                  {c.active && (
-                    <button onClick={() => handleQuickDone(c)}
-                      className="p-2 hover:bg-green-800 rounded text-sm"
-                      title="Quick done – mark as completed now">
-                      ✅
-                    </button>
-                  )}
-                  {c.active && (
-                    <button onClick={() => openAssign(c)}
-                      className="p-2 hover:bg-gray-700 rounded text-sm"
-                      title="Assign to person">
-                      👤
-                    </button>
-                  )}
-                  <button onClick={() => openEdit(c)}
-                    className="p-2 hover:bg-gray-700 rounded text-sm"
-                    title="Edit">
-                    ✏️
+              </div>
+              {/* Action buttons row */}
+              <div className="flex gap-2">
+                {c.active && (
+                  <button onClick={() => handleQuickDone(c)}
+                    className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 rounded-lg text-base font-medium transition-colors"
+                    title="Quick done – mark as completed now">
+                    ✅ Done
                   </button>
-                  <button onClick={() => handleToggleActive(c)}
-                    className="p-2 hover:bg-gray-700 rounded text-sm"
-                    title={c.active ? 'Deactivate' : 'Activate'}>
-                    {c.active ? '⏸️' : '▶️'}
+                )}
+                {c.active && (
+                  <button onClick={() => openAssign(c)}
+                    className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-base font-medium transition-colors"
+                    title="Assign to person">
+                    👤 Assign
                   </button>
-                  <button onClick={() => handleDelete(c.id)}
-                    className="p-2 hover:bg-gray-700 rounded text-sm text-red-400"
-                    title="Delete">
-                    🗑️
-                  </button>
-                </div>
+                )}
+                <button onClick={() => openEdit(c)}
+                  className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-base font-medium transition-colors"
+                  title="Edit">
+                  ✏️ Edit
+                </button>
+                <button onClick={() => handleToggleActive(c)}
+                  className="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-base transition-colors"
+                  title={c.active ? 'Deactivate' : 'Activate'}>
+                  {c.active ? '⏸️' : '▶️'}
+                </button>
+                <button onClick={() => handleDelete(c.id)}
+                  className="py-2.5 px-4 bg-gray-700 hover:bg-red-900 rounded-lg text-base text-red-400 transition-colors"
+                  title="Delete">
+                  🗑️
+                </button>
               </div>
             </div>
           ))}
