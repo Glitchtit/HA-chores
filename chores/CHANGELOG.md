@@ -1,3 +1,6 @@
+## 0.2.57
+Fix: notifications are no longer sent on app restart/startup. A `_is_startup` flag suppresses all notification dispatch (overdue, reminders, streak warnings, weekly summary) during the first scheduler loop iteration. DB state updates (instance generation, overdue marking) still run normally on startup.
+
 ## 0.2.56
 Fix: overdue unclaimed chores in "Today's Chores" now correctly show the "Claim 🙋" button instead of jumping straight to "Done ❔". The claim condition previously only checked `status === 'pending'`; overdue chores have `status === 'overdue'`, so both are now accepted.
 
