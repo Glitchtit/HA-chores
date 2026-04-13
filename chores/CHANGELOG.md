@@ -1,3 +1,6 @@
+## 0.2.58
+Replace dizzying rainbow border on powered-up chore cards and power-up panels with a calm golden sparkle/glitter effect. The new animation cycles through amber and gold tones only, with a varying box-shadow that simulates light catching glitter. Speed reduced from 2.5 s to 3.5 s with ease-in-out timing.
+
 ## 0.2.57
 Fix: notifications are no longer sent on app restart/startup. A `_is_startup` flag suppresses all notification dispatch (overdue, reminders, streak warnings, weekly summary) during the first scheduler loop iteration. DB state updates (instance generation, overdue marking) still run normally on startup.
 
