@@ -315,7 +315,7 @@ function PowerUpEarnedCard({ powerup, remaining, onDone }) {
         className={`relative ${exiting ? 'animate-powerup-exit' : 'animate-powerup-enter'}`}
         style={{ width: 'min(340px, 90vw)' }}
       >
-        <div className="animate-rainbow-shimmer relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl p-5 text-center">
+        <div className="animate-golden-sparkle relative overflow-hidden rounded-2xl bg-gray-900 shadow-2xl p-5 text-center">
           <div className="text-xs font-bold text-purple-300 uppercase tracking-widest mb-2">
             ⚡ Power-up Unlocked!
           </div>

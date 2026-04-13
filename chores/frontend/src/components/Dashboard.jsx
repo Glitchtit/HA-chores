@@ -192,7 +192,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
           </h3>
           <div className="space-y-2">
             {activePowerups.map(p => (
-              <div key={p.id} className="animate-rainbow-shimmer rounded-lg p-3 flex items-center gap-3">
+              <div key={p.id} className="animate-golden-sparkle rounded-lg p-3 flex items-center gap-3">
                 <span className="text-2xl flex-shrink-0">{p.icon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-white text-sm">{p.name}</div>
@@ -232,7 +232,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                 <div
                   key={ci.id}
                   className={`rounded-lg p-4 flex items-center justify-between transition-colors ${
-                    activePowerup ? 'animate-rainbow-shimmer' : 'bg-gray-800'
+                    activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800'
                   } ${ci.status === 'overdue' ? 'border border-red-500/50' : ''} ${
                     completingId === ci.id ? 'animate-complete-flash' : ''
                   }`}
@@ -304,7 +304,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
               const activePowerup = getApplicablePowerup(c.difficulty);
               return (
                 <div key={c.id} className={`rounded-lg p-4 flex items-center justify-between ${
-                  activePowerup ? 'animate-rainbow-shimmer' : 'bg-gray-800'
+                  activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800'
                 }`}>
                   <div className="flex items-center gap-3">
                     <div className="relative">
