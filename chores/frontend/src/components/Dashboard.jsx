@@ -292,52 +292,96 @@ export default function Dashboard({ activePerson, persons, addToast }) {
         )}
       </div>
 
-      {/* You could — optional one-time chores */}
-      {optionalChores.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            💡 You could
-            <span className="text-sm font-normal text-gray-500">({optionalChores.length})</span>
-          </h3>
-          <div className="space-y-2">
-            {optionalChores.map(c => {
-              const activePowerup = getApplicablePowerup(c.difficulty);
-              return (
-                <div key={c.id} className={`rounded-lg p-4 flex items-center justify-between ${
-                  activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800'
-                }`}>
-                  <div className="flex items-center gap-3">
-                    <div className="relative">
-                      <span className="text-2xl">{c.icon || '🧹'}</span>
-                      {activePowerup && <span className="absolute -top-1 -right-1 text-xs">⚡</span>}
-                    </div>
-                    <div>
-                      <div className="font-medium">{c.name}</div>
-                      <div className="text-xs text-gray-500 flex gap-1.5 items-center">
-                        <span className="capitalize">{c.difficulty}</span>
-                        <span>·</span>
-                        {activePowerup ? (
-                          <span className="text-yellow-400 font-black text-sm">
-                            ✨ ~{Math.round(c.xp_reward * activePowerup.multiplier)} XP
-                          </span>
-                        ) : (
-                          <span>{c.xp_reward} XP</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleAdd(c)}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
-                  >
-                    Add
-                  </button>
+      {/* You could — easy/medium one-time chores as clickable tiles */}
+      {(() => {
+        const easyMedChores = optionalChores.filter(c => c.difficulty !== 'hard');
+        const hardChores    = optionalChores.filter(c => c.difficulty === 'hard');
+        return (
+          <>
+            {easyMedChores.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  💡 You could
+                  <span className="text-sm font-normal text-gray-500">({easyMedChores.length})</span>
+                </h3>
+                <div className="grid grid-cols-3 gap-2">
+                  {easyMedChores.map(c => {
+                    const activePowerup = getApplicablePowerup(c.difficulty);
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => handleAdd(c)}
+                        className={`rounded-lg p-3 flex flex-col items-center gap-1 text-center transition-colors hover:brightness-110 active:scale-95 ${
+                          activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800 hover:bg-gray-700'
+                        }`}
+                      >
+                        <div className="relative">
+                          <span className="text-2xl">{c.icon || '🧹'}</span>
+                          {activePowerup && <span className="absolute -top-1 -right-1 text-xs">⚡</span>}
+                        </div>
+                        <div className="text-xs font-medium leading-tight line-clamp-2">{c.name}</div>
+                        <div className="text-xs">
+                          {activePowerup ? (
+                            <span className="text-yellow-400 font-bold">✨ {Math.round(c.xp_reward * activePowerup.multiplier)} XP</span>
+                          ) : (
+                            <span className="text-gray-500">{c.xp_reward} XP</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+              </div>
+            )}
+
+            {hardChores.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  💪 Feeling extra?
+                  <span className="text-sm font-normal text-gray-500">({hardChores.length})</span>
+                </h3>
+                <div className="space-y-2">
+                  {hardChores.map(c => {
+                    const activePowerup = getApplicablePowerup(c.difficulty);
+                    return (
+                      <div key={c.id} className={`rounded-lg p-4 flex items-center justify-between ${
+                        activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800'
+                      }`}>
+                        <div className="flex items-center gap-3">
+                          <div className="relative">
+                            <span className="text-2xl">{c.icon || '🧹'}</span>
+                            {activePowerup && <span className="absolute -top-1 -right-1 text-xs">⚡</span>}
+                          </div>
+                          <div>
+                            <div className="font-medium">{c.name}</div>
+                            <div className="text-xs text-gray-500 flex gap-1.5 items-center">
+                              <span className="capitalize">{c.difficulty}</span>
+                              <span>·</span>
+                              {activePowerup ? (
+                                <span className="text-yellow-400 font-black text-sm">
+                                  ✨ ~{Math.round(c.xp_reward * activePowerup.multiplier)} XP
+                                </span>
+                              ) : (
+                                <span>{c.xp_reward} XP</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleAdd(c)}
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
