@@ -231,25 +231,24 @@ export default function Dashboard({ activePerson, persons, addToast }) {
               return (
                 <div
                   key={ci.id}
-                  className={`rounded-lg p-4 flex flex-col gap-3 transition-colors ${
+                  className={`rounded-lg p-4 flex items-center justify-between transition-colors ${
                     activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800'
                   } ${ci.status === 'overdue' ? 'border border-red-500/50' : ''} ${
                     completingId === ci.id ? 'animate-complete-flash' : ''
                   }`}
                 >
-                  {/* Chore info row */}
                   <div className="flex items-center gap-3">
                     <div className="relative">
-                      <span className="text-3xl">{ci.chore_icon || '🧹'}</span>
+                      <span className="text-2xl">{ci.chore_icon || '🧹'}</span>
                       {activePowerup && (
                         <span className="absolute -top-1 -right-1 text-xs">⚡</span>
                       )}
                     </div>
                     <div>
-                      <div className="font-semibold text-base">{ci.chore_name}</div>
+                      <div className="font-medium">{ci.chore_name}</div>
                       <div className="text-xs text-gray-500 flex gap-2 items-center">
                         {ci.status === 'overdue' && <span className="text-red-400">Overdue ·</span>}
-                        <span className="capitalize">{ci.chore_difficulty}</span>
+                        <span>{ci.chore_difficulty}</span>
                         {activePowerup && (
                           <span className="text-yellow-400 font-black text-sm">
                             ✨ ~{Math.round((ci.chore_xp_reward ?? 0) * activePowerup.multiplier)} XP
@@ -261,33 +260,31 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                       </div>
                     </div>
                   </div>
-
-                  {/* Action button row */}
-                  {ci.status !== 'completed' && (
-                    <div className="flex gap-2">
-                      {ci.chore_assignment_mode === 'claim' && ['pending', 'overdue'].includes(ci.status) && ci.assigned_to !== activePerson ? (
+                  <div>
+                    {ci.status === 'completed' ? null
+                      : ci.chore_assignment_mode === 'claim' && ['pending', 'overdue'].includes(ci.status) && ci.assigned_to !== activePerson ? (
                         <button
                           onClick={() => handleClaim(ci.id)}
-                          className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg font-semibold text-base transition-colors"
+                          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
                         >
-                          🙋 Claim
+                          Claim 🙋
                         </button>
                       ) : ci.chore_assignment_mode === 'claim' && ci.status === 'claimed' && ci.assigned_to !== activePerson ? (
-                        <span className="flex-1 py-3 text-center text-sm text-gray-500 bg-gray-700 rounded-lg">
-                          Claimed by someone else
+                        <span className="px-3 py-2 text-xs text-gray-500 bg-gray-700 rounded-lg">
+                          Claimed
                         </span>
                       ) : (
                         <button
                           ref={el => { doneButtonRefs.current[ci.id] = el; }}
                           onClick={() => handleComplete(ci.id)}
                           disabled={completingId === ci.id}
-                          className="flex-1 py-3 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 rounded-lg font-semibold text-base transition-colors"
+                          className="px-4 py-2 bg-orange-600 hover:bg-orange-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
                         >
-                          {completingId === ci.id ? '⏳ Completing…' : '❔ Done'}
+                          {completingId === ci.id ? '⏳' : 'Done ❔'}
                         </button>
-                      )}
-                    </div>
-                  )}
+                      )
+                    }
+                  </div>
                 </div>
               );
             })}

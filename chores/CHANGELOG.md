@@ -1,3 +1,6 @@
+## 0.2.63
+Revert v0.2.62 Dashboard changes (wrong component). Apply mobile-friendly layout to the Chores management list instead: larger icon (text-3xl), chore info on top, action buttons (Done, Assign, Edit, pause/activate, delete) in a full-width row below each card with bigger tap targets (py-2.5, flex-1 where appropriate).
+
 ## 0.2.62
 Improve mobile usability of Today's Chores list: cards now stack vertically — chore info (larger icon, name, difficulty) on top, action button full-width below. Buttons are taller (py-3, flex-1) and use larger text for easier tapping on mobile.
 
