@@ -142,6 +142,14 @@ def generate_instances(days_ahead: int = 7) -> int:
             if existing:
                 continue
 
+            # Purge stale overdue/pending instances from previous cycles before
+            # creating the new one — prevents old missed entries piling up.
+            conn.execute(
+                """DELETE FROM chore_instances
+                   WHERE chore_id = ? AND due_date < ? AND status IN ('overdue', 'pending')""",
+                (chore["id"], today.isoformat()),
+            )
+
             # Determine assignee
             assigned_to = None
             if chore["assignment_mode"] == "rotation" and rotation_order:
