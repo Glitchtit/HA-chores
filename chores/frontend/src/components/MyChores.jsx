@@ -1,10 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import * as api from '../api';
+import { useGameEffects } from './effects/GameEffects';
 
 export default function MyChores({ activePerson, persons, addToast }) {
   const [instances, setInstances] = useState([]);
   const [filter, setFilter] = useState('active');
   const [loading, setLoading] = useState(true);
+  const { triggerEffects } = useGameEffects();
+  const doneButtonRefs = useRef({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -30,8 +33,15 @@ export default function MyChores({ activePerson, persons, addToast }) {
 
   const handleComplete = async (id) => {
     try {
-      await api.completeInstance(id, activePerson);
-      addToast('✅ Chore completed! +XP', 'success');
+      const statsBeforePromise = activePerson ? api.getPersonStats(activePerson).catch(() => null) : Promise.resolve(null);
+      const [result, statsBefore] = await Promise.all([
+        api.completeInstance(id, activePerson),
+        statsBeforePromise,
+      ]);
+      addToast(`✅ +${result.xp_awarded} XP${result.leveled_up ? ' · LEVEL UP! 🎉' : ''}`, 'success');
+      const oldXP = statsBefore ? statsBefore.xp_total % 100 : 0;
+      const newXP = ((statsBefore ? statsBefore.xp_total : 0) + result.xp_awarded) % 100;
+      triggerEffects(result, doneButtonRefs.current[id], null, oldXP, newXP);
       load();
     } catch {
       addToast('Failed to complete', 'error');
@@ -143,6 +153,7 @@ export default function MyChores({ activePerson, persons, addToast }) {
                       </button>
                     )}
                     <button
+                      ref={el => { doneButtonRefs.current[ci.id] = el; }}
                       onClick={() => handleComplete(ci.id)}
                       className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-medium"
                     >

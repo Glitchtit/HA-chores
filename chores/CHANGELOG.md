@@ -1,3 +1,6 @@
+## 0.2.64
+Game effects (floating XP, confetti, level-up modal, badge modal, power-up modal) now trigger from the Chores menu quick-done button and the My Chores done button, identical to the Dashboard. Person stats are fetched in parallel with completion so XP progress is calculated correctly.
+
 ## 0.2.63
 Revert v0.2.62 Dashboard changes (wrong component). Apply mobile-friendly layout to the Chores management list instead: larger icon (text-3xl), chore info on top, action buttons (Done, Assign, Edit, pause/activate, delete) in a full-width row below each card with bigger tap targets (py-2.5, flex-1 where appropriate).
 
