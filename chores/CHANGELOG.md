@@ -1,3 +1,6 @@
+## 0.2.61
+Redesign optional chores section on dashboard: easy and medium one-time chores now appear as a compact 3-column clickable tile grid under "💡 You could" — tap the tile to add the chore, no separate button needed. Hard one-time chores move to a new "💪 Feeling extra?" section below, keeping the original 1-column row layout with an explicit Add button. Both sections retain the golden sparkle border and ⚡ XP boost indicator when a power-up applies.
+
 ## 0.2.60
 Slow golden sparkle animation from 3.5 s to 7 s for a more subtle, less distracting effect.
 
