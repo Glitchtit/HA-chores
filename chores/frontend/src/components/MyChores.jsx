@@ -120,54 +120,50 @@ export default function MyChores({ activePerson, persons, addToast }) {
                 ci.status === 'overdue' ? 'border border-red-500/50' : ''
               }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <span className="text-2xl flex-shrink-0">{ci.chore_icon || '🧹'}</span>
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{ci.chore_name}</div>
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {statusBadge(ci.status)}
-                      <span className="text-xs text-gray-500">📅 {ci.due_date}</span>
-                      {ci.assigned_to && (
-                        <span className="text-xs text-gray-400">
-                          👤 {personName(ci.assigned_to)}
-                        </span>
-                      )}
-                      {ci.xp_awarded > 0 && (
-                        <span className="text-xs text-amber-400">+{ci.xp_awarded} XP</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                {ci.status !== 'completed' && ci.status !== 'skipped' && (
-                  <div className="flex gap-1 flex-shrink-0 ml-2">
-                    {(!ci.assigned_to || ci.status === 'pending') && ci.assigned_to !== activePerson && (
-                      <button
-                        onClick={() => handleClaim(ci.id)}
-                        className="px-2 py-1.5 bg-blue-600 hover:bg-blue-500 rounded text-xs font-medium"
-                        title="Claim"
-                      >
-                        🙋
-                      </button>
+              <div className="flex items-start gap-3">
+                <span className="text-3xl flex-shrink-0 mt-0.5">{ci.chore_icon || '🧹'}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{ci.chore_name}</div>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {statusBadge(ci.status)}
+                    <span className="text-xs text-gray-500">📅 {ci.due_date}</span>
+                    {ci.assigned_to && (
+                      <span className="text-xs text-gray-400">
+                        👤 {personName(ci.assigned_to)}
+                      </span>
                     )}
-                    <button
-                      ref={el => { doneButtonRefs.current[ci.id] = el; }}
-                      onClick={() => handleComplete(ci.id)}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded text-xs font-medium"
-                    >
-                      Done ✓
-                    </button>
-                    <button
-                      onClick={() => handleSkip(ci.id)}
-                      className="px-2 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs"
-                      title="Skip"
-                    >
-                      ⏭️
-                    </button>
+                    {ci.xp_awarded > 0 && (
+                      <span className="text-xs text-amber-400">+{ci.xp_awarded} XP</span>
+                    )}
                   </div>
-                )}
+
+                  {/* Actions */}
+                  {ci.status !== 'completed' && ci.status !== 'skipped' && (
+                    <div className="flex gap-2 mt-3">
+                      {(!ci.assigned_to || ci.status === 'pending') && ci.assigned_to !== activePerson && (
+                        <button
+                          onClick={() => handleClaim(ci.id)}
+                          className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-lg text-base font-medium transition-colors"
+                        >
+                          🙋 Claim
+                        </button>
+                      )}
+                      <button
+                        ref={el => { doneButtonRefs.current[ci.id] = el; }}
+                        onClick={() => handleComplete(ci.id)}
+                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-base font-medium transition-colors"
+                      >
+                        ✅ Done
+                      </button>
+                      <button
+                        onClick={() => handleSkip(ci.id)}
+                        className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-base font-medium transition-colors"
+                      >
+                        ⏭️ Skip
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}

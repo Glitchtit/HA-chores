@@ -1,3 +1,6 @@
+## 0.2.65
+My Chores mobile-friendly button layout: icon enlarged (text-3xl), info on top, action buttons (🙋 Claim, ✅ Done, ⏭️ Skip) in a full-width row below with larger tap targets. Skip button now shows text label.
+
 ## 0.2.64
 Game effects (floating XP, confetti, level-up modal, badge modal, power-up modal) now trigger from the Chores menu quick-done button and the My Chores done button, identical to the Dashboard. Person stats are fetched in parallel with completion so XP progress is calculated correctly.
 
