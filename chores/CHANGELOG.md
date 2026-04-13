@@ -1,3 +1,6 @@
+## 0.2.66
+When a new scheduled instance is generated for a chore, any stale overdue or pending instances from previous cycles are automatically removed. This prevents old uncompleted entries from accumulating indefinitely.
+
 ## 0.2.65
 My Chores mobile-friendly button layout: icon enlarged (text-3xl), info on top, action buttons (🙋 Claim, ✅ Done, ⏭️ Skip) in a full-width row below with larger tap targets. Skip button now shows text label.
 
