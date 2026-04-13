@@ -1,3 +1,6 @@
+## 0.2.55
+Fix timezone bug: chores created around midnight were getting yesterday's date because the add-on container runs in UTC. At startup the app now resolves the correct timezone using this priority order: 1) `TZ` env var, 2) `timezone` field in `/data/options.json` (add-on config option), 3) HA Core `/api/config` `time_zone` field via Supervisor API. The resolved timezone is applied via `os.environ["TZ"]` + `time.tzset()` so all `date.today()` and `datetime.now()` calls throughout the app use local time. A `timezone` option (e.g. `"Europe/Helsinki"`) is now also exposed in the add-on config schema for manual override.
+
 ## 0.2.54
 Overdue chores from previous days now appear in "Today's Chores". The `/assignments/today` endpoint now queries `due_date <= today` instead of an exact date match, so any pending/claimed/overdue instance from past days surfaces alongside today's chores (sorted oldest-first).
 
