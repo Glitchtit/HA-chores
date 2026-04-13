@@ -1,3 +1,6 @@
+## 0.2.62
+Improve mobile usability of Today's Chores list: cards now stack vertically — chore info (larger icon, name, difficulty) on top, action button full-width below. Buttons are taller (py-3, flex-1) and use larger text for easier tapping on mobile.
+
 ## 0.2.61
 Redesign optional chores section on dashboard: easy and medium one-time chores now appear as a compact 3-column clickable tile grid under "💡 You could" — tap the tile to add the chore, no separate button needed. Hard one-time chores move to a new "💪 Feeling extra?" section below, keeping the original 1-column row layout with an explicit Add button. Both sections retain the golden sparkle border and ⚡ XP boost indicator when a power-up applies.
 
