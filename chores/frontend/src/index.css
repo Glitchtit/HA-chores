@@ -164,7 +164,7 @@
 .animate-golden-sparkle {
   border-width: 2px;
   border-style: solid;
-  animation: golden-sparkle 3.5s ease-in-out infinite;
+  animation: golden-sparkle 7s ease-in-out infinite;
 }
 
 /* Powerup earned card entrance */

@@ -1,3 +1,6 @@
+## 0.2.60
+Slow golden sparkle animation from 3.5 s to 7 s for a more subtle, less distracting effect.
+
 ## 0.2.59
 Reduce golden sparkle glow size by half — peak box-shadow reduced from 16px/28px to 8px/14px for a subtler shimmer.
 
