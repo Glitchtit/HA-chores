@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 import os
+import time
 import logging
 import httpx
 
@@ -14,6 +15,21 @@ HA_URL = "http://supervisor/core"
 
 def _headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {SUPERVISOR_TOKEN}"}
+
+
+async def get_ha_timezone() -> str | None:
+    """Fetch the Home Assistant configured timezone from the Supervisor."""
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                f"{SUPERVISOR_URL}/core/api/config",
+                headers=_headers(),
+            )
+            resp.raise_for_status()
+            return resp.json().get("time_zone")
+    except Exception as e:
+        logger.warning("Could not fetch HA timezone: %s", e)
+        return None
 
 
 async def get_persons() -> list[dict]:

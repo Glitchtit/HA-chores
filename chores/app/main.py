@@ -25,6 +25,7 @@ from scheduler import (
     check_perfect_week,
 )
 from routers.persons import sync_persons_from_ha
+from ha_client import get_ha_timezone
 from notifications import (
     notify_chore_overdue,
     notify_streak_warning,
@@ -190,6 +191,30 @@ async def lifespan(app: FastAPI):
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
     logger.info("Chores API v%s starting...", VERSION)
+
+    # Apply timezone from HA config so date.today() returns local time
+    import time as _time
+    tz = os.environ.get("TZ")
+    if not tz:
+        # Check add-on options first (/data/options.json written by Supervisor)
+        try:
+            options_path = os.environ.get("OPTIONS_PATH", "/data/options.json")
+            if os.path.exists(options_path):
+                with open(options_path) as f:
+                    tz = json.load(f).get("timezone") or None
+        except Exception:
+            tz = None
+    if not tz:
+        try:
+            tz = await get_ha_timezone()
+        except Exception:
+            tz = None
+    if tz:
+        os.environ["TZ"] = tz
+        _time.tzset()
+        logger.info("Timezone set to %s", tz)
+    else:
+        logger.warning("Could not determine timezone; using system default (may be UTC)")
 
     # Initialize database
     db_tables = database.initialize()

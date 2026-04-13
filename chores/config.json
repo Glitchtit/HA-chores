@@ -1,6 +1,6 @@
 {
   "name": "Chores",
-  "version": "0.2.54",
+  "version": "0.2.55",
   "slug": "ha_chores",
   "description": "Gamified household chore management with HA integration",
   "url": "https://github.com/Glitchtit/HA-chores",
@@ -26,9 +26,11 @@
     "share:rw"
   ],
   "options": {
-    "debug": false
+    "debug": false,
+    "timezone": ""
   },
   "schema": {
-    "debug": "bool?"
+    "debug": "bool?",
+    "timezone": "str?"
   }
 }
