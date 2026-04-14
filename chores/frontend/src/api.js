@@ -54,6 +54,10 @@ export const getPersonBadges = (entityId) =>
   api.get(`/gamification/person/${entityId}/badges`).then(r => r.data);
 export const getPersonStats = (entityId) =>
   api.get(`/gamification/person/${entityId}/stats`).then(r => r.data);
+export const getMonthEndCheck = (entityId) =>
+  api.get(`/gamification/month-end-check/${entityId}`).then(r => r.data);
+export const markMonthEndSeen = (entityId) =>
+  api.post(`/gamification/month-end-seen/${entityId}`).then(r => r.data);
 
 // ── Calendar ────────────────────────────────────────────────────────────────
 export const getCalendarEvents = (start, end) =>
