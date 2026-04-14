@@ -1,3 +1,6 @@
+## 0.2.68
+Power-up names and descriptions updated to use emoji difficulty labels (❤️ / 💖 / ❤️‍🔥) instead of text ("Easy", "Medium", "Hard").
+
 ## 0.2.67
 Difficulty labels changed from text ("Easy", "Medium", "Hard") to emoji (❤️, 💖, ❤️‍🔥) to make chore difficulty feel inviting rather than discouraging.
 
