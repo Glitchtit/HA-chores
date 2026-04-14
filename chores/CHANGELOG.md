@@ -1,3 +1,6 @@
+## 0.2.72
+Fix: chores that are set as a follow-up of another chore are now hidden from the "You could" and "Feeling extra?" suggestion grids. They are meant to be triggered automatically, not picked manually.
+
 ## 0.2.71
 Fix: overdue chores in Today's chores can now be claimed. Previously pressing "Claim" on an overdue instance returned an error because the backend only accepted pending status.
 

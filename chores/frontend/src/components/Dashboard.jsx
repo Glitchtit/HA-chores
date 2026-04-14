@@ -42,7 +42,8 @@ export default function Dashboard({ activePerson, persons, addToast }) {
       setStats(personStats);
       setActivePowerups(powerups);
       const scheduledIds = new Set(chores.map(c => c.chore_id));
-      setOptionalChores(allChores.filter(c => !c.recurrence && !scheduledIds.has(c.id)));
+      const followupIds = new Set(allChores.map(c => c.followup_chore_id).filter(Boolean));
+      setOptionalChores(allChores.filter(c => !c.recurrence && !scheduledIds.has(c.id) && !followupIds.has(c.id)));
     } catch { /* ignore */ }
     setLoading(false);
   }, [activePerson]);
