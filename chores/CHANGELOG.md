@@ -1,3 +1,6 @@
+## 0.2.69
+Monthly leaderboard: the leaderboard now shows XP earned in the current calendar month (instead of all-time totals). After month-end, the next time each person opens the app they see a full-screen podium overlay announcing final placements for the finished month — similar in style to the level-up announcement. The overlay is per-person and dismisses independently.
+
 ## 0.2.68
 Power-up names and descriptions updated to use emoji difficulty labels (❤️ / 💖 / ❤️‍🔥) instead of text ("Easy", "Medium", "Hard").
 

@@ -170,6 +170,7 @@ class LeaderboardEntry(BaseModel):
     name: str
     avatar_url: str
     xp_total: int
+    xp_month: int
     level: int
     current_streak: int
     rank: int
@@ -178,7 +179,22 @@ class LeaderboardEntry(BaseModel):
 
 class Leaderboard(BaseModel):
     entries: list[LeaderboardEntry]
-    period: str = "all_time"
+    period: str  # "YYYY-MM" for monthly
+
+
+class MonthEndEntry(BaseModel):
+    entity_id: str
+    name: str
+    avatar_url: str
+    xp_month: int
+    rank: int
+
+
+class MonthEndCheck(BaseModel):
+    pending: bool
+    month: str         # "YYYY-MM" or ""
+    month_name: str    # "April 2026" or ""
+    entries: list[MonthEndEntry]
 
 
 # ── Config ───────────────────────────────────────────────────────────────────

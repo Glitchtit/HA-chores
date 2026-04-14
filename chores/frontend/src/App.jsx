@@ -7,7 +7,7 @@ import Leaderboard from './components/Leaderboard';
 import Achievements from './components/Achievements';
 import Settings from './components/Settings';
 import HouseholdOverview from './components/HouseholdOverview';
-import { GameEffectsProvider } from './components/effects/GameEffects';
+import { GameEffectsProvider, useGameEffects } from './components/effects/GameEffects';
 
 const PERSONAL_TABS = [
   { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
@@ -44,6 +44,24 @@ function Toasts({ toasts, onDismiss }) {
       ))}
     </div>
   );
+}
+
+function MonthEndChecker({ activePerson }) {
+  const { triggerMonthEnd } = useGameEffects();
+
+  useEffect(() => {
+    if (!activePerson) return;
+    api.getMonthEndCheck(activePerson).then(data => {
+      if (data.pending) {
+        triggerMonthEnd({
+          ...data,
+          onSeen: () => api.markMonthEndSeen(activePerson).catch(() => {}),
+        });
+      }
+    }).catch(() => {});
+  }, [activePerson]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+  return null;
 }
 
 export default function App() {
@@ -185,6 +203,7 @@ export default function App() {
 
   return (
     <GameEffectsProvider>
+      <MonthEndChecker activePerson={activePerson} />
       <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col lg:flex-row">
         <Toasts toasts={toasts} onDismiss={dismissToast} />
 

@@ -1,6 +1,20 @@
 import { useState, useEffect } from 'react';
 import * as api from '../api';
 
+const MONTH_NAMES = [
+  '', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function periodLabel(period) {
+  try {
+    const [year, month] = period.split('-');
+    return `${MONTH_NAMES[parseInt(month)]} ${year}`;
+  } catch {
+    return period;
+  }
+}
+
 export default function Leaderboard() {
   const [leaderboard, setLeaderboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,10 +38,14 @@ export default function Leaderboard() {
 
   const medal = (rank) => rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
   const podiumHeight = (rank) => rank === 1 ? 'h-28' : rank === 2 ? 'h-20' : 'h-14';
+  const label = leaderboard.period ? periodLabel(leaderboard.period) : '';
 
   return (
     <div className="max-w-lg mx-auto space-y-4">
-      <h2 className="text-lg font-semibold">🏆 Leaderboard</h2>
+      <div>
+        <h2 className="text-lg font-semibold">🏆 Leaderboard</h2>
+        {label && <p className="text-sm text-gray-400">{label}</p>}
+      </div>
 
       {/* Podium (top 3) */}
       {leaderboard.entries.length >= 1 && (
@@ -48,7 +66,7 @@ export default function Leaderboard() {
                 </div>
                 <div className="text-xs text-amber-400 font-bold">Lv {entry.level}</div>
                 <div className={`${podiumHeight(entry.rank)} w-20 bg-gradient-to-t from-amber-700 to-amber-500 rounded-t-lg mt-2 flex items-end justify-center pb-2`}>
-                  <span className="text-xs font-bold">{entry.xp_total} XP</span>
+                  <span className="text-xs font-bold">{entry.xp_month} XP</span>
                 </div>
               </div>
             );
@@ -80,8 +98,8 @@ export default function Leaderboard() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-amber-400 font-bold">{entry.xp_total}</div>
-              <div className="text-xs text-gray-500">XP</div>
+              <div className="text-amber-400 font-bold">{entry.xp_month}</div>
+              <div className="text-xs text-gray-500">XP this month</div>
             </div>
           </div>
         ))}
@@ -89,3 +107,4 @@ export default function Leaderboard() {
     </div>
   );
 }
+

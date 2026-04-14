@@ -220,7 +220,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("badges",  "hidden",          "INTEGER DEFAULT 0"),
         ("badges",  "condition_extra", "TEXT DEFAULT ''"),
         # persons columns (v0.2.8)
-        ("persons", "ha_user_id",      "TEXT DEFAULT ''"),
+        ("persons", "ha_user_id",           "TEXT DEFAULT ''"),
+        # persons columns (v0.2.69)
+        ("persons", "last_month_end_seen",  "TEXT DEFAULT ''"),
     ]
     for table, col, defn in migrations:
         try:
