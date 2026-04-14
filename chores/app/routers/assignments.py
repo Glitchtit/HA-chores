@@ -140,7 +140,8 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
     """Mark a chore instance as completed, awarding XP and checking badges."""
     conn = get_connection()
     row = conn.execute(
-        """SELECT ci.*, c.xp_reward, c.assignment_mode, c.difficulty as chore_difficulty
+        """SELECT ci.*, c.xp_reward, c.assignment_mode, c.difficulty as chore_difficulty,
+                  c.followup_chore_id
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),
@@ -210,6 +211,30 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
            WHERE ci.id = ?""",
         (instance_id,),
     ).fetchone()
+
+    # Spawn follow-up instance if configured
+    followup_name: str | None = None
+    followup_chore_id = row["followup_chore_id"]
+    if followup_chore_id:
+        followup_chore = conn.execute(
+            "SELECT * FROM chores WHERE id = ? AND active = 1", (followup_chore_id,)
+        ).fetchone()
+        if followup_chore:
+            today_str = date.today().isoformat()
+            already_exists = conn.execute(
+                """SELECT id FROM chore_instances
+                   WHERE chore_id = ? AND due_date = ? AND status IN ('pending', 'claimed')""",
+                (followup_chore_id, today_str),
+            ).fetchone()
+            if not already_exists:
+                conn.execute(
+                    """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status)
+                       VALUES (?, ?, NULL, 'pending')""",
+                    (followup_chore_id, today_str),
+                )
+                conn.commit()
+                followup_name = followup_chore["name"]
+
     return {
         "instance": _row_to_instance(updated),
         "xp_awarded": xp,
@@ -220,6 +245,8 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
         "new_badges": [BadgeResult(**b) for b in new_badges],
         "powerup_consumed": PowerUp(**consumed_powerup) if consumed_powerup else None,
         "powerup_earned": PowerUp(**earned_powerup) if earned_powerup else None,
+        "followup_triggered": followup_name is not None,
+        "followup_name": followup_name,
     }
 
 

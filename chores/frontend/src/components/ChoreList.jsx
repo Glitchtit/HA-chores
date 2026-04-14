@@ -34,6 +34,7 @@ export default function ChoreList({ persons, activePerson, addToast }) {
     name: '', description: '', icon: '🧹', xp_reward: 10,
     difficulty: 'medium', recurrence: '', estimated_minutes: '',
     assignment_mode: 'manual', rotation_order: [],
+    followup_chore_id: '',
   });
   const [assignChore, setAssignChore] = useState(null); // chore being assigned
   const [assignForm, setAssignForm] = useState({ person_id: '', due_date: '' });
@@ -51,6 +52,7 @@ export default function ChoreList({ persons, activePerson, addToast }) {
       name: '', description: '', icon: '🧹', xp_reward: 10,
       difficulty: 'medium', recurrence: '', estimated_minutes: '',
       assignment_mode: 'manual', rotation_order: [],
+      followup_chore_id: '',
     });
     setEditId(null);
     setShowForm(false);
@@ -67,6 +69,7 @@ export default function ChoreList({ persons, activePerson, addToast }) {
       estimated_minutes: chore.estimated_minutes || '',
       assignment_mode: chore.assignment_mode,
       rotation_order: chore.rotation_order || [],
+      followup_chore_id: chore.followup_chore_id ?? '',
     });
     setEditId(chore.id);
     setShowForm(true);
@@ -80,6 +83,7 @@ export default function ChoreList({ persons, activePerson, addToast }) {
       estimated_minutes: form.estimated_minutes ? parseInt(form.estimated_minutes) : null,
       recurrence: form.recurrence || null,
       rotation_order: form.rotation_order.length > 0 ? form.rotation_order : null,
+      followup_chore_id: form.followup_chore_id ? parseInt(form.followup_chore_id) : null,
     };
     try {
       if (editId) {
@@ -132,6 +136,9 @@ export default function ChoreList({ persons, activePerson, addToast }) {
         statsBeforePromise,
       ]);
       addToast(`✅ +${result.xp_awarded} XP${result.leveled_up ? ' · LEVEL UP! 🎉' : ''}`, 'success');
+      if (result.followup_triggered && result.followup_name) {
+        addToast(`🔗 "${result.followup_name}" is now up for grabs!`, 'info');
+      }
       const oldXP = statsBefore ? statsBefore.xp_total % 100 : 0;
       const newXP = ((statsBefore ? statsBefore.xp_total : 0) + result.xp_awarded) % 100;
       triggerEffects(result, doneButtonRefs.current[chore.id], null, oldXP, newXP);
@@ -323,6 +330,27 @@ export default function ChoreList({ persons, activePerson, addToast }) {
                 </div>
               )}
 
+              <div>
+                <label className="text-xs text-gray-400">Follow-up chore <span className="text-gray-600">(optional)</span></label>
+                <select
+                  value={form.followup_chore_id}
+                  onChange={e => setForm(f => ({ ...f, followup_chore_id: e.target.value }))}
+                  className="w-full bg-gray-700 rounded px-3 py-2"
+                >
+                  <option value="">— None —</option>
+                  {chores
+                    .filter(c => c.active && c.id !== editId)
+                    .map(c => (
+                      <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                    ))}
+                </select>
+                {form.followup_chore_id && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    When this chore is completed, the follow-up will be automatically assigned as claimable today.
+                  </p>
+                )}
+              </div>
+
               <div className="flex gap-2 pt-2">
                 <button type="submit"
                   className="flex-1 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg font-medium">
@@ -410,6 +438,12 @@ export default function ChoreList({ persons, activePerson, addToast }) {
                       <span className="text-xs text-blue-400">🔄 {c.recurrence}</span>
                     )}
                     <span className="text-xs text-gray-500">{c.assignment_mode}</span>
+                    {c.followup_chore_id && (() => {
+                      const fu = chores.find(x => x.id === c.followup_chore_id);
+                      return fu ? (
+                        <span className="text-xs text-purple-400">🔗 {fu.icon} {fu.name}</span>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               </div>

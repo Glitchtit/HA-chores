@@ -223,6 +223,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("persons", "ha_user_id",           "TEXT DEFAULT ''"),
         # persons columns (v0.2.69)
         ("persons", "last_month_end_seen",  "TEXT DEFAULT ''"),
+        # chores columns (v0.2.70)
+        ("chores", "followup_chore_id", "INTEGER DEFAULT NULL REFERENCES chores(id) ON DELETE SET NULL"),
     ]
     for table, col, defn in migrations:
         try:
