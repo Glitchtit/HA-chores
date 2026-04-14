@@ -579,16 +579,29 @@ export function GameEffectsProvider({ children }) {
     });
   }, []);
 
-  const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress) => {
+  const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress, tileEl) => {
     const { xp_awarded, leveled_up, old_level, new_level, new_badges, powerup_earned } = result;
 
-    // Floating XP number
+    // Floating XP from the Done button
     if (buttonEl && xp_awarded > 0) {
       const rect = buttonEl.getBoundingClientRect();
-      const x = rect.left + rect.width / 2;
-      const y = rect.top;
-      setFloatingXPs(prev => [...prev, { id: uid(), xp: xp_awarded, x, y }]);
-      setConfettiBursts(prev => [...prev, { id: uid(), x, y: rect.top + rect.height / 2 }]);
+      setFloatingXPs(prev => [...prev, { id: uid(), xp: xp_awarded, x: rect.left + rect.width / 2, y: rect.top }]);
+    }
+
+    // Pop effects fired at the peak of balloon inflate (82% through 520ms)
+    if (tileEl) {
+      const tr = tileEl.getBoundingClientRect();
+      const tx = tr.left + tr.width / 2;
+      const ty = tr.top + tr.height / 2;
+      setTimeout(() => {
+        setConfettiBursts(prev => [...prev, { id: uid(), x: tx, y: ty }]);
+        setConfettiBursts(prev => [...prev, { id: uid(), x: tx, y: ty }]); // double burst
+        setImpactRings(prev => [...prev, { id: uid(), x: tx, y: ty }]);
+        setImpactRings(prev => [...prev, { id: uid(), x: tx + 50, y: ty - 25 }]);
+      }, Math.round(520 * 0.82));
+    } else if (buttonEl) {
+      const rect = buttonEl.getBoundingClientRect();
+      setConfettiBursts(prev => [...prev, { id: uid(), x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }]);
     }
 
     // XP bar sparkle

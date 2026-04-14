@@ -1,3 +1,6 @@
+## 0.2.77
+Balloon-pop animation when completing a chore. The tile inflates like an overinflating balloon with an orange-to-gold glow and a slight wobble, peaks at 1.43× scale with a blinding white flash at 82% through the animation, then bursts into nothing — triggering a double confetti explosion and two expanding impact rings right at the pop moment. Floating XP still rises from the Done button.
+
 ## 0.2.76
 Fix infinite confetti/wiggle loop after adding an optional chore. SwoopFly and ImpactRing useEffect hooks depended on inline callbacks that changed reference every render, causing them to re-fire endlessly. Fixed by capturing callbacks in refs and using empty dependency arrays.
 
