@@ -1,3 +1,6 @@
+## 0.2.76
+Fix infinite confetti/wiggle loop after adding an optional chore. SwoopFly and ImpactRing useEffect hooks depended on inline callbacks that changed reference every render, causing them to re-fire endlessly. Fixed by capturing callbacks in refs and using empty dependency arrays.
+
 ## 0.2.75
 Greatly exaggerated swoop animation when adding an optional chore: the pill now launches with a scale-punch and golden glow, arcs dramatically across the screen trailed by 7 speed lines fanning behind it, blurs and shrinks with motion blur, then slams into the Today's Chores heading triggering a confetti burst, an expanding impact ring, and a thud-wiggle on the heading text.
 
