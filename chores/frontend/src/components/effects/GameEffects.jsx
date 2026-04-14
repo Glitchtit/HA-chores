@@ -454,10 +454,11 @@ function MonthEndOverlay({ monthName, entries, onDone }) {
 /* ── ImpactRing ───────────────────────────────────────────────────────────── */
 
 function ImpactRing({ x, y, onDone }) {
+  const onDoneRef = useRef(onDone);
   useEffect(() => {
-    const t = setTimeout(onDone, 520);
+    const t = setTimeout(() => onDoneRef.current?.(), 520);
     return () => clearTimeout(t);
-  }, [onDone]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -471,12 +472,14 @@ function ImpactRing({ x, y, onDone }) {
 
 function SwoopFly({ startX, startY, endX, endY, icon, name, onDone, onLand }) {
   const DURATION = 500;
+  const onLandRef = useRef(onLand);
+  const onDoneRef = useRef(onDone);
 
   useEffect(() => {
-    const t1 = setTimeout(onLand, Math.round(DURATION * 0.78));
-    const t2 = setTimeout(onDone, DURATION + 100);
+    const t1 = setTimeout(() => onLandRef.current?.(), Math.round(DURATION * 0.78));
+    const t2 = setTimeout(() => onDoneRef.current?.(), DURATION + 100);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [onDone, onLand]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dx = endX - startX;
   const dy = endY - startY;
