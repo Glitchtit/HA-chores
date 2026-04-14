@@ -26,9 +26,11 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   const [activePowerups, setActivePowerups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState(null);
+  const [poppingId, setPoppingId] = useState(null);
   const { triggerEffects, triggerSwoop } = useGameEffects();
   const xpBarRef = useRef(null);
   const doneButtonRefs = useRef({});
+  const choreTileRefs = useRef({});
   const tileRefs = useRef({});
   const todayChoresRef = useRef(null);
 
@@ -65,15 +67,23 @@ export default function Dashboard({ activePerson, persons, addToast }) {
       const newXP = (stats ? stats.xp_total : 0) + result.xp_awarded;
       const newXPIntoLevel = result.leveled_up ? newXP % 100 : newXP % 100;
 
+      // Start balloon-pop animation on the tile
+      setPoppingId(instanceId);
+
       triggerEffects(
         result,
         doneButtonRefs.current[instanceId],
         xpBarRef.current,
         oldXPIntoLevel,
         newXPIntoLevel,
+        choreTileRefs.current[instanceId],
       );
 
-      load();
+      // Delay reload so the pop animation plays out
+      setTimeout(() => {
+        setPoppingId(null);
+        load();
+      }, 540);
     } catch (e) {
       addToast('Failed to complete chore', 'error');
     } finally {
@@ -238,10 +248,11 @@ export default function Dashboard({ activePerson, persons, addToast }) {
               return (
                 <div
                   key={ci.id}
+                  ref={el => { choreTileRefs.current[ci.id] = el; }}
                   className={`rounded-lg p-4 flex items-center justify-between transition-colors ${
                     activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800'
                   } ${ci.status === 'overdue' ? 'border border-red-500/50' : ''} ${
-                    completingId === ci.id ? 'animate-complete-flash' : ''
+                    poppingId === ci.id ? 'animate-balloon-pop' : completingId === ci.id ? 'animate-complete-flash' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3">
