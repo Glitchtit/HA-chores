@@ -6,6 +6,8 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖', hard: '❤️‍🔥' };
+
 function timeUntilExpiry(expiresAt) {
   if (!expiresAt) return null;
   const diff = new Date(expiresAt) - new Date();
@@ -248,7 +250,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                       <div className="font-medium">{ci.chore_name}</div>
                       <div className="text-xs text-gray-500 flex gap-2 items-center">
                         {ci.status === 'overdue' && <span className="text-red-400">Overdue ·</span>}
-                        <span>{ci.chore_difficulty}</span>
+                        <span>{DIFFICULTY_LABELS[ci.chore_difficulty] || ci.chore_difficulty}</span>
                         {activePowerup && (
                           <span className="text-yellow-400 font-black text-sm">
                             ✨ ~{Math.round((ci.chore_xp_reward ?? 0) * activePowerup.multiplier)} XP
@@ -355,7 +357,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                           <div>
                             <div className="font-medium">{c.name}</div>
                             <div className="text-xs text-gray-500 flex gap-1.5 items-center">
-                              <span className="capitalize">{c.difficulty}</span>
+                              <span>{DIFFICULTY_LABELS[c.difficulty] || c.difficulty}</span>
                               <span>·</span>
                               {activePowerup ? (
                                 <span className="text-yellow-400 font-black text-sm">

@@ -9,6 +9,7 @@ const DIFFICULTY_COLORS = {
 };
 
 const DIFFICULTY_XP = { easy: 5, medium: 10, hard: 20 };
+const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖', hard: '❤️‍🔥' };
 
 const RECURRENCE_OPTIONS = [
   { value: '', label: 'One-time' },
@@ -231,9 +232,9 @@ export default function ChoreList({ persons, activePerson, addToast }) {
                     }}
                     className="w-full bg-gray-700 rounded px-2 py-2"
                   >
-                    <option value="easy">Easy (5 XP)</option>
-                    <option value="medium">Medium (10 XP)</option>
-                    <option value="hard">Hard (20 XP)</option>
+                    <option value="easy">❤️ (5 XP)</option>
+                    <option value="medium">💖 (10 XP)</option>
+                    <option value="hard">❤️‍🔥 (20 XP)</option>
                   </select>
                 </div>
                 {editId ? (
@@ -402,7 +403,7 @@ export default function ChoreList({ persons, activePerson, addToast }) {
                   <div className="font-semibold text-base truncate">{c.name}</div>
                   <div className="flex flex-wrap gap-2 mt-1">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[c.difficulty]}`}>
-                      {c.difficulty}
+                      {DIFFICULTY_LABELS[c.difficulty] || c.difficulty}
                     </span>
                     <span className="text-xs text-gray-500">{c.xp_reward} XP</span>
                     {c.recurrence && (

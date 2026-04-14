@@ -1,3 +1,6 @@
+## 0.2.67
+Difficulty labels changed from text ("Easy", "Medium", "Hard") to emoji (❤️, 💖, ❤️‍🔥) to make chore difficulty feel inviting rather than discouraging.
+
 ## 0.2.66
 When a new scheduled instance is generated for a chore, any stale overdue or pending instances from previous cycles are automatically removed. This prevents old uncompleted entries from accumulating indefinitely.
 
