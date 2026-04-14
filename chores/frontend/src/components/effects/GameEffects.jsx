@@ -451,35 +451,91 @@ function MonthEndOverlay({ monthName, entries, onDone }) {
 
 /* ── Provider ────────────────────────────────────────────────────────────── */
 
-/* ── SwoopFly ────────────────────────────────────────────────────────────── */
+/* ── ImpactRing ───────────────────────────────────────────────────────────── */
 
-function SwoopFly({ startX, startY, endX, endY, icon, name, onDone }) {
+function ImpactRing({ x, y, onDone }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 650);
+    const t = setTimeout(onDone, 520);
     return () => clearTimeout(t);
   }, [onDone]);
 
-  const dx = endX - startX;
-  const dy = endY - startY;
-  // Arc midpoint: offset perpendicular to the travel direction for a satisfying curve
-  const mx = dx * 0.4 + (dy < 0 ? -50 : 50);
-  const my = dy * 0.4 - Math.abs(dx) * 0.25 - 30;
-
   return (
     <div
+      className="animate-impact-ring z-[199]"
+      style={{ left: x, top: y, transform: 'translate(-50%, -50%)' }}
+    />
+  );
+}
+
+/* ── SwoopFly ────────────────────────────────────────────────────────────── */
+
+function SwoopFly({ startX, startY, endX, endY, icon, name, onDone, onLand }) {
+  const DURATION = 500;
+
+  useEffect(() => {
+    const t1 = setTimeout(onLand, Math.round(DURATION * 0.78));
+    const t2 = setTimeout(onDone, DURATION + 100);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [onDone, onLand]);
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+
+  // Big dramatic arc — swing wide before homing in
+  const mx = dx * 0.28 + (dy < 0 ? -110 : 110);
+  const my = dy * 0.28 - Math.abs(dx) * 0.45 - 80;
+
+  // Angle of travel for speed line orientation
+  const angleDeg = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  // Fan of speed lines trailing behind the pill
+  const speedLines = [
+    { length: 40, gap: 28, spread: -28, width: 2,   opacity: 0.35 },
+    { length: 58, gap: 22, spread: -16, width: 2.5, opacity: 0.65 },
+    { length: 82, gap: 16, spread:  -6, width: 3.5, opacity: 0.90 },
+    { length: 95, gap: 12, spread:   0, width: 4,   opacity: 1.00 },
+    { length: 82, gap: 16, spread:   6, width: 3.5, opacity: 0.90 },
+    { length: 58, gap: 22, spread:  16, width: 2.5, opacity: 0.65 },
+    { length: 40, gap: 28, spread:  28, width: 2,   opacity: 0.35 },
+  ];
+
+  return (
+    // Zero-size anchor that moves along the arc
+    <div
       className="animate-swoop-fly fixed z-[200] pointer-events-none select-none"
-      style={{
-        left: startX,
-        top: startY,
-        '--sx': '0px', '--sy': '0px',
-        '--mx': `${mx}px`, '--my': `${my}px`,
-        '--ex': `${dx}px`, '--ey': `${dy}px`,
-        transform: 'translate(-50%, -50%)',
-      }}
+      style={{ left: startX, top: startY, width: 0, height: 0,
+               '--mx': `${mx}px`, '--my': `${my}px`,
+               '--ex': `${dx}px`, '--ey': `${dy}px` }}
     >
-      <div className="flex items-center gap-1.5 bg-gray-700/90 border border-gray-500 rounded-lg px-2.5 py-1.5 shadow-xl shadow-black/50 backdrop-blur-sm">
-        <span className="text-xl leading-none">{icon || '🧹'}</span>
-        <span className="text-xs font-semibold text-white max-w-[100px] truncate">{name}</span>
+      {/* Speed lines — rotate around their right end, pointing backward */}
+      {speedLines.map((l, i) => (
+        <div
+          key={i}
+          className="animate-speed-trail absolute"
+          style={{
+            left: 0, top: 0,
+            width: l.length, height: l.width,
+            marginLeft: -(l.length + l.gap),
+            marginTop: -l.width / 2,
+            background: 'linear-gradient(to right, transparent 0%, rgba(251,191,36,0.85) 55%, rgba(255,255,255,0.95) 100%)',
+            borderRadius: 99,
+            opacity: l.opacity,
+            transformOrigin: 'right center',
+            transform: `rotate(${angleDeg + l.spread}deg)`,
+            '--line-delay': `${i * 0.008}s`,
+          }}
+        />
+      ))}
+
+      {/* Pill — centered on anchor, scale + blur animation */}
+      <div className="animate-pill-motion absolute" style={{ left: 0, top: 0 }}>
+        <div
+          className="flex items-center gap-2 bg-gray-900 border-2 border-amber-400 rounded-xl px-3 py-2"
+          style={{ boxShadow: '0 0 20px 6px rgba(251,191,36,0.75), 0 6px 24px rgba(0,0,0,0.7)' }}
+        >
+          <span className="text-2xl leading-none">{icon || '🧹'}</span>
+          <span className="text-sm font-bold text-white max-w-[120px] truncate">{name}</span>
+        </div>
       </div>
     </div>
   );
@@ -490,6 +546,7 @@ export function GameEffectsProvider({ children }) {
   const [confettiBursts, setConfettiBursts] = useState([]);
   const [xpSparkle, setXpSparkle] = useState(null);
   const [swoopFlies, setSwoopFlies] = useState([]);
+  const [impactRings, setImpactRings] = useState([]);
   // Unified modal queue: items are { type: 'levelup', oldLevel, newLevel } | { type: 'badge', ...badge }
   const [modalQueue, setModalQueue] = useState([]);
 
@@ -505,6 +562,10 @@ export function GameEffectsProvider({ children }) {
 
   const removeSwoop = useCallback((id) => {
     setSwoopFlies(prev => prev.filter(s => s.id !== id));
+  }, []);
+
+  const removeImpactRing = useCallback((id) => {
+    setImpactRings(prev => prev.filter(r => r.id !== id));
   }, []);
 
   const dismissModal = useCallback(() => {
@@ -559,14 +620,25 @@ export function GameEffectsProvider({ children }) {
     if (!sourceEl || !targetEl) return;
     const src = sourceEl.getBoundingClientRect();
     const tgt = targetEl.getBoundingClientRect();
+    const endX = tgt.left + tgt.width * 0.3;
+    const endY = tgt.top + tgt.height / 2;
+    const onLand = () => {
+      setConfettiBursts(prev => [...prev, { id: uid(), x: endX, y: endY - 8 }]);
+      setImpactRings(prev => [...prev, { id: uid(), x: endX, y: endY }]);
+      if (targetEl) {
+        targetEl.classList.add('animate-land-thud');
+        setTimeout(() => targetEl.classList.remove('animate-land-thud'), 600);
+      }
+    };
     setSwoopFlies(prev => [...prev, {
       id: uid(),
       startX: src.left + src.width / 2,
       startY: src.top + src.height / 2,
-      endX: tgt.left + tgt.width * 0.3,
-      endY: tgt.top + tgt.height / 2,
+      endX,
+      endY,
       icon,
       name,
+      onLand,
     }]);
   }, []);
 
@@ -602,8 +674,13 @@ export function GameEffectsProvider({ children }) {
           startX={s.startX} startY={s.startY}
           endX={s.endX} endY={s.endY}
           icon={s.icon} name={s.name}
+          onLand={s.onLand}
           onDone={() => removeSwoop(s.id)}
         />
+      ))}
+
+      {impactRings.map(r => (
+        <ImpactRing key={r.id} x={r.x} y={r.y} onDone={() => removeImpactRing(r.id)} />
       ))}
 
       {currentModal?.type === 'levelup' && (
