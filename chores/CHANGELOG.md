@@ -1,3 +1,6 @@
+## 0.2.71
+Fix: overdue chores in Today's chores can now be claimed. Previously pressing "Claim" on an overdue instance returned an error because the backend only accepted pending status.
+
 ## 0.2.70
 Follow-up chores: when creating or editing a chore, you can now optionally set a "Follow-up chore". When the original chore is completed by anyone, the follow-up is automatically assigned as a claimable task with today's deadline — it immediately appears in Today's chores for any household member to claim. Example: completing "Start dishwasher" automatically queues "Empty dishwasher" as claimable. The link is shown in the chore list with a 🔗 indicator, and a toast notification announces the follow-up when triggered.
 
