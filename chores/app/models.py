@@ -17,6 +17,7 @@ class ChoreCreate(BaseModel):
     estimated_minutes: Optional[int] = None
     assignment_mode: str = "manual"
     rotation_order: Optional[list[str]] = None
+    followup_chore_id: Optional[int] = None
 
 
 class ChoreUpdate(BaseModel):
@@ -30,6 +31,7 @@ class ChoreUpdate(BaseModel):
     assignment_mode: Optional[str] = None
     rotation_order: Optional[list[str]] = None
     active: Optional[bool] = None
+    followup_chore_id: Optional[int] = None
 
 
 class Chore(BaseModel):
@@ -44,6 +46,7 @@ class Chore(BaseModel):
     assignment_mode: str
     rotation_order: Optional[list[str]]
     active: bool
+    followup_chore_id: Optional[int]
     created_at: str
     updated_at: str
 
@@ -155,6 +158,8 @@ class CompleteResult(BaseModel):
     new_badges: list[BadgeResult]
     powerup_consumed: Optional[PowerUp] = None
     powerup_earned: Optional[PowerUp] = None
+    followup_triggered: bool = False
+    followup_name: Optional[str] = None
 
 
 class PersonBadgeStatus(BaseModel):
