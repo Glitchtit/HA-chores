@@ -1,3 +1,6 @@
+## 0.2.75
+Greatly exaggerated swoop animation when adding an optional chore: the pill now launches with a scale-punch and golden glow, arcs dramatically across the screen trailed by 7 speed lines fanning behind it, blurs and shrinks with motion blur, then slams into the Today's Chores heading triggering a confetti burst, an expanding impact ring, and a thud-wiggle on the heading text.
+
 ## 0.2.74
 Swoop animation when adding an optional chore to Today's Chores: clicking a tile in "You could" or "Feeling extra?" now launches a pill-shaped ghost of the chore that arcs up into the Today's Chores heading. The green "added to today" toast is removed — the animation is the feedback.
 
