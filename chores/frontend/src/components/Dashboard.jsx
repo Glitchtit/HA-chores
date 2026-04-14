@@ -26,9 +26,11 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   const [activePowerups, setActivePowerups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState(null);
-  const { triggerEffects } = useGameEffects();
+  const { triggerEffects, triggerSwoop } = useGameEffects();
   const xpBarRef = useRef(null);
   const doneButtonRefs = useRef({});
+  const tileRefs = useRef({});
+  const todayChoresRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -90,9 +92,9 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   };
 
   const handleAdd = async (chore) => {
+    triggerSwoop(tileRefs.current[chore.id], todayChoresRef.current, chore.icon, chore.name);
     try {
       await api.createInstance({ chore_id: chore.id, due_date: todayISO(), assigned_to: activePerson });
-      addToast(`📋 "${chore.name}" added to today!`, 'success');
       load();
     } catch {
       addToast('Failed to add chore', 'error');
@@ -220,7 +222,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
 
       {/* Today's chores */}
       <div>
-        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+        <h3 ref={todayChoresRef} className="text-lg font-semibold mb-3 flex items-center gap-2">
           📅 Today's Chores
           <span className="text-sm text-gray-500">({todayChores.length})</span>
         </h3>
@@ -315,6 +317,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                     return (
                       <button
                         key={c.id}
+                        ref={el => { tileRefs.current[c.id] = el; }}
                         onClick={() => handleAdd(c)}
                         className={`rounded-lg p-3 flex flex-col items-center gap-1 text-center transition-colors hover:brightness-110 active:scale-95 ${
                           activePowerup ? 'animate-golden-sparkle' : 'bg-gray-800 hover:bg-gray-700'
@@ -373,6 +376,7 @@ export default function Dashboard({ activePerson, persons, addToast }) {
                           </div>
                         </div>
                         <button
+                          ref={el => { tileRefs.current[c.id] = el; }}
                           onClick={() => handleAdd(c)}
                           className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors"
                         >

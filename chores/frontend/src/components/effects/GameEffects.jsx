@@ -451,10 +451,45 @@ function MonthEndOverlay({ monthName, entries, onDone }) {
 
 /* ── Provider ────────────────────────────────────────────────────────────── */
 
+/* ── SwoopFly ────────────────────────────────────────────────────────────── */
+
+function SwoopFly({ startX, startY, endX, endY, icon, name, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 650);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+  // Arc midpoint: offset perpendicular to the travel direction for a satisfying curve
+  const mx = dx * 0.4 + (dy < 0 ? -50 : 50);
+  const my = dy * 0.4 - Math.abs(dx) * 0.25 - 30;
+
+  return (
+    <div
+      className="animate-swoop-fly fixed z-[200] pointer-events-none select-none"
+      style={{
+        left: startX,
+        top: startY,
+        '--sx': '0px', '--sy': '0px',
+        '--mx': `${mx}px`, '--my': `${my}px`,
+        '--ex': `${dx}px`, '--ey': `${dy}px`,
+        transform: 'translate(-50%, -50%)',
+      }}
+    >
+      <div className="flex items-center gap-1.5 bg-gray-700/90 border border-gray-500 rounded-lg px-2.5 py-1.5 shadow-xl shadow-black/50 backdrop-blur-sm">
+        <span className="text-xl leading-none">{icon || '🧹'}</span>
+        <span className="text-xs font-semibold text-white max-w-[100px] truncate">{name}</span>
+      </div>
+    </div>
+  );
+}
+
 export function GameEffectsProvider({ children }) {
   const [floatingXPs, setFloatingXPs] = useState([]);
   const [confettiBursts, setConfettiBursts] = useState([]);
   const [xpSparkle, setXpSparkle] = useState(null);
+  const [swoopFlies, setSwoopFlies] = useState([]);
   // Unified modal queue: items are { type: 'levelup', oldLevel, newLevel } | { type: 'badge', ...badge }
   const [modalQueue, setModalQueue] = useState([]);
 
@@ -467,6 +502,10 @@ export function GameEffectsProvider({ children }) {
   }, []);
 
   const removeXpSparkle = useCallback(() => setXpSparkle(null), []);
+
+  const removeSwoop = useCallback((id) => {
+    setSwoopFlies(prev => prev.filter(s => s.id !== id));
+  }, []);
 
   const dismissModal = useCallback(() => {
     setModalQueue(prev => {
@@ -516,7 +555,22 @@ export function GameEffectsProvider({ children }) {
     setModalQueue(prev => [...prev, { type: 'monthend', ...data }]);
   }, []);
 
-  const ctx = { triggerEffects, triggerMonthEnd };
+  const triggerSwoop = useCallback((sourceEl, targetEl, icon, name) => {
+    if (!sourceEl || !targetEl) return;
+    const src = sourceEl.getBoundingClientRect();
+    const tgt = targetEl.getBoundingClientRect();
+    setSwoopFlies(prev => [...prev, {
+      id: uid(),
+      startX: src.left + src.width / 2,
+      startY: src.top + src.height / 2,
+      endX: tgt.left + tgt.width * 0.3,
+      endY: tgt.top + tgt.height / 2,
+      icon,
+      name,
+    }]);
+  }, []);
+
+  const ctx = { triggerEffects, triggerMonthEnd, triggerSwoop };
 
   const currentModal = modalQueue[0] ?? null;
 
@@ -541,6 +595,16 @@ export function GameEffectsProvider({ children }) {
           onDone={removeXpSparkle}
         />
       )}
+
+      {swoopFlies.map(s => (
+        <SwoopFly
+          key={s.id}
+          startX={s.startX} startY={s.startY}
+          endX={s.endX} endY={s.endY}
+          icon={s.icon} name={s.name}
+          onDone={() => removeSwoop(s.id)}
+        />
+      ))}
 
       {currentModal?.type === 'levelup' && (
         <LevelUpOverlay

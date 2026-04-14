@@ -1,3 +1,6 @@
+## 0.2.74
+Swoop animation when adding an optional chore to Today's Chores: clicking a tile in "You could" or "Feeling extra?" now launches a pill-shaped ghost of the chore that arcs up into the Today's Chores heading. The green "added to today" toast is removed — the animation is the feedback.
+
 ## 0.2.73
 Remove the green "✅ +XP" toast on chore completion — the golden floating XP text already provides this feedback.
 
