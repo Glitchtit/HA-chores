@@ -116,8 +116,21 @@ class TestAssignments:
 
 class TestGamification:
     def test_leaderboard(self, client, tmp_db):
+        from datetime import date
+        this_month = date.today().strftime("%Y-%m")
         tmp_db.execute("INSERT INTO persons (entity_id, name, xp_total, level) VALUES ('person.a', 'Alice', 100, 2)")
         tmp_db.execute("INSERT INTO persons (entity_id, name, xp_total, level) VALUES ('person.b', 'Bob', 50, 1)")
+        # Insert a chore so we can create instances
+        tmp_db.execute("INSERT INTO chores (name, xp_reward, difficulty, assignment_mode) VALUES ('T', 5, 'easy', 'manual')")
+        chore_id = tmp_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        tmp_db.execute(
+            "INSERT INTO chore_instances (chore_id, due_date, status, completed_by, completed_at, xp_awarded) VALUES (?, ?, 'completed', 'person.a', ?, 100)",
+            (chore_id, f"{this_month}-01", f"{this_month}-01 10:00:00"),
+        )
+        tmp_db.execute(
+            "INSERT INTO chore_instances (chore_id, due_date, status, completed_by, completed_at, xp_awarded) VALUES (?, ?, 'completed', 'person.b', ?, 50)",
+            (chore_id, f"{this_month}-01", f"{this_month}-01 11:00:00"),
+        )
         tmp_db.commit()
 
         resp = client.get("/api/gamification/leaderboard")
@@ -125,8 +138,10 @@ class TestGamification:
         data = resp.json()
         assert data["entries"][0]["name"] == "Alice"
         assert data["entries"][0]["rank"] == 1
+        assert data["entries"][0]["xp_month"] == 100
         assert data["entries"][1]["name"] == "Bob"
         assert data["entries"][1]["rank"] == 2
+        assert data["entries"][1]["xp_month"] == 50
 
     def test_badges_list(self, client):
         resp = client.get("/api/gamification/badges")

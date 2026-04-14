@@ -334,6 +334,121 @@ function PowerUpEarnedCard({ powerup, remaining, onDone }) {
   );
 }
 
+/* ── MonthEndOverlay ─────────────────────────────────────────────────────── */
+
+const MEDAL = ['🥇', '🥈', '🥉'];
+
+function MonthEndOverlay({ monthName, entries, onDone }) {
+  const [exiting, setExiting] = useState(false);
+
+  const stars = useRef(
+    Array.from({ length: STAR_COUNT }, () => ({
+      x: randomBetween(10, 90),
+      sy: randomBetween(60, 90),
+      ey: randomBetween(-10, 30),
+      dur: randomBetween(1.0, 2.0),
+      delay: randomBetween(0, 0.8),
+      size: randomBetween(14, 26),
+      emoji: ['🏆', '⭐', '✨', '🌟'][Math.floor(Math.random() * 4)],
+    }))
+  ).current;
+
+  const dismiss = useCallback(() => {
+    if (exiting) return;
+    setExiting(true);
+    setTimeout(onDone, 400);
+  }, [exiting, onDone]);
+
+  const top3 = entries.slice(0, 3);
+  // Podium order: 2nd, 1st, 3rd
+  const podiumOrder = [1, 0, 2];
+  const podiumHeight = (rank) => rank === 1 ? 'h-24' : rank === 2 ? 'h-16' : 'h-10';
+
+  return (
+    <div
+      className={`fixed inset-0 z-[210] flex flex-col items-center justify-center
+                  bg-black/85 backdrop-blur-sm cursor-pointer overflow-y-auto py-6
+                  ${exiting ? 'animate-level-up-exit' : ''}`}
+      onClick={dismiss}
+    >
+      {stars.map((s, i) => (
+        <div
+          key={i}
+          className="animate-star fixed pointer-events-none text-center leading-none"
+          style={{
+            left: `${s.x}%`,
+            top: `${s.sy}%`,
+            fontSize: s.size,
+            '--sx': '0px',
+            '--sy': '0px',
+            '--ex': `${randomBetween(-40, 40)}px`,
+            '--ey': `${-(s.sy - s.ey) * 4}px`,
+            '--star-dur': `${s.dur}s`,
+            animationDelay: `${s.delay}s`,
+          }}
+        >
+          {s.emoji}
+        </div>
+      ))}
+
+      <div
+        className="animate-level-up-enter text-center px-8 py-7 rounded-3xl mx-4 w-full max-w-sm
+                    bg-gradient-to-b from-amber-500/20 to-yellow-600/10
+                    border-2 border-amber-400/50 shadow-2xl shadow-amber-500/30"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="text-4xl mb-1">🏆</div>
+        <div className="text-2xl font-black text-amber-400 tracking-wide">Month End!</div>
+        <div className="text-gray-300 text-base mb-4">{monthName} — Final Results</div>
+
+        {/* Podium */}
+        {top3.length > 0 && (
+          <div className="flex justify-center items-end gap-3 mb-5">
+            {podiumOrder.map(idx => {
+              const entry = top3[idx];
+              if (!entry) return <div key={idx} className="w-20" />;
+              return (
+                <div key={entry.entity_id} className="flex flex-col items-center">
+                  <div className="text-2xl mb-0.5">{MEDAL[idx] || ''}</div>
+                  <div className="w-9 h-9 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden mb-0.5">
+                    {entry.avatar_url
+                      ? <img src={entry.avatar_url} className="w-full h-full object-cover" alt="" />
+                      : <span className="text-base">👤</span>}
+                  </div>
+                  <div className="text-xs font-medium truncate max-w-[72px] text-center">{entry.name}</div>
+                  <div className={`${podiumHeight(entry.rank)} w-16 bg-gradient-to-t from-amber-700 to-amber-500 rounded-t-lg mt-1 flex items-end justify-center pb-1`}>
+                    <span className="text-xs font-bold">{entry.xp_month} XP</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Full ranked list */}
+        <div className="space-y-1.5 text-left">
+          {entries.map(entry => (
+            <div key={entry.entity_id} className="flex items-center gap-3 bg-gray-800/60 rounded-lg px-3 py-2">
+              <span className="text-sm font-bold text-gray-400 w-6 text-center">
+                {MEDAL[entry.rank - 1] || `#${entry.rank}`}
+              </span>
+              <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden shrink-0">
+                {entry.avatar_url
+                  ? <img src={entry.avatar_url} className="w-full h-full object-cover" alt="" />
+                  : <span className="text-sm">👤</span>}
+              </div>
+              <div className="flex-1 text-sm truncate">{entry.name}</div>
+              <div className="text-amber-400 text-sm font-bold">{entry.xp_month} XP</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-xs text-gray-500 mt-4">Tap to continue</div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Provider ────────────────────────────────────────────────────────────── */
 
 export function GameEffectsProvider({ children }) {
@@ -354,7 +469,11 @@ export function GameEffectsProvider({ children }) {
   const removeXpSparkle = useCallback(() => setXpSparkle(null), []);
 
   const dismissModal = useCallback(() => {
-    setModalQueue(prev => prev.slice(1));
+    setModalQueue(prev => {
+      const current = prev[0];
+      if (current?.type === 'monthend') current.onSeen?.();
+      return prev.slice(1);
+    });
   }, []);
 
   const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress) => {
@@ -393,7 +512,11 @@ export function GameEffectsProvider({ children }) {
     }
   }, []);
 
-  const ctx = { triggerEffects };
+  const triggerMonthEnd = useCallback((data) => {
+    setModalQueue(prev => [...prev, { type: 'monthend', ...data }]);
+  }, []);
+
+  const ctx = { triggerEffects, triggerMonthEnd };
 
   const currentModal = modalQueue[0] ?? null;
 
@@ -442,6 +565,15 @@ export function GameEffectsProvider({ children }) {
           key={`powerup-${currentModal.id}`}
           powerup={currentModal}
           remaining={modalQueue.length}
+          onDone={dismissModal}
+        />
+      )}
+
+      {currentModal?.type === 'monthend' && (
+        <MonthEndOverlay
+          key={`monthend-${currentModal.month}`}
+          monthName={currentModal.month_name}
+          entries={currentModal.entries}
           onDone={dismissModal}
         />
       )}
