@@ -115,7 +115,7 @@ async def claim_instance(instance_id: int, body: InstanceClaim):
     row = conn.execute("SELECT * FROM chore_instances WHERE id = ?", (instance_id,)).fetchone()
     if not row:
         raise HTTPException(404, "Instance not found")
-    if row["status"] not in ("pending",):
+    if row["status"] not in ("pending", "overdue"):
         raise HTTPException(400, "Can only claim pending instances")
     if row["assigned_to"] and row["assigned_to"] != body.person_id:
         raise HTTPException(400, "Instance already assigned to someone else")
