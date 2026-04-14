@@ -189,8 +189,8 @@ import random as _random
 POWERUP_CATALOG = [
     {
         "powerup_type": "xp_double_hard",
-        "name": "Hard Mode Bonus",
-        "description": "2× XP on your next Hard chore",
+        "name": "❤️‍🔥 Bonus",
+        "description": "2× XP on your next ❤️‍🔥 chore",
         "icon": "💥",
         "applies_to": "hard",
         "multiplier": 2.0,
@@ -209,8 +209,8 @@ POWERUP_CATALOG = [
     },
     {
         "powerup_type": "xp_double_medium",
-        "name": "Medium Surge",
-        "description": "2× XP on your next Medium chore",
+        "name": "💖 Surge",
+        "description": "2× XP on your next 💖 chore",
         "icon": "🌊",
         "applies_to": "medium",
         "multiplier": 2.0,
@@ -229,8 +229,8 @@ POWERUP_CATALOG = [
     },
     {
         "powerup_type": "easy_blitz",
-        "name": "Easy Blitz",
-        "description": "3× XP on your next Easy chore",
+        "name": "❤️ Blitz",
+        "description": "3× XP on your next ❤️ chore",
         "icon": "🎯",
         "applies_to": "easy",
         "multiplier": 3.0,
