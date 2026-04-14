@@ -1,3 +1,6 @@
+## 0.2.73
+Remove the green "✅ +XP" toast on chore completion — the golden floating XP text already provides this feedback.
+
 ## 0.2.72
 Fix: chores that are set as a follow-up of another chore are now hidden from the "You could" and "Feeling extra?" suggestion grids. They are meant to be triggered automatically, not picked manually.
 
