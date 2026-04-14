@@ -1,3 +1,6 @@
+## 0.2.70
+Follow-up chores: when creating or editing a chore, you can now optionally set a "Follow-up chore". When the original chore is completed by anyone, the follow-up is automatically assigned as a claimable task with today's deadline — it immediately appears in Today's chores for any household member to claim. Example: completing "Start dishwasher" automatically queues "Empty dishwasher" as claimable. The link is shown in the chore list with a 🔗 indicator, and a toast notification announces the follow-up when triggered.
+
 ## 0.2.69
 Monthly leaderboard: the leaderboard now shows XP earned in the current calendar month (instead of all-time totals). After month-end, the next time each person opens the app they see a full-screen podium overlay announcing final placements for the finished month — similar in style to the level-up announcement. The overlay is per-person and dismisses independently.
 

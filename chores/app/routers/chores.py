@@ -22,6 +22,7 @@ def _row_to_chore(row) -> dict:
         **{k: row[k] for k in row.keys()},
         "rotation_order": rotation,
         "active": bool(row["active"]),
+        "followup_chore_id": row["followup_chore_id"] if "followup_chore_id" in row.keys() else None,
     }
 
 
@@ -50,12 +51,13 @@ async def create_chore(body: ChoreCreate):
     rotation_json = json.dumps(body.rotation_order) if body.rotation_order else None
     cursor = conn.execute(
         """INSERT INTO chores (name, description, icon, xp_reward, difficulty,
-                               recurrence, estimated_minutes, assignment_mode, rotation_order)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                               recurrence, estimated_minutes, assignment_mode, rotation_order,
+                               followup_chore_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             body.name, body.description, body.icon, body.xp_reward,
             body.difficulty, body.recurrence, body.estimated_minutes,
-            body.assignment_mode, rotation_json,
+            body.assignment_mode, rotation_json, body.followup_chore_id,
         ),
     )
     conn.commit()

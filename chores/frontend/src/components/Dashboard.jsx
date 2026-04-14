@@ -54,6 +54,9 @@ export default function Dashboard({ activePerson, persons, addToast }) {
     try {
       const result = await api.completeInstance(instanceId, activePerson);
       addToast(`✅ +${result.xp_awarded} XP${result.leveled_up ? ' · LEVEL UP! 🎉' : ''}`, 'success');
+      if (result.followup_triggered && result.followup_name) {
+        addToast(`🔗 "${result.followup_name}" is now up for grabs!`, 'info');
+      }
 
       // Compute XP bar progress before reload
       const oldXPIntoLevel = stats ? stats.xp_total % 100 : 0;
