@@ -1,6 +1,6 @@
 {
   "name": "Chores",
-  "version": "0.2.66",
+  "version": "0.2.67",
   "slug": "ha_chores",
   "description": "Gamified household chore management with HA integration",
   "url": "https://github.com/Glitchtit/HA-chores",
