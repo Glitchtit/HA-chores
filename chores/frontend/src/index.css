@@ -186,4 +186,13 @@
   animation: powerup-exit 0.35s ease-in forwards;
 }
 
-
+/* Swoop-fly: tile shoots into Today's Chores */
+@keyframes swoop-fly {
+  0%   { transform: translate(var(--sx), var(--sy)) scale(1);    opacity: 1; }
+  45%  { transform: translate(var(--mx), var(--my)) scale(0.85); opacity: 1; }
+  100% { transform: translate(var(--ex), var(--ey)) scale(0.4);  opacity: 0; }
+}
+.animate-swoop-fly {
+  animation: swoop-fly 0.58s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+}
