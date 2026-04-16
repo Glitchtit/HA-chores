@@ -632,9 +632,17 @@ export function GameEffectsProvider({ children }) {
     setModalQueue(prev => [...prev, { type: 'monthend', ...data }]);
   }, []);
 
-  const triggerSwoop = useCallback((sourceEl, targetEl, icon, name) => {
-    if (!sourceEl || !targetEl) return;
-    const src = sourceEl.getBoundingClientRect();
+  const triggerSwoop = useCallback((sourceElOrCoords, targetEl, icon, name) => {
+    if (!sourceElOrCoords || !targetEl) return;
+    let startX, startY;
+    if (typeof sourceElOrCoords.getBoundingClientRect === 'function') {
+      const src = sourceElOrCoords.getBoundingClientRect();
+      startX = src.left + src.width / 2;
+      startY = src.top + src.height / 2;
+    } else {
+      startX = sourceElOrCoords.x;
+      startY = sourceElOrCoords.y;
+    }
     const tgt = targetEl.getBoundingClientRect();
     const endX = tgt.left + tgt.width * 0.3;
     const endY = tgt.top + tgt.height / 2;
@@ -648,8 +656,8 @@ export function GameEffectsProvider({ children }) {
     };
     setSwoopFlies(prev => [...prev, {
       id: uid(),
-      startX: src.left + src.width / 2,
-      startY: src.top + src.height / 2,
+      startX,
+      startY,
       endX,
       endY,
       icon,

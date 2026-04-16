@@ -19,7 +19,7 @@ function timeUntilExpiry(expiresAt) {
   return '<1h left';
 }
 
-export default function Dashboard({ activePerson, persons, addToast }) {
+export default function Dashboard({ activePerson, persons, addToast, pendingQuickDone, onClearQuickDone }) {
   const [todayChores, setTodayChores] = useState([]);
   const [optionalChores, setOptionalChores] = useState([]);
   const [stats, setStats] = useState(null);
@@ -27,12 +27,15 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState(null);
   const [poppingId, setPoppingId] = useState(null);
+  const [pendingCompleteId, setPendingCompleteId] = useState(null);
   const { triggerEffects, triggerSwoop } = useGameEffects();
   const xpBarRef = useRef(null);
   const doneButtonRefs = useRef({});
   const choreTileRefs = useRef({});
   const tileRefs = useRef({});
   const todayChoresRef = useRef(null);
+  const loadingRef = useRef(true);
+  const quickDoneRunningRef = useRef(false);
 
   const load = useCallback(async () => {
     try {
@@ -53,6 +56,66 @@ export default function Dashboard({ activePerson, persons, addToast }) {
   }, [activePerson]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Keep loadingRef in sync so effects can read current loading state without re-triggering
+  useEffect(() => { loadingRef.current = loading; }, [loading]);
+
+  // Effect 1: when a quick-done is pending, run the swoop → create → reload → complete sequence
+  useEffect(() => {
+    if (!pendingQuickDone || !activePerson) return;
+    if (quickDoneRunningRef.current) return;
+    quickDoneRunningRef.current = true;
+    let cancelled = false;
+
+    async function run() {
+      // Wait for the initial data load to finish
+      while (loadingRef.current && !cancelled) {
+        await new Promise(r => setTimeout(r, 50));
+      }
+      if (cancelled) { quickDoneRunningRef.current = false; return; }
+
+      // Fire swoop from the saved button coordinates to the Today's Chores heading
+      triggerSwoop(pendingQuickDone.sourceCoords, todayChoresRef.current,
+        pendingQuickDone.chore.icon, pendingQuickDone.chore.name);
+
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        const instance = await api.createInstance({
+          chore_id: pendingQuickDone.chore.id,
+          due_date: today,
+          assigned_to: activePerson,
+        });
+        // Wait for swoop to land before reloading
+        await new Promise(r => setTimeout(r, 600));
+        if (cancelled) { quickDoneRunningRef.current = false; return; }
+        await load();
+        if (cancelled) { quickDoneRunningRef.current = false; return; }
+        setPendingCompleteId(instance.id);
+      } catch {
+        addToast('Failed to record chore', 'error');
+        onClearQuickDone?.();
+      }
+      quickDoneRunningRef.current = false;
+    }
+
+    run();
+    return () => { cancelled = true; };
+  }, [pendingQuickDone]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Effect 2: once the new instance appears in todayChores, auto-complete it
+  useEffect(() => {
+    if (!pendingCompleteId) return;
+    const instance = todayChores.find(c => c.id === pendingCompleteId);
+    if (!instance) return;
+
+    // rAF ensures choreTileRefs / doneButtonRefs are populated after the render cycle
+    const raf = requestAnimationFrame(() => {
+      handleComplete(pendingCompleteId);
+      setPendingCompleteId(null);
+      onClearQuickDone?.();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [pendingCompleteId, todayChores]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleComplete = async (instanceId) => {
     setCompletingId(instanceId);
