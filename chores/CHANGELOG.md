@@ -1,4 +1,7 @@
-## 0.2.77
+## 0.2.78
+Quick-done from the Chores tab now redirects to Dashboard and plays the full animation sequence. When a user confirms Quick-done, the app switches to Dashboard, fires a swoop animation (the chore pill flies from the Done button's position to the "Today's Chores" heading), creates the instance, then automatically triggers the full complete flow — balloon-pop, double confetti burst, impact rings, floating XP, XP bar sparkle, and level-up/badge/power-up overlays if earned.
+
+
 Balloon-pop animation when completing a chore. The tile inflates like an overinflating balloon with an orange-to-gold glow and a slight wobble, peaks at 1.43× scale with a blinding white flash at 82% through the animation, then bursts into nothing — triggering a double confetti explosion and two expanding impact rings right at the pop moment. Floating XP still rises from the Done button.
 
 ## 0.2.76

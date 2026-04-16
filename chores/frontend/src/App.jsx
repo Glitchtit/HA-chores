@@ -74,6 +74,7 @@ export default function App() {
   const [autoDetected, setAutoDetected] = useState(false);
   const [isHouseholdMode, setIsHouseholdMode] = useState(false);
   const [toasts, setToasts] = useState([]);
+  const [pendingQuickDone, setPendingQuickDone] = useState(null);
   const pickerRef = useRef(null);
 
   const addToast = useCallback((message, type = 'info') => {
@@ -84,6 +85,11 @@ export default function App() {
 
   const dismissToast = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
+  const handleQuickDone = useCallback((chore, sourceCoords) => {
+    setPendingQuickDone({ chore, sourceCoords });
+    setTab('dashboard');
   }, []);
 
   // Health check with retry
@@ -179,9 +185,12 @@ export default function App() {
           />
         );
       case 'dashboard':
-        return <Dashboard activePerson={activePerson} persons={persons} addToast={addToast} />;
+        return <Dashboard activePerson={activePerson} persons={persons} addToast={addToast}
+                          pendingQuickDone={pendingQuickDone}
+                          onClearQuickDone={() => setPendingQuickDone(null)} />;
       case 'chores':
-        return <ChoreList persons={persons} activePerson={activePerson} addToast={addToast} />;
+        return <ChoreList persons={persons} activePerson={activePerson} addToast={addToast}
+                          onQuickDone={handleQuickDone} />;
       case 'my':
         return <MyChores activePerson={activePerson} persons={persons} addToast={addToast} />;
       case 'leader':
