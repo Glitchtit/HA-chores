@@ -137,6 +137,14 @@ async def delete_layout():
     return {"ok": True}
 
 
+@router.get("/sun")
+async def get_sun():
+    """Return whether it is currently daytime according to HA's sun.sun entity."""
+    from ha_client import get_sun_state
+    is_day = await get_sun_state()
+    return {"is_day": is_day if is_day is not None else True}
+
+
 @router.put("/{person_id}/design")
 async def set_pet_design(person_id: str, body: PetDesignUpdate):
     """Pick which axolotl design this person's pet uses."""
