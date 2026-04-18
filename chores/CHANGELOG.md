@@ -1,3 +1,7 @@
+## 0.3.22
+
+- Allow petting any user's pet, not just your own
+
 ## 0.3.21
 
 - Remove yellow active ring from pet sprites in the pet house
