@@ -58,7 +58,7 @@ const MOOD_TONE = {
 };
 
 // Sprite sizing class shared by pets and mess piles
-const SPRITE_CLS = 'w-[clamp(48px,18vw,120px)]';
+const SPRITE_CLS = 'w-[clamp(24px,9vw,60px)]';
 
 // Default spots derived from the background image layout.
 const DEFAULT_PET_SPOTS = [

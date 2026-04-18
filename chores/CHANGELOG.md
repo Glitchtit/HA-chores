@@ -1,3 +1,7 @@
+## 0.3.7
+
+- Reduced pet and mess pile sprite size by half in the house scene
+
 ## 0.3.6
 
 - Mess piles no longer show category labels in the house scene
