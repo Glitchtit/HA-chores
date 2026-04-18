@@ -137,6 +137,40 @@ class TestGenerateInstances:
         assignees = [r["assigned_to"] for r in rows]
         assert assignees == ["person.alice", "person.bob", "person.alice", "person.bob"]
 
+    def test_purges_overdue_on_subsequent_scheduler_runs(self, tmp_db):
+        """No new pending instance is created while an overdue one exists."""
+        from scheduler import generate_instances
+        from datetime import date, timedelta
+
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        tmp_db.execute(
+            """INSERT INTO chores (id, name, recurrence, active)
+               VALUES (1, 'Daily Clean', 'daily', 1)"""
+        )
+        # Simulate an instance that was created yesterday and is now overdue
+        tmp_db.execute(
+            """INSERT INTO chore_instances (chore_id, due_date, status)
+               VALUES (1, ?, 'overdue')""",
+            (yesterday,),
+        )
+        tmp_db.commit()
+
+        generate_instances(days_ahead=3)
+
+        # Yesterday's overdue instance must still be there
+        stale = tmp_db.execute(
+            "SELECT * FROM chore_instances WHERE chore_id = 1 AND due_date = ?",
+            (yesterday,),
+        ).fetchone()
+        assert stale is not None
+        assert stale["status"] == "overdue"
+
+        # No new pending instances should have been created
+        pending = tmp_db.execute(
+            "SELECT * FROM chore_instances WHERE chore_id = 1 AND status = 'pending'"
+        ).fetchall()
+        assert len(pending) == 0
+
 
 class TestMarkOverdue:
     def test_marks_past_due(self, tmp_db):
