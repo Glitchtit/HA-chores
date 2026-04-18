@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/persons", tags=["persons"])
 
 
 async def sync_persons_from_ha() -> list[dict]:
-    """Fetch persons from HA and upsert into local DB."""
+    """Fetch persons from HA and upsert into local DB. Removes persons no longer in HA."""
     ha_persons = await ha_get_persons()
     conn = get_connection()
     for p in ha_persons:
@@ -24,6 +24,17 @@ async def sync_persons_from_ha() -> list[dict]:
                    ha_user_id = excluded.ha_user_id""",
             (p["entity_id"], p["name"], p.get("avatar_url", ""), p.get("user_id", "")),
         )
+    # Remove persons that no longer exist in HA
+    if ha_persons:
+        ha_ids = [p["entity_id"] for p in ha_persons]
+        placeholders = ",".join("?" * len(ha_ids))
+        conn.execute(
+            f"DELETE FROM persons WHERE entity_id NOT IN ({placeholders})",
+            ha_ids,
+        )
+    else:
+        # HA returned an empty list — clear all persons
+        conn.execute("DELETE FROM persons")
     conn.commit()
     _seed_pet_states(conn)
     return ha_persons
