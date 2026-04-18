@@ -515,7 +515,6 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
               {household.pets.map((pet, i) => {
                 const spot = displaySpots.pet[i % displaySpots.pet.length];
                 const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
-                const isActive = pet.person_id === viewedPerson;
                 const state = stateFor(pet, pet.person_id === celebratingId, pettedId);
                 const personName = pet.pet_name || personsById.get(pet.person_id)?.name || pet.person_id;
                 const flip = i % 2 === 1;
@@ -534,8 +533,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                       <button
                         type="button"
                         onClick={() => handlePetClick(pet.person_id)}
-                        className={`block rounded transition-all hover:bg-white/10
-                          ${isActive ? 'ring-2 ring-amber-400/60 rounded-lg' : ''}`}
+                        className="block rounded transition-all hover:bg-white/10"
                         title={personName}
                       >
                         <SpriteFrame
