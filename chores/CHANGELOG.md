@@ -1,3 +1,8 @@
+## 0.3.6
+
+- Mess piles no longer show category labels in the house scene
+- Each overdue chore now spawns its own pile instead of stacking a count badge
+
 ## 0.3.5
 
 - "Change placement" toggle lets you drag-and-drop pet and mess sprites to custom positions
