@@ -16,6 +16,8 @@ HAPPINESS_DAILY_DECAY = 3
 CLEANLINESS_PER_OVERDUE = 10
 
 CATEGORIES = ("dishes", "laundry", "cleaning", "trash", "cooking", "other")
+DESIGNS = ("orange_black", "blue_black")
+DEFAULT_DESIGN = "orange_black"
 
 
 def _empty_mess_counts() -> dict[str, int]:
@@ -155,6 +157,31 @@ def _pet_row(conn: sqlite3.Connection, person_id: str) -> sqlite3.Row | None:
     ).fetchone()
 
 
+def set_design(conn: sqlite3.Connection, person_id: str, design: str) -> str:
+    """Persist the chosen axolotl design for this person. Raises ValueError on
+    an unknown design."""
+    if design not in DESIGNS:
+        raise ValueError(f"unknown pet design: {design!r}")
+    ensure_pet(conn, person_id)
+    conn.execute(
+        "UPDATE pet_states SET pet_design = ? WHERE person_id = ?",
+        (design, person_id),
+    )
+    conn.commit()
+    return design
+
+
+def _state_design(state: sqlite3.Row | None) -> str:
+    if state is None:
+        return DEFAULT_DESIGN
+    # Row access via key is tolerant of missing columns on very old rows.
+    try:
+        val = state["pet_design"]
+    except (IndexError, KeyError):
+        val = None
+    return val if val in DESIGNS else DEFAULT_DESIGN
+
+
 def get_pet_view(conn: sqlite3.Connection, person_id: str) -> dict:
     """Build the per-person pet response."""
     ensure_pet(conn, person_id)
@@ -166,6 +193,7 @@ def get_pet_view(conn: sqlite3.Connection, person_id: str) -> dict:
     return {
         "person_id": person_id,
         "pet_emoji": emoji,
+        "pet_design": _state_design(state),
         "happiness": happiness,
         "cleanliness": cleanliness,
         "mess_counts": mess_counts,

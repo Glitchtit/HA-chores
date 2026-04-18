@@ -1,3 +1,10 @@
+## 0.3.1
+
+- Replaced the emoji pet with hand-generated axolotl pixel-art sprites in two designs (orange/black, blue/black)
+- New cozy house background and per-category illustrated mess piles replace the emoji scene
+- Pets now have distinct idle, happy, and sad animation states
+- Design picker replaces the emoji picker; your choice persists per person
+
 ## 0.3.0
 
 - New Pet feature: each household member gets a virtual pet with happiness and cleanliness driven by chore completions and overdue state

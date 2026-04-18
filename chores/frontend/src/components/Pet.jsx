@@ -1,14 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../api';
 
-const CATEGORY_EMOJI = {
-  dishes: '🍽',
-  laundry: '👕',
-  cleaning: '🧹',
-  trash: '🗑',
-  cooking: '🍳',
-  other: '📦',
-};
+import houseBg        from '../assets/pets/house/background.png';
+import orangeIdle     from '../assets/pets/orange_black/idle.png';
+import orangeHappy    from '../assets/pets/orange_black/happy.png';
+import orangeSad      from '../assets/pets/orange_black/sad.png';
+import blueIdle       from '../assets/pets/blue_black/idle.png';
+import blueHappy      from '../assets/pets/blue_black/happy.png';
+import blueSad        from '../assets/pets/blue_black/sad.png';
+import messDishes      from '../assets/pets/mess/dishes.png';
+import messLaundry     from '../assets/pets/mess/laundry.png';
+import messCleaning    from '../assets/pets/mess/cleaning.png';
+import messTrash       from '../assets/pets/mess/trash.png';
+import messCooking     from '../assets/pets/mess/cooking.png';
+import messOther       from '../assets/pets/mess/other.png';
 
 const CATEGORY_LABEL = {
   dishes: 'Dishes',
@@ -19,7 +24,33 @@ const CATEGORY_LABEL = {
   other: 'Other',
 };
 
-const PET_EMOJI_CHOICES = ['🐶','🐱','🐰','🐻','🐼','🐸','🦊','🐵','🐷','🐔','🐧','🦄'];
+const MESS_IMG = {
+  dishes: messDishes,
+  laundry: messLaundry,
+  cleaning: messCleaning,
+  trash: messTrash,
+  cooking: messCooking,
+  other: messOther,
+};
+
+const DESIGNS = ['orange_black', 'blue_black'];
+const DESIGN_LABEL = {
+  orange_black: 'Orange',
+  blue_black: 'Blue',
+};
+
+const SPRITES = {
+  orange_black: { idle: orangeIdle, happy: orangeHappy, sad: orangeSad },
+  blue_black:   { idle: blueIdle,   happy: blueHappy,   sad: blueSad   },
+};
+
+const STATE_ANIM = {
+  idle:  'animate-[pet-breathe_2.4s_ease-in-out_infinite]',
+  happy: 'animate-[pet-bounce_0.6s_ease-in-out_infinite]',
+  sad:   'animate-[pet-droop_2.6s_ease-in-out_infinite]',
+};
+
+const SPRITE_SIZE = 160;
 
 const MOOD_TONE = {
   ecstatic: 'text-emerald-300',
@@ -43,24 +74,54 @@ function Bar({ value, label, color }) {
   );
 }
 
+function SpriteFrame({ design, state, size = SPRITE_SIZE }) {
+  const src = SPRITES[design]?.[state] || SPRITES.orange_black.idle;
+  const anim = STATE_ANIM[state] || STATE_ANIM.idle;
+  return (
+    <img
+      key={`${design}-${state}`}
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      className={`pixelated ${anim}`}
+      style={{ width: `${size}px`, height: `${size}px`, objectFit: 'contain' }}
+    />
+  );
+}
+
+function StaticPreview({ design, size = 48 }) {
+  const src = SPRITES[design]?.idle || SPRITES.orange_black.idle;
+  return (
+    <img
+      src={src}
+      alt=""
+      width={size}
+      height={size}
+      className="pixelated"
+      style={{ width: `${size}px`, height: `${size}px`, objectFit: 'contain' }}
+    />
+  );
+}
+
 function MessPile({ category, count, position }) {
   if (count <= 0) return null;
-  const emoji = CATEGORY_EMOJI[category] || '❓';
+  const src = MESS_IMG[category] || MESS_IMG.other;
   const size = Math.min(count, 5);
   return (
     <div
-      className="absolute flex gap-0.5"
+      className="absolute flex gap-0.5 items-end"
       style={position}
       title={`${count} overdue ${CATEGORY_LABEL[category].toLowerCase()}`}
     >
       {Array.from({ length: size }).map((_, i) => (
-        <span
+        <img
           key={i}
-          className="text-2xl leading-none animate-[mess-jitter_2.4s_ease-in-out_infinite]"
+          src={src}
+          alt=""
+          className="w-8 h-8 pixelated animate-[mess-jitter_2.4s_ease-in-out_infinite]"
           style={{ animationDelay: `${i * 0.15}s` }}
-        >
-          {emoji}
-        </span>
+        />
       ))}
       {count > 5 && (
         <span className="text-xs text-gray-400 self-end ml-1">+{count - 5}</span>
@@ -78,18 +139,25 @@ const CORNER_POSITIONS = {
   other:    { left: '50%', top: '12px',    transform: 'translateX(-50%)' },
 };
 
-function PetScene({ pet, onPickEmoji, celebrating }) {
-  const moodAnim = pet.mood === 'sad'
-    ? 'animate-[sad-droop_2.8s_ease-in-out_infinite]'
-    : 'animate-[idle-breath_3s_ease-in-out_infinite]';
-  const celebAnim = celebrating
-    ? 'animate-[celebration-bounce_1.2s_ease-out]'
-    : moodAnim;
+function stateFor(pet, celebrating) {
+  if (celebrating) return 'happy';
+  if (pet.mood === 'sad') return 'sad';
+  return 'idle';
+}
 
+function PetScene({ pet, onOpenPicker, celebrating }) {
+  const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
+  const state = stateFor(pet, celebrating);
   return (
     <div className="bg-gray-800 rounded-lg p-4 space-y-4">
-      <div className="relative aspect-[4/3] bg-gradient-to-b from-gray-700 to-gray-800 rounded-md overflow-hidden">
-        {/* Mess piles in corners */}
+      <div
+        className="relative aspect-[4/3] rounded-md overflow-hidden bg-gray-900"
+        style={{
+          backgroundImage: `url(${houseBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         {Object.entries(pet.mess_counts).map(([cat, count]) => (
           <MessPile
             key={cat}
@@ -99,19 +167,17 @@ function PetScene({ pet, onPickEmoji, celebrating }) {
           />
         ))}
 
-        {/* Pet emoji, centered */}
         <div className="absolute inset-0 flex items-center justify-center">
           <button
             type="button"
-            onClick={onPickEmoji}
-            className={`text-[5rem] leading-none ${celebAnim}`}
-            title="Tap to change your pet"
+            onClick={onOpenPicker}
+            className="p-1 rounded hover:bg-white/10"
+            title="Tap to change your axolotl"
           >
-            {pet.pet_emoji}
+            <SpriteFrame design={design} state={state} />
           </button>
         </div>
 
-        {/* Mood tag, top-left */}
         <div className="absolute top-2 left-2 text-xs uppercase tracking-widest bg-gray-900/70 px-2 py-0.5 rounded">
           <span className={MOOD_TONE[pet.mood] || 'text-gray-300'}>{pet.mood}</span>
         </div>
@@ -123,26 +189,27 @@ function PetScene({ pet, onPickEmoji, celebrating }) {
   );
 }
 
-function EmojiPicker({ current, onPick, onClose }) {
+function DesignPicker({ current, onPick, onClose }) {
   return (
     <div className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4"
          onClick={onClose}>
       <div
         onClick={e => e.stopPropagation()}
-        className="bg-gray-800 rounded-lg p-5 w-full max-w-sm space-y-4"
+        className="bg-gray-800 rounded-lg p-5 w-full max-w-md space-y-4"
       >
-        <h3 className="text-lg font-semibold">Pick your pet</h3>
-        <div className="grid grid-cols-4 gap-2">
-          {PET_EMOJI_CHOICES.map(e => (
+        <h3 className="text-lg font-semibold">Pick your axolotl</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {DESIGNS.map(d => (
             <button
-              key={e}
-              onClick={() => onPick(e)}
-              className={`aspect-square text-3xl rounded border-2 transition-all
-                          ${e === current
+              key={d}
+              onClick={() => onPick(d)}
+              className={`aspect-square rounded border-2 transition-all flex flex-col items-center justify-center gap-2 py-3
+                          ${d === current
                             ? 'border-amber-400 bg-gray-700'
                             : 'border-transparent hover:border-gray-600 hover:bg-gray-700'}`}
             >
-              {e}
+              <StaticPreview design={d} size={96} />
+              <span className="text-sm text-gray-200">{DESIGN_LABEL[d]}</span>
             </button>
           ))}
         </div>
@@ -171,7 +238,7 @@ function HouseholdShared({ shared }) {
         <div className="flex flex-wrap gap-2">
           {nonZero.map(([cat, v]) => (
             <span key={cat} className="bg-gray-700 rounded-full px-3 py-1 text-xs flex items-center gap-1">
-              <span className="text-base">{CATEGORY_EMOJI[cat]}</span>
+              <img src={MESS_IMG[cat] || MESS_IMG.other} alt="" className="w-4 h-4 pixelated" />
               <span className="text-gray-300">{CATEGORY_LABEL[cat]}</span>
               <span className="text-amber-400 font-bold">×{v}</span>
             </span>
@@ -190,6 +257,7 @@ function HouseholdScene({ data, onSelectPerson, personsById }) {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         {data.pets.map(pet => {
           const p = personsById.get(pet.person_id);
+          const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
           return (
             <button
               key={pet.person_id}
@@ -202,8 +270,8 @@ function HouseholdScene({ data, onSelectPerson, personsById }) {
                   {pet.mood}
                 </span>
               </div>
-              <div className="flex items-center justify-center text-5xl my-2 animate-[idle-breath_3s_ease-in-out_infinite]">
-                {pet.pet_emoji}
+              <div className="flex items-center justify-center my-2">
+                <StaticPreview design={design} size={64} />
               </div>
               <div className="space-y-1 text-[10px] text-gray-400">
                 <div className="flex justify-between"><span>❤️</span><span>{pet.happiness}</span></div>
@@ -224,7 +292,10 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   const [pickerOpen, setPickerOpen] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const celebrateTimer = useRef(null);
-  const personsById = new Map(persons.map(p => [p.entity_id, p]));
+  const personsById = useMemo(
+    () => new Map(persons.map(p => [p.entity_id, p])),
+    [persons],
+  );
 
   const load = useCallback(async () => {
     try {
@@ -240,7 +311,6 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
 
   useEffect(() => { load(); }, [load]);
 
-  // Poll every 10s while the tab is visible.
   useEffect(() => {
     let cancelled = false;
     const id = setInterval(() => {
@@ -249,7 +319,6 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
     return () => { cancelled = true; clearInterval(id); };
   }, [load]);
 
-  // Optimistic happiness update when a completion event fires.
   useEffect(() => {
     const onCompleted = (e) => {
       const { person_id, pet_delta, pet_happiness } = e.detail || {};
@@ -262,19 +331,18 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
         if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
         celebrateTimer.current = setTimeout(() => setCelebrating(false), 1300);
       }
-      // refresh after the server has updated
       setTimeout(load, 800);
     };
     window.addEventListener('chore-completed', onCompleted);
     return () => window.removeEventListener('chore-completed', onCompleted);
   }, [activePerson, isHousehold, load]);
 
-  const handlePickEmoji = async (emoji) => {
+  const handlePickDesign = async (design) => {
     if (!activePerson) return;
     setPickerOpen(false);
-    setPet(prev => prev ? { ...prev, pet_emoji: emoji } : prev);
+    setPet(prev => prev ? { ...prev, pet_design: design } : prev);
     try {
-      const updated = await api.setPetEmoji(activePerson, emoji);
+      const updated = await api.setPetDesign(activePerson, design);
       setPet(updated);
     } catch { /* rollback handled by next poll */ }
   };
@@ -285,21 +353,21 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   }
 
   if (!activePerson) {
-    return <div className="text-gray-400 text-sm">Pick a profile from the header to meet your pet.</div>;
+    return <div className="text-gray-400 text-sm">Pick a profile from the header to meet your axolotl.</div>;
   }
-  if (!pet) return <div className="text-gray-400 text-sm">Loading your pet…</div>;
+  if (!pet) return <div className="text-gray-400 text-sm">Loading your axolotl…</div>;
 
   return (
     <div className="space-y-4">
       <PetScene
         pet={pet}
-        onPickEmoji={() => setPickerOpen(true)}
+        onOpenPicker={() => setPickerOpen(true)}
         celebrating={celebrating}
       />
       {pickerOpen && (
-        <EmojiPicker
-          current={pet.pet_emoji}
-          onPick={handlePickEmoji}
+        <DesignPicker
+          current={pet.pet_design}
+          onPick={handlePickDesign}
           onClose={() => setPickerOpen(false)}
         />
       )}
