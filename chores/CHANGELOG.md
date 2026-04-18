@@ -1,3 +1,10 @@
+## 0.3.18
+
+- Move axolotl sprite picker from pet house click interaction to Settings menu
+- Add pet name field in Settings — custom name replaces person name in the pet house scene
+- Pet names saved per-person and shown in tooltip and stats panel
+- Clicking other people's pets in the pet house now just switches active person (no picker)
+
 ## 0.3.17
 
 - Overdue chores no longer spawn a duplicate pending instance for the next scheduled date

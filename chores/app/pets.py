@@ -171,6 +171,18 @@ def set_design(conn: sqlite3.Connection, person_id: str, design: str) -> str:
     return design
 
 
+def set_name(conn: sqlite3.Connection, person_id: str, name: str) -> str | None:
+    """Persist a custom pet name for this person. Pass empty string to clear."""
+    ensure_pet(conn, person_id)
+    stored = name.strip() if name else None
+    conn.execute(
+        "UPDATE pet_states SET pet_name = ? WHERE person_id = ?",
+        (stored, person_id),
+    )
+    conn.commit()
+    return stored
+
+
 def _state_design(state: sqlite3.Row | None) -> str:
     if state is None:
         return DEFAULT_DESIGN
@@ -189,11 +201,13 @@ def get_pet_view(conn: sqlite3.Connection, person_id: str) -> dict:
     happiness = state["happiness"] if state else 80
     emoji = state["pet_emoji"] if state else "🐶"
     last_bump = state["last_bump_at"] if state else None
+    pet_name = state["pet_name"] if state else None
     cleanliness, mess_counts = compute_cleanliness(conn, person_id)
     return {
         "person_id": person_id,
         "pet_emoji": emoji,
         "pet_design": _state_design(state),
+        "pet_name": pet_name,
         "happiness": happiness,
         "cleanliness": cleanliness,
         "mess_counts": mess_counts,

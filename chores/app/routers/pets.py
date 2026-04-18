@@ -27,6 +27,10 @@ class PetDesignUpdate(BaseModel):
     design: Literal["orange_black", "blue_black"]
 
 
+class PetNameUpdate(BaseModel):
+    name: str = Field(max_length=40)
+
+
 async def _resolve_person_id(request: Request, fallback: str | None) -> str | None:
     """Resolve the viewer's person entity_id from X-Remote-User-Id, with a
     `?person_id=` fallback for testability."""
@@ -159,4 +163,17 @@ async def set_pet_design(person_id: str, body: PetDesignUpdate):
     if not exists:
         raise HTTPException(404, "Person not found")
     pets.set_design(conn, person_id, body.design)
+    return pets.get_pet_view(conn, person_id)
+
+
+@router.put("/{person_id}/name")
+async def set_pet_name(person_id: str, body: PetNameUpdate):
+    """Set (or clear) a custom display name for this person's pet."""
+    conn = get_connection()
+    exists = conn.execute(
+        "SELECT 1 FROM persons WHERE entity_id = ?", (person_id,)
+    ).fetchone()
+    if not exists:
+        raise HTTPException(404, "Person not found")
+    pets.set_name(conn, person_id, body.name)
     return pets.get_pet_view(conn, person_id)

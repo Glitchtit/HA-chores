@@ -150,6 +150,7 @@ CREATE TABLE IF NOT EXISTS pet_states (
     happiness     INTEGER DEFAULT 80 CHECK (happiness BETWEEN 0 AND 100),
     pet_emoji     TEXT    DEFAULT '🐶',
     pet_design    TEXT    DEFAULT 'orange_black',
+    pet_name      TEXT    DEFAULT NULL,
     last_tick_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_bump_at  TIMESTAMP,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -241,6 +242,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("chores", "category", "TEXT DEFAULT 'other'"),
         # pet_states columns (v0.3.1 — axolotl sprites)
         ("pet_states", "pet_design", "TEXT DEFAULT 'orange_black'"),
+        # pet_states columns (v0.3.18 — pet name)
+        ("pet_states", "pet_name", "TEXT DEFAULT NULL"),
     ]
     for table, col, defn in migrations:
         try:
