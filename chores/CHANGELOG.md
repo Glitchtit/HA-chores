@@ -1,3 +1,7 @@
+## 0.3.23
+
+- Preload all pet sprites on mount so state transitions are instant
+
 ## 0.3.22
 
 - Allow petting any user's pet, not just your own
