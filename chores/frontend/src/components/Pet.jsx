@@ -41,10 +41,6 @@ const MESS_IMG = {
 };
 
 const DESIGNS = ['orange_black', 'blue_black'];
-const DESIGN_LABEL = {
-  orange_black: 'Orange',
-  blue_black: 'Blue',
-};
 
 const SPRITES = {
   orange_black: { idle: orangeIdle, happy: orangeHappy, sad: orangeSad },
@@ -216,39 +212,6 @@ function Ghost({ spot, type, index, onDragStart }) {
   );
 }
 
-/* ── Design picker modal ──────────────────────────────────────────────────── */
-
-function DesignPicker({ current, onPick, onClose }) {
-  return (
-    <div className="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4"
-         onClick={onClose}>
-      <div onClick={e => e.stopPropagation()}
-           className="bg-gray-800 rounded-lg p-5 w-full max-w-md space-y-4">
-        <h3 className="text-lg font-semibold">Pick your axolotl</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {DESIGNS.map(d => (
-            <button
-              key={d}
-              onClick={() => onPick(d)}
-              className={`aspect-square rounded border-2 transition-all flex flex-col items-center justify-center gap-2 py-3
-                ${d === current
-                  ? 'border-amber-400 bg-gray-700'
-                  : 'border-transparent hover:border-gray-600 hover:bg-gray-700'}`}
-            >
-              <StaticPreview design={d} size={96} />
-              <span className="text-sm text-gray-200">{DESIGN_LABEL[d]}</span>
-            </button>
-          ))}
-        </div>
-        <button onClick={onClose}
-                className="w-full bg-gray-700 hover:bg-gray-600 rounded py-2 text-sm">
-          Close
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ── Household shared summary ─────────────────────────────────────────────── */
 
 function HouseholdShared({ shared }) {
@@ -304,7 +267,6 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   const sceneRef = useRef(null);
 
   const [household, setHousehold] = useState(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [celebratingId, setCelebratingId] = useState(null);
   const celebrateTimer = useRef(null);
 
@@ -441,21 +403,10 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
     try { await api.deleteLayout(); } catch { /* ok */ }
   };
 
-  /* ── Design picker ─────────────────────────────────────────────────────── */
-  const handlePickDesign = async (design) => {
-    if (!activePerson) return;
-    setPickerOpen(false);
-    setHousehold(prev => {
-      if (!prev) return prev;
-      return { ...prev, pets: prev.pets.map(p => p.person_id === activePerson ? { ...p, pet_design: design } : p) };
-    });
-    try { await api.setPetDesign(activePerson, design); load(); } catch { /* ok */ }
-  };
-
+  /* ── Pet click ─────────────────────────────────────────────────────────── */
   const handlePetClick = (personId) => {
     if (editMode) return;
-    if (personId === activePerson) setPickerOpen(true);
-    else if (setActivePerson) setActivePerson(personId);
+    if (personId !== activePerson && setActivePerson) setActivePerson(personId);
   };
 
   /* ── Derived data ──────────────────────────────────────────────────────── */
@@ -546,7 +497,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                 const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
                 const isActive = pet.person_id === activePerson;
                 const state = stateFor(pet, pet.person_id === celebratingId);
-                const personName = personsById.get(pet.person_id)?.name || pet.person_id;
+                const personName = pet.pet_name || personsById.get(pet.person_id)?.name || pet.person_id;
                 const flip = i % 2 === 1;
 
                 return (
@@ -603,7 +554,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
         <div className="bg-gray-800 rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-2 text-sm text-gray-300">
             <StaticPreview design={myPet.pet_design} size={28} />
-            <span className="font-semibold">{personsById.get(activePerson)?.name || 'Your pet'}</span>
+            <span className="font-semibold">{myPet.pet_name || personsById.get(activePerson)?.name || 'Your pet'}</span>
             <span className={`ml-auto text-xs uppercase ${MOOD_TONE[myPet.mood] || 'text-gray-400'}`}>
               {myPet.mood}
             </span>
@@ -615,14 +566,6 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
 
       {/* Shared household summary */}
       {!editMode && household && <HouseholdShared shared={household.shared} />}
-
-      {pickerOpen && myPet && (
-        <DesignPicker
-          current={myPet.pet_design}
-          onPick={handlePickDesign}
-          onClose={() => setPickerOpen(false)}
-        />
-      )}
     </div>
   );
 }
