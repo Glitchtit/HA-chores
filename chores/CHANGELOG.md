@@ -1,3 +1,8 @@
+## 0.3.19
+
+- Clicking/tapping your own pet shows the petted sprite for 3 seconds with a floating heart animation
+- Added `petted.png` sprites for orange and blue axolotl designs
+
 ## 0.3.18
 
 - Move axolotl sprite picker from pet house click interaction to Settings menu
