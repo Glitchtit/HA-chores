@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim, CompleteResult, BadgeResult, PowerUp
 from database import get_connection
 from gamification import calculate_xp, update_streak, add_xp, check_and_award_badges, award_levelup_powerup, apply_powerup_to_xp
+import pets
 from notifications import (
     notify_chore_assigned,
     notify_badge_earned,
@@ -151,6 +152,8 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
     if row["status"] == "completed":
         raise HTTPException(400, "Already completed")
 
+    was_overdue = row["status"] == "overdue"
+
     # Get person's current streak and level for XP calculation
     person = conn.execute(
         "SELECT * FROM persons WHERE entity_id = ?", (body.completed_by,)
@@ -195,6 +198,21 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
             earned_powerup = award_levelup_powerup(body.completed_by, new_level)
         except Exception as e:
             logger.warning("Failed to award level-up power-up: %s", e)
+
+    # Pet happiness bump for the completer (not the assignee)
+    try:
+        pets.ensure_pet(conn, body.completed_by)
+        old_happiness = conn.execute(
+            "SELECT happiness FROM pet_states WHERE person_id = ?",
+            (body.completed_by,),
+        ).fetchone()
+        prev_happiness = old_happiness["happiness"] if old_happiness else 80
+        new_happiness = pets.bump_happiness(conn, body.completed_by, was_overdue=was_overdue)
+        pet_delta = new_happiness - prev_happiness
+    except Exception as e:
+        logger.warning("Failed to bump pet happiness: %s", e)
+        new_happiness = None
+        pet_delta = None
 
     # Check for new badges
     new_badges = check_and_award_badges(body.completed_by)
@@ -247,6 +265,8 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
         "powerup_earned": PowerUp(**earned_powerup) if earned_powerup else None,
         "followup_triggered": followup_name is not None,
         "followup_name": followup_name,
+        "pet_happiness": new_happiness,
+        "pet_delta": pet_delta,
     }
 
 

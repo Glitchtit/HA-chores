@@ -29,7 +29,7 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
   const [editId, setEditId] = useState(null);
   const [form, setForm] = useState({
     name: '', description: '', icon: '🧹', xp_reward: 10,
-    difficulty: 'medium', recurrence: '', estimated_minutes: '',
+    difficulty: 'medium', category: 'other', recurrence: '', estimated_minutes: '',
     assignment_mode: 'manual', rotation_order: [],
     followup_chore_id: '',
   });
@@ -62,6 +62,7 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
       icon: chore.icon,
       xp_reward: chore.xp_reward,
       difficulty: chore.difficulty,
+      category: chore.category || 'other',
       recurrence: chore.recurrence || '',
       estimated_minutes: chore.estimated_minutes || '',
       assignment_mode: chore.assignment_mode,
@@ -200,7 +201,7 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs text-gray-400">Difficulty</label>
                   <select
@@ -219,6 +220,21 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
                     <option value="easy">❤️ (5 XP)</option>
                     <option value="medium">💖 (10 XP)</option>
                     <option value="hard">❤️‍🔥 (20 XP)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-400">Category</label>
+                  <select
+                    value={form.category}
+                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    className="w-full bg-gray-700 rounded px-2 py-2"
+                  >
+                    <option value="dishes">🍽 Dishes</option>
+                    <option value="laundry">👕 Laundry</option>
+                    <option value="cleaning">🧹 Cleaning</option>
+                    <option value="trash">🗑 Trash</option>
+                    <option value="cooking">🍳 Cooking</option>
+                    <option value="other">📦 Other</option>
                   </select>
                 </div>
                 {editId ? (
