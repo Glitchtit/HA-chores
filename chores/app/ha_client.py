@@ -150,6 +150,25 @@ async def get_sun_state() -> bool | None:
         return None
 
 
+_RAINY_STATES = {"rainy", "pouring", "snowy-rainy", "hail", "lightning-rainy", "lightning"}
+
+
+async def get_weather_state() -> bool | None:
+    """Return True if it is currently raining according to weather.forecast_home.
+    Returns None if the entity is unavailable."""
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            resp = await client.get(
+                f"{HA_URL}/api/states/weather.forecast_home",
+                headers=_headers(),
+            )
+            resp.raise_for_status()
+            return resp.json().get("state", "") in _RAINY_STATES
+    except Exception as e:
+        logger.warning("Could not fetch weather state: %s", e)
+        return None
+
+
 async def get_calendar_events(
     calendar_entity: str, start: str, end: str
 ) -> list[dict]:
