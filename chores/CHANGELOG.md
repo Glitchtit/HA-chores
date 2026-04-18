@@ -1,3 +1,7 @@
+## 0.3.2
+
+- Replaced assets with fixed transpararent background
+
 ## 0.3.1
 
 - Replaced the emoji pet with hand-generated axolotl pixel-art sprites in two designs (orange/black, blue/black)
