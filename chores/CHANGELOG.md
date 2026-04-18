@@ -1,3 +1,7 @@
+## 0.3.21
+
+- Remove yellow active ring from pet sprites in the pet house
+
 ## 0.3.20
 
 - Clicking another person's pet in the pet house now only changes the stats view locally — the global active person (used for chores and settings) is no longer affected
