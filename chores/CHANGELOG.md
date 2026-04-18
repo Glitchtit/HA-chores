@@ -1,3 +1,9 @@
+## 0.3.14
+
+- House background switches to rain variant when weather.forecast_home reports rainy conditions
+- House background switches to filthy variant when shared cleanliness drops below 30
+- Both conditions combine (rain + filthy), giving 8 total background variants (day/night × rain/clear × normal/filthy)
+
 ## 0.3.13
 
 - Increased pet and mess pile sprite size by 30% in the house scene

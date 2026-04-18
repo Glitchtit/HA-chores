@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../api';
 
-import houseBgDay   from '../assets/pets/house/background-day.png';
-import houseBgNight from '../assets/pets/house/background-night.png';
+import houseBgDay            from '../assets/pets/house/background-day.png';
+import houseBgDayRain        from '../assets/pets/house/background-day-rain.png';
+import houseBgDayFilthy      from '../assets/pets/house/background-day-filthy.png';
+import houseBgDayRainFilthy  from '../assets/pets/house/background-day-rain-filthy.png';
+import houseBgNight          from '../assets/pets/house/background-night.png';
+import houseBgNightRain      from '../assets/pets/house/background-night-rain.png';
+import houseBgNightFilthy    from '../assets/pets/house/background-night-filthy.png';
+import houseBgNightRainFilthy from '../assets/pets/house/background-night-rain-filthy.png';
 import orangeIdle     from '../assets/pets/orange_black/idle.png';
 import orangeHappy    from '../assets/pets/orange_black/happy.png';
 import orangeSad      from '../assets/pets/orange_black/sad.png';
@@ -311,8 +317,9 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   const [editDraft, setEditDraft] = useState(null); // working copy during edit
   const [dragging, setDragging] = useState(null);   // { type: 'pet'|'mess', index }
 
-  // Day/night background
+  // Day/night background + rain
   const [isDay, setIsDay] = useState(true);
+  const [isRaining, setIsRaining] = useState(false);
 
   const personsById = useMemo(
     () => new Map(persons.map(p => [p.entity_id, p])),
@@ -321,7 +328,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
 
   /* ── Load sun state (on mount + every 5 min) ───────────────────────────── */
   useEffect(() => {
-    const fetchSun = () => api.getSunState().then(d => setIsDay(d.is_day)).catch(() => {});
+    const fetchSun = () => api.getSunState().then(d => { setIsDay(d.is_day); setIsRaining(d.is_raining); }).catch(() => {});
     fetchSun();
     const id = setInterval(fetchSun, 5 * 60 * 1000);
     return () => clearInterval(id);
@@ -491,7 +498,12 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
           ref={sceneRef}
           className={`relative aspect-[4/3] rounded-md overflow-hidden bg-gray-900 ${editMode ? 'ring-2 ring-amber-400/40' : ''}`}
           style={{
-            backgroundImage: `url(${isDay ? houseBgDay : houseBgNight})`,
+            backgroundImage: (() => {
+              const filthy = (household?.shared?.cleanliness ?? 100) < 30;
+              const rain   = isRaining;
+              if (isDay)  return `url(${rain ? (filthy ? houseBgDayRainFilthy  : houseBgDayRain)  : (filthy ? houseBgDayFilthy  : houseBgDay)})`;
+              return             `url(${rain ? (filthy ? houseBgNightRainFilthy : houseBgNightRain) : (filthy ? houseBgNightFilthy : houseBgNight)})`;
+            })(),
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
