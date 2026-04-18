@@ -1,3 +1,9 @@
+## 0.3.12
+
+- House background switches between day and night based on HA's sun.sun entity
+- Background refreshes every 5 minutes while the page is open
+- Falls back to day background if sun entity is unavailable
+
 ## 0.3.11
 
 - Pet shows happy sprite for 1 hour after its owner completes a chore

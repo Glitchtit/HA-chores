@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../api';
 
-import houseBg        from '../assets/pets/house/background.png';
+import houseBgDay   from '../assets/pets/house/background-day.png';
+import houseBgNight from '../assets/pets/house/background-night.png';
 import orangeIdle     from '../assets/pets/orange_black/idle.png';
 import orangeHappy    from '../assets/pets/orange_black/happy.png';
 import orangeSad      from '../assets/pets/orange_black/sad.png';
@@ -310,10 +311,21 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   const [editDraft, setEditDraft] = useState(null); // working copy during edit
   const [dragging, setDragging] = useState(null);   // { type: 'pet'|'mess', index }
 
+  // Day/night background
+  const [isDay, setIsDay] = useState(true);
+
   const personsById = useMemo(
     () => new Map(persons.map(p => [p.entity_id, p])),
     [persons],
   );
+
+  /* ── Load sun state (on mount + every 5 min) ───────────────────────────── */
+  useEffect(() => {
+    const fetchSun = () => api.getSunState().then(d => setIsDay(d.is_day)).catch(() => {});
+    fetchSun();
+    const id = setInterval(fetchSun, 5 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   /* ── Load saved layout (once on mount) ─────────────────────────────────── */
   useEffect(() => {
@@ -479,7 +491,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
           ref={sceneRef}
           className={`relative aspect-[4/3] rounded-md overflow-hidden bg-gray-900 ${editMode ? 'ring-2 ring-amber-400/40' : ''}`}
           style={{
-            backgroundImage: `url(${houseBg})`,
+            backgroundImage: `url(${isDay ? houseBgDay : houseBgNight})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}

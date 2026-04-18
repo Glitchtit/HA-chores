@@ -79,6 +79,7 @@ export const setPetDesign = (entityId, design) =>
 export const getLayout = () => api.get('/pets/layout').then(r => r.data);
 export const saveLayout = (layout) => api.put('/pets/layout', layout).then(r => r.data);
 export const deleteLayout = () => api.delete('/pets/layout').then(r => r.data);
+export const getSunState = () => api.get('/pets/sun').then(r => r.data);
 
 // ── Config ──────────────────────────────────────────────────────────────────
 export const getConfig = () => api.get('/config/').then(r => r.data);
