@@ -1,3 +1,9 @@
+## 0.3.16
+
+- Fix rotation chores not assigning to persons correctly
+- Rotation now advances day-by-day within a single scheduler pass (previously all days in a 7-day window got assigned to the same person)
+- Editing a chore's assignment_mode or rotation_order now deletes stale pending instances and regenerates them with correct rotation assignments
+
 ## 0.3.15
 
 - Fix pet sprites being elevated vs ghost placement positions

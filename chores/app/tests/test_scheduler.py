@@ -119,6 +119,24 @@ class TestGenerateInstances:
         count = generate_instances(days_ahead=3)
         assert count == 2  # Today already exists
 
+    def test_rotation_advances_across_days(self, tmp_db):
+        from scheduler import generate_instances
+
+        tmp_db.execute(
+            """INSERT INTO chores (id, name, recurrence, active, assignment_mode, rotation_order)
+               VALUES (1, 'Rotation Chore', 'daily', 1, 'rotation', '["person.alice", "person.bob"]')"""
+        )
+        tmp_db.commit()
+
+        count = generate_instances(days_ahead=4)
+        assert count == 4
+
+        rows = tmp_db.execute(
+            "SELECT due_date, assigned_to FROM chore_instances WHERE chore_id = 1 ORDER BY due_date"
+        ).fetchall()
+        assignees = [r["assigned_to"] for r in rows]
+        assert assignees == ["person.alice", "person.bob", "person.alice", "person.bob"]
+
 
 class TestMarkOverdue:
     def test_marks_past_due(self, tmp_db):

@@ -119,6 +119,10 @@ def generate_instances(days_ahead: int = 7) -> int:
     today = date.today()
     created = 0
 
+    # Track the last assigned person per chore within this scheduler run so
+    # rotation advances day-by-day when multiple instances are created in one pass.
+    in_run_last_assigned: dict[int, str] = {}
+
     for chore in chores:
         rotation_order = None
         if chore["rotation_order"]:
@@ -153,7 +157,20 @@ def generate_instances(days_ahead: int = 7) -> int:
             # Determine assignee
             assigned_to = None
             if chore["assignment_mode"] == "rotation" and rotation_order:
-                assigned_to = get_next_assignee(chore["id"], rotation_order)
+                chore_id = chore["id"]
+                if chore_id in in_run_last_assigned:
+                    # Advance rotation from the previous assignment made in this run
+                    last = in_run_last_assigned[chore_id]
+                    try:
+                        idx = rotation_order.index(last)
+                        assigned_to = rotation_order[(idx + 1) % len(rotation_order)]
+                    except ValueError:
+                        assigned_to = get_next_assignee(chore_id, rotation_order)
+                else:
+                    # First new instance for this chore in this run: use DB history
+                    assigned_to = get_next_assignee(chore_id, rotation_order)
+                if assigned_to:
+                    in_run_last_assigned[chore_id] = assigned_to
             # manual and claim modes leave assigned_to as None
 
             conn.execute(

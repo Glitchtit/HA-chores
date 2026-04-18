@@ -95,6 +95,17 @@ async def update_chore(chore_id: int, body: ChoreUpdate):
     if "active" in (body.model_dump(exclude_unset=True)):
         validate_and_revoke_badges()
 
+    # If assignment mode or rotation order changed, delete pending instances so
+    # the scheduler recreates them with correct rotation assignments.
+    changed_fields = set(body.model_dump(exclude_unset=True).keys())
+    if changed_fields & {"assignment_mode", "rotation_order"}:
+        conn.execute(
+            "DELETE FROM chore_instances WHERE chore_id = ? AND status = 'pending'",
+            (chore_id,),
+        )
+        conn.commit()
+        generate_instances(days_ahead=7)
+
     return await get_chore(chore_id)
 
 
