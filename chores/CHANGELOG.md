@@ -1,3 +1,9 @@
+## 0.3.3
+
+- Chores menu now groups chores by category with section headers
+- Within each category, chores are sorted by XP reward (low to high)
+- Follow-up chores appear indented under their parent chore with a visual connector
+
 ## 0.3.2
 
 - Replaced assets with fixed transpararent background

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import * as api from '../api';
 
 const DIFFICULTY_COLORS = {
@@ -9,6 +9,17 @@ const DIFFICULTY_COLORS = {
 
 const DIFFICULTY_XP = { easy: 5, medium: 10, hard: 20 };
 const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖', hard: '❤️‍🔥' };
+
+const CATEGORY_META = {
+  dishes:   { label: 'Dishes',   icon: '🍽️' },
+  laundry:  { label: 'Laundry',  icon: '👕' },
+  cleaning: { label: 'Cleaning', icon: '🧹' },
+  trash:    { label: 'Trash',    icon: '🗑️' },
+  cooking:  { label: 'Cooking',  icon: '🍳' },
+  other:    { label: 'Other',    icon: '📦' },
+};
+
+const CATEGORY_ORDER = ['dishes', 'laundry', 'cleaning', 'trash', 'cooking', 'other'];
 
 const RECURRENCE_OPTIONS = [
   { value: '', label: 'One-time' },
@@ -35,6 +46,18 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
   });
   const [assignChore, setAssignChore] = useState(null); // chore being assigned
   const [assignForm, setAssignForm] = useState({ person_id: '', due_date: '' });
+
+  const choreMap = useMemo(() => Object.fromEntries(chores.map(c => [c.id, c])), [chores]);
+  const followupIds = useMemo(() => new Set(chores.map(c => c.followup_chore_id).filter(Boolean)), [chores]);
+  const groupedChores = useMemo(() => {
+    const groups = {};
+    for (const cat of CATEGORY_ORDER) {
+      groups[cat] = chores
+        .filter(c => !followupIds.has(c.id) && (c.category || 'other') === cat)
+        .sort((a, b) => a.xp_reward - b.xp_reward);
+    }
+    return groups;
+  }, [chores, followupIds]);
 
   const load = useCallback(async () => {
     try {
@@ -146,6 +169,77 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
     } catch {
       addToast('Failed to assign chore', 'error');
     }
+  };
+
+  const renderChoreCard = (c, depth = 0) => {
+    const followup = c.followup_chore_id ? choreMap[c.followup_chore_id] : null;
+    return (
+      <div key={c.id} className={depth > 0 ? 'mt-1 ml-5 pl-3 border-l-2 border-purple-700/50' : ''}>
+        <div className={`bg-gray-800 rounded-lg p-4 ${!c.active ? 'opacity-50' : ''}`}>
+          {depth > 0 && (
+            <div className="flex items-center gap-1 text-xs text-purple-400 mb-2">
+              <span>↳</span> follow-up
+            </div>
+          )}
+          {/* Chore info */}
+          <div className="flex items-center gap-3 min-w-0 mb-3">
+            <span className="text-3xl shrink-0">{c.icon}</span>
+            <div className="min-w-0">
+              <div className="font-semibold text-base truncate">{c.name}</div>
+              <div className="flex flex-wrap gap-2 mt-1">
+                <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[c.difficulty]}`}>
+                  {DIFFICULTY_LABELS[c.difficulty] || c.difficulty}
+                </span>
+                <span className="text-xs text-gray-500">{c.xp_reward} XP</span>
+                {c.recurrence && (
+                  <span className="text-xs text-blue-400">🔄 {c.recurrence}</span>
+                )}
+                <span className="text-xs text-gray-500">{c.assignment_mode}</span>
+                {c.followup_chore_id && (() => {
+                  const fu = choreMap[c.followup_chore_id];
+                  return fu ? (
+                    <span className="text-xs text-purple-400">🔗 {fu.icon} {fu.name}</span>
+                  ) : null;
+                })()}
+              </div>
+            </div>
+          </div>
+          {/* Action buttons row */}
+          <div className="flex gap-2">
+            {c.active && (
+              <button onClick={(e) => handleQuickDone(c, e)}
+                className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 rounded-lg text-base font-medium transition-colors"
+                title="Quick done – mark as completed now">
+                ✅ Done
+              </button>
+            )}
+            {c.active && (
+              <button onClick={() => openAssign(c)}
+                className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-base font-medium transition-colors"
+                title="Assign to person">
+                👤 Assign
+              </button>
+            )}
+            <button onClick={() => openEdit(c)}
+              className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-base font-medium transition-colors"
+              title="Edit">
+              ✏️ Edit
+            </button>
+            <button onClick={() => handleToggleActive(c)}
+              className="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-base transition-colors"
+              title={c.active ? 'Deactivate' : 'Activate'}>
+              {c.active ? '⏸️' : '▶️'}
+            </button>
+            <button onClick={() => handleDelete(c.id)}
+              className="py-2.5 px-4 bg-gray-700 hover:bg-red-900 rounded-lg text-base text-red-400 transition-colors"
+              title="Delete">
+              🗑️
+            </button>
+          </div>
+        </div>
+        {followup && renderChoreCard(followup, depth + 1)}
+      </div>
+    );
   };
 
   return (
@@ -406,74 +500,31 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
         </div>
       )}
 
-      {/* Chore list */}
+      {/* Chore list – grouped by category, sorted by XP, follow-ups nested */}
       {chores.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
           <div className="text-4xl mb-2">📋</div>
           <p>No chores yet. Create your first one!</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {chores.map(c => (
-            <div key={c.id}
-              className={`bg-gray-800 rounded-lg p-4 ${!c.active ? 'opacity-50' : ''}`}>
-              {/* Chore info */}
-              <div className="flex items-center gap-3 min-w-0 mb-3">
-                <span className="text-3xl shrink-0">{c.icon}</span>
-                <div className="min-w-0">
-                  <div className="font-semibold text-base truncate">{c.name}</div>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${DIFFICULTY_COLORS[c.difficulty]}`}>
-                      {DIFFICULTY_LABELS[c.difficulty] || c.difficulty}
-                    </span>
-                    <span className="text-xs text-gray-500">{c.xp_reward} XP</span>
-                    {c.recurrence && (
-                      <span className="text-xs text-blue-400">🔄 {c.recurrence}</span>
-                    )}
-                    <span className="text-xs text-gray-500">{c.assignment_mode}</span>
-                    {c.followup_chore_id && (() => {
-                      const fu = chores.find(x => x.id === c.followup_chore_id);
-                      return fu ? (
-                        <span className="text-xs text-purple-400">🔗 {fu.icon} {fu.name}</span>
-                      ) : null;
-                    })()}
-                  </div>
+        <div className="space-y-6">
+          {CATEGORY_ORDER.map(cat => {
+            const catChores = groupedChores[cat];
+            if (!catChores || catChores.length === 0) return null;
+            return (
+              <div key={cat}>
+                <div className="flex items-center gap-2 mb-2 px-1">
+                  <span>{CATEGORY_META[cat].icon}</span>
+                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">
+                    {CATEGORY_META[cat].label}
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {catChores.map(c => renderChoreCard(c, 0))}
                 </div>
               </div>
-              {/* Action buttons row */}
-              <div className="flex gap-2">
-                {c.active && (
-                  <button onClick={(e) => handleQuickDone(c, e)}
-                    className="flex-1 py-2.5 bg-green-700 hover:bg-green-600 rounded-lg text-base font-medium transition-colors"
-                    title="Quick done – mark as completed now">
-                    ✅ Done
-                  </button>
-                )}
-                {c.active && (
-                  <button onClick={() => openAssign(c)}
-                    className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-base font-medium transition-colors"
-                    title="Assign to person">
-                    👤 Assign
-                  </button>
-                )}
-                <button onClick={() => openEdit(c)}
-                  className="flex-1 py-2.5 bg-gray-700 hover:bg-gray-600 rounded-lg text-base font-medium transition-colors"
-                  title="Edit">
-                  ✏️ Edit
-                </button>
-                <button onClick={() => handleToggleActive(c)}
-                  className="py-2.5 px-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-base transition-colors"
-                  title={c.active ? 'Deactivate' : 'Activate'}>
-                  {c.active ? '⏸️' : '▶️'}
-                </button>
-                <button onClick={() => handleDelete(c.id)}
-                  className="py-2.5 px-4 bg-gray-700 hover:bg-red-900 rounded-lg text-base text-red-400 transition-colors"
-                  title="Delete">
-                  🗑️
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
