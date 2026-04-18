@@ -580,7 +580,18 @@ export function GameEffectsProvider({ children }) {
   }, []);
 
   const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress, tileEl) => {
-    const { xp_awarded, leveled_up, old_level, new_level, new_badges, powerup_earned } = result;
+    const { xp_awarded, leveled_up, old_level, new_level, new_badges, powerup_earned, pet_delta, pet_happiness, instance } = result;
+
+    // Notify Pet view (and any other listeners) that a chore was completed
+    if (typeof window !== 'undefined' && (pet_delta != null || pet_happiness != null)) {
+      window.dispatchEvent(new CustomEvent('chore-completed', {
+        detail: {
+          person_id: instance?.completed_by ?? null,
+          pet_delta: pet_delta ?? 0,
+          pet_happiness: pet_happiness ?? null,
+        },
+      }));
+    }
 
     // Floating XP from the Done button
     if (buttonEl && xp_awarded > 0) {

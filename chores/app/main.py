@@ -105,6 +105,14 @@ async def _scheduler_loop():
                     expire_old_powerups()
                 except Exception as e:
                     logger.error("Power-up expiry failed: %s", e)
+                try:
+                    import pets as _pets
+                    from database import get_connection as _get_conn
+                    decayed_pets = _pets.decay_all(_get_conn())
+                    if decayed_pets:
+                        logger.info("Midnight pet happiness decay applied to %d pet(s)", decayed_pets)
+                except Exception as e:
+                    logger.error("Pet decay failed: %s", e)
 
             from database import get_connection
             conn = get_connection()
@@ -282,7 +290,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Register routers ────────────────────────────────────────────────────────
-from routers import health, chores, persons, assignments, gamification, config, calendar, powerups
+from routers import health, chores, persons, assignments, gamification, config, calendar, powerups, pets as pets_router
 
 app.include_router(health.router)
 app.include_router(chores.router)
@@ -292,6 +300,7 @@ app.include_router(gamification.router)
 app.include_router(config.router)
 app.include_router(calendar.router)
 app.include_router(powerups.router)
+app.include_router(pets_router.router)
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────

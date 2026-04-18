@@ -50,13 +50,13 @@ async def create_chore(body: ChoreCreate):
     conn = get_connection()
     rotation_json = json.dumps(body.rotation_order) if body.rotation_order else None
     cursor = conn.execute(
-        """INSERT INTO chores (name, description, icon, xp_reward, difficulty,
+        """INSERT INTO chores (name, description, icon, xp_reward, difficulty, category,
                                recurrence, estimated_minutes, assignment_mode, rotation_order,
                                followup_chore_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             body.name, body.description, body.icon, body.xp_reward,
-            body.difficulty, body.recurrence, body.estimated_minutes,
+            body.difficulty, body.category, body.recurrence, body.estimated_minutes,
             body.assignment_mode, rotation_json, body.followup_chore_id,
         ),
     )
