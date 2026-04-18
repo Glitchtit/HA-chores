@@ -1,3 +1,7 @@
+## 0.3.9
+
+- Fix mess pile position offset after toggling placement editor: ghost badge is now absolutely positioned so it no longer affects the container height used for the translate anchor
+
 ## 0.3.8
 
 - Sync persons from HA now removes persons that no longer exist in HA (badges, power-ups, and pet state are cascade-deleted automatically)
