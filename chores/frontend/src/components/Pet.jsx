@@ -315,7 +315,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
     api.getLayout()
       .then(saved => {
         if (saved?.pet_spots?.length && saved?.mess_spots?.length) {
-          setSpots({ pet: saved.pet_spots, mess: saved.mess_spots });
+          setSpots({ pet: shuffle(saved.pet_spots), mess: shuffle(saved.mess_spots) });
         } else {
           setSpots({ pet: shuffle(DEFAULT_PET_SPOTS), mess: shuffle(DEFAULT_MESS_SPOTS) });
         }
