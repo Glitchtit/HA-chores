@@ -309,6 +309,12 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
     return () => clearInterval(id);
   }, []);
 
+  /* ── Preload all pet sprites on mount so swaps are instant ─────────────── */
+  useEffect(() => {
+    const urls = Object.values(SPRITES).flatMap(s => Object.values(s));
+    urls.forEach(src => { const img = new Image(); img.src = src; });
+  }, []);
+
   /* ── Load saved layout (once on mount) ─────────────────────────────────── */
   useEffect(() => {
     api.getLayout()
