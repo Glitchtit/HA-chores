@@ -1,3 +1,9 @@
+## 0.3.15
+
+- Fix pet sprites being elevated vs ghost placement positions
+- Name label is now absolutely positioned (below sprite, out of flow) so translate(-50%,-100%) anchors to sprite height only
+- Removed button padding that also contributed a small offset
+
 ## 0.3.14
 
 - House background switches to rain variant when weather.forecast_home reports rainy conditions
