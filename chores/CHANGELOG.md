@@ -1,3 +1,7 @@
+## 0.3.10
+
+- Pet and mess pile positions are now reshuffled on every page load (saved layout defines the spot pool, not fixed positions)
+
 ## 0.3.9
 
 - Fix mess pile position offset after toggling placement editor: ghost badge is now absolutely positioned so it no longer affects the container height used for the translate anchor
