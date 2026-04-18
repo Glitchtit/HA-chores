@@ -1,3 +1,8 @@
+## 0.3.20
+
+- Clicking another person's pet in the pet house now only changes the stats view locally — the global active person (used for chores and settings) is no longer affected
+- Prevents accidentally completing chores on someone else's profile
+
 ## 0.3.19
 
 - Clicking/tapping your own pet shows the petted sprite for 3 seconds with a floating heart animation

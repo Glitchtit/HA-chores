@@ -277,6 +277,12 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   const [pettedKey, setPettedKey] = useState(0);
   const pettedTimer = useRef(null);
 
+  // viewedPerson tracks whose stats are shown in the pet tab.
+  // It defaults to activePerson but can be changed locally by clicking other pets
+  // without affecting the global activePerson used by chores/settings.
+  const [viewedPerson, setViewedPerson] = useState(activePerson);
+  useEffect(() => { setViewedPerson(activePerson); }, [activePerson]);
+
   // Spot state: loaded from backend (fixed) or shuffled defaults (random)
   const [spots, setSpots] = useState(null);        // { pet: [...], mess: [...] }
   const [spotsLoaded, setSpotsLoaded] = useState(false);
@@ -418,14 +424,14 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
       setPettedKey(k => k + 1);
       clearTimeout(pettedTimer.current);
       pettedTimer.current = setTimeout(() => setPettedId(null), 3000);
-    } else if (setActivePerson) {
-      setActivePerson(personId);
     }
+    // Always update local viewed pet — never change global activePerson
+    setViewedPerson(personId);
   };
 
   /* ── Derived data ──────────────────────────────────────────────────────── */
   const displaySpots = editMode && editDraft ? editDraft : spots;
-  const myPet = household?.pets?.find(p => p.person_id === activePerson);
+  const myPet = household?.pets?.find(p => p.person_id === viewedPerson);
   const activeMessCategories = household
     ? Object.entries(household.shared.mess_counts).filter(([, v]) => v > 0)
     : [];
@@ -509,7 +515,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
               {household.pets.map((pet, i) => {
                 const spot = displaySpots.pet[i % displaySpots.pet.length];
                 const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
-                const isActive = pet.person_id === activePerson;
+                const isActive = pet.person_id === viewedPerson;
                 const state = stateFor(pet, pet.person_id === celebratingId, pettedId);
                 const personName = pet.pet_name || personsById.get(pet.person_id)?.name || pet.person_id;
                 const flip = i % 2 === 1;
@@ -575,7 +581,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
         <div className="bg-gray-800 rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-2 text-sm text-gray-300">
             <StaticPreview design={myPet.pet_design} size={28} />
-            <span className="font-semibold">{myPet.pet_name || personsById.get(activePerson)?.name || 'Your pet'}</span>
+            <span className="font-semibold">{myPet.pet_name || personsById.get(viewedPerson)?.name || 'Your pet'}</span>
             <span className={`ml-auto text-xs uppercase ${MOOD_TONE[myPet.mood] || 'text-gray-400'}`}>
               {myPet.mood}
             </span>
