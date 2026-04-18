@@ -144,6 +144,11 @@ function StaticPreview({ design, size = 48 }) {
 
 function stateFor(pet, celebrating) {
   if (celebrating) return 'happy';
+  if (pet.last_bump_at) {
+    // SQLite CURRENT_TIMESTAMP is UTC without a timezone suffix — append Z before parsing
+    const bumpedAt = new Date(pet.last_bump_at.replace(' ', 'T') + 'Z');
+    if (Date.now() - bumpedAt.getTime() < 60 * 60 * 1000) return 'happy';
+  }
   if (pet.mood === 'sad') return 'sad';
   return 'idle';
 }

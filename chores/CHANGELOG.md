@@ -1,3 +1,7 @@
+## 0.3.11
+
+- Pet shows happy sprite for 1 hour after its owner completes a chore
+
 ## 0.3.10
 
 - Pet and mess pile positions are now reshuffled on every page load (saved layout defines the spot pool, not fixed positions)
