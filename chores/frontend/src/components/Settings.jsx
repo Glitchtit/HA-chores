@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import * as api from '../api';
 
+import orangeIdle from '../assets/pets/orange_black/idle.png';
+import blueIdle   from '../assets/pets/blue_black/idle.png';
+
+const PET_DESIGNS = ['orange_black', 'blue_black'];
+const PET_DESIGN_LABEL = { orange_black: 'Orange', blue_black: 'Blue' };
+const PET_DESIGN_SPRITE = { orange_black: orangeIdle, blue_black: blueIdle };
+
 const HOURS = Array.from({ length: 24 }, (_, i) => ({
   value: i,
   label: `${String(i).padStart(2, '0')}:00`,
@@ -109,6 +116,11 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
   const [resetting, setResetting] = useState(false);
   const saveTimers = useRef({});
 
+  // Pet state
+  const [petData, setPetData] = useState(null); // { pet_design, pet_name, ... }
+  const [petName, setPetName] = useState('');
+  const petNameTimer = useRef(null);
+
   // Load notification config for the active person whenever they change
   useEffect(() => {
     if (!activePerson) { setNotifCfg(NOTIF_DEFAULTS); return; }
@@ -129,6 +141,15 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
     }).catch(() => {});
   }, [activePerson]);
 
+  // Load pet data for active person
+  useEffect(() => {
+    if (!activePerson) { setPetData(null); setPetName(''); return; }
+    api.getHouseholdPets().then(data => {
+      const pet = data.pets?.find(p => p.person_id === activePerson);
+      if (pet) { setPetData(pet); setPetName(pet.pet_name ?? ''); }
+    }).catch(() => {});
+  }, [activePerson]);
+
   // Debounced auto-save — key is scoped to the active person
   const updateNotifCfg = useCallback((key, value) => {
     if (!activePerson) return;
@@ -140,6 +161,29 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
         await api.setConfigValue(scopedKey, JSON.stringify(value));
       } catch {
         addToast('Failed to save notification setting', 'error');
+      }
+    }, 600);
+  }, [activePerson, addToast]);
+
+  const handlePickDesign = useCallback(async (design) => {
+    if (!activePerson) return;
+    setPetData(prev => prev ? { ...prev, pet_design: design } : prev);
+    try {
+      await api.setPetDesign(activePerson, design);
+    } catch {
+      addToast('Failed to save pet design', 'error');
+    }
+  }, [activePerson, addToast]);
+
+  const handlePetNameChange = useCallback((val) => {
+    setPetName(val);
+    clearTimeout(petNameTimer.current);
+    petNameTimer.current = setTimeout(async () => {
+      if (!activePerson) return;
+      try {
+        await api.setPetName(activePerson, val);
+      } catch {
+        addToast('Failed to save pet name', 'error');
       }
     }, 600);
   }, [activePerson, addToast]);
@@ -225,8 +269,61 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
         </div>
       </div>
 
-      {/* Notification Settings */}
-      <div className="bg-gray-800 rounded-xl p-5">
+      {/* My Pet */}
+      <div className="bg-gray-800 rounded-xl p-5 space-y-4">
+        <h3 className="font-medium">🐾 My Pet</h3>
+        {!activePerson ? (
+          <p className="text-sm text-gray-500 italic">Select a person above to customise their pet.</p>
+        ) : (<>
+          {/* Design picker */}
+          <div>
+            <p className="text-xs text-gray-500 mb-2">Axolotl style</p>
+            <div className="grid grid-cols-2 gap-3">
+              {PET_DESIGNS.map(d => (
+                <button
+                  key={d}
+                  onClick={() => handlePickDesign(d)}
+                  className={`aspect-square rounded-lg border-2 transition-all flex flex-col items-center justify-center gap-2 py-3
+                    ${d === petData?.pet_design
+                      ? 'border-amber-400 bg-gray-700'
+                      : 'border-gray-600 hover:border-gray-500 hover:bg-gray-700'}`}
+                >
+                  <img
+                    src={PET_DESIGN_SPRITE[d]}
+                    alt={PET_DESIGN_LABEL[d]}
+                    width={80}
+                    height={80}
+                    className="pixelated"
+                    style={{ width: 80, height: 80, objectFit: 'contain' }}
+                  />
+                  <span className="text-sm text-gray-200">{PET_DESIGN_LABEL[d]}</span>
+                  {d === petData?.pet_design && (
+                    <span className="text-xs text-amber-400">✓ Selected</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Pet name */}
+          <div>
+            <label className="text-xs text-gray-500 block mb-1.5">Pet name</label>
+            <input
+              type="text"
+              value={petName}
+              onChange={e => handlePetNameChange(e.target.value)}
+              placeholder={persons.find(p => p.entity_id === activePerson)?.name ?? 'Name your pet…'}
+              maxLength={40}
+              className="w-full bg-gray-700 border border-gray-600 focus:border-amber-500 focus:outline-none rounded-lg px-3 py-2 text-sm"
+            />
+            <p className="text-xs text-gray-600 mt-1">
+              Shown in the pet house instead of the person's name. Leave blank to use the person's name.
+            </p>
+          </div>
+        </>)}
+      </div>
+
+      {/* Notification Settings */}      <div className="bg-gray-800 rounded-xl p-5">
         <h3 className="font-medium mb-1">🔔 Notifications</h3>
         <p className="text-xs text-gray-500 mb-3">
           {activePerson
