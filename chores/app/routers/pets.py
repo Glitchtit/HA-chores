@@ -8,6 +8,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+import asyncio
 import json
 
 import pets
@@ -139,10 +140,13 @@ async def delete_layout():
 
 @router.get("/sun")
 async def get_sun():
-    """Return whether it is currently daytime according to HA's sun.sun entity."""
-    from ha_client import get_sun_state
-    is_day = await get_sun_state()
-    return {"is_day": is_day if is_day is not None else True}
+    """Return daytime and rain status from HA entities."""
+    from ha_client import get_sun_state, get_weather_state
+    is_day, is_raining = await asyncio.gather(get_sun_state(), get_weather_state())
+    return {
+        "is_day": is_day if is_day is not None else True,
+        "is_raining": is_raining if is_raining is not None else False,
+    }
 
 
 @router.put("/{person_id}/design")
