@@ -1,3 +1,7 @@
+## 0.3.8
+
+- Sync persons from HA now removes persons that no longer exist in HA (badges, power-ups, and pet state are cascade-deleted automatically)
+
 ## 0.3.7
 
 - Reduced pet and mess pile sprite size by half in the house scene
