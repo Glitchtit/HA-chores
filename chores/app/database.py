@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS pet_states (
     person_id     TEXT PRIMARY KEY REFERENCES persons(entity_id) ON DELETE CASCADE,
     happiness     INTEGER DEFAULT 80 CHECK (happiness BETWEEN 0 AND 100),
     pet_emoji     TEXT    DEFAULT '🐶',
+    pet_design    TEXT    DEFAULT 'orange_black',
     last_tick_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_bump_at  TIMESTAMP,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -238,6 +239,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("chores", "followup_chore_id", "INTEGER DEFAULT NULL REFERENCES chores(id) ON DELETE SET NULL"),
         # chores columns (v0.3.0 — pet feature)
         ("chores", "category", "TEXT DEFAULT 'other'"),
+        # pet_states columns (v0.3.1 — axolotl sprites)
+        ("pet_states", "pet_design", "TEXT DEFAULT 'orange_black'"),
     ]
     for table, col, defn in migrations:
         try:

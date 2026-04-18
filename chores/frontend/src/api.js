@@ -74,6 +74,8 @@ export const getMyPet = () => api.get('/pets/me').then(r => r.data);
 export const getHouseholdPets = () => api.get('/pets/').then(r => r.data);
 export const setPetEmoji = (entityId, emoji) =>
   api.put(`/pets/${entityId}/emoji`, { emoji }).then(r => r.data);
+export const setPetDesign = (entityId, design) =>
+  api.put(`/pets/${entityId}/design`, { design }).then(r => r.data);
 
 // ── Config ──────────────────────────────────────────────────────────────────
 export const getConfig = () => api.get('/config/').then(r => r.data);

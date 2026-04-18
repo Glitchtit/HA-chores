@@ -3,6 +3,8 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import sqlite3
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -298,6 +300,101 @@ class TestChoreCategory:
         )
         assert resp.status_code == 200
         assert resp.json()["category"] == "laundry"
+
+
+# ── Pet design (v0.3.1 axolotl sprites) ─────────────────────────────────────
+
+class TestPetDesign:
+    def test_default_design_is_orange_black(self, tmp_db):
+        import pets
+        _seed_person(tmp_db, "person.alice", "Alice")
+        view = pets.get_pet_view(tmp_db, "person.alice")
+        assert view["pet_design"] == "orange_black"
+
+    def test_set_design_valid(self, tmp_db):
+        import pets
+        _seed_person(tmp_db, "person.alice", "Alice")
+        pets.set_design(tmp_db, "person.alice", "blue_black")
+        view = pets.get_pet_view(tmp_db, "person.alice")
+        assert view["pet_design"] == "blue_black"
+
+    def test_set_design_invalid_raises(self, tmp_db):
+        import pets
+        _seed_person(tmp_db, "person.alice", "Alice")
+        with pytest.raises(ValueError):
+            pets.set_design(tmp_db, "person.alice", "rainbow")
+
+    def test_put_design_endpoint_200(self, client, tmp_db):
+        _seed_person(tmp_db, "person.alice", "Alice")
+        resp = client.put(
+            "/api/pets/person.alice/design", json={"design": "blue_black"}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["pet_design"] == "blue_black"
+
+    def test_put_design_endpoint_422_bad_value(self, client, tmp_db):
+        _seed_person(tmp_db, "person.alice", "Alice")
+        resp = client.put(
+            "/api/pets/person.alice/design", json={"design": "rainbow"}
+        )
+        assert resp.status_code == 422
+
+    def test_put_design_unknown_person_404(self, client, tmp_db):
+        resp = client.put(
+            "/api/pets/person.ghost/design", json={"design": "blue_black"}
+        )
+        assert resp.status_code == 404
+
+    def test_get_pet_view_includes_pet_design(self, client, tmp_db):
+        _seed_person(tmp_db, "person.alice", "Alice")
+        resp = client.get("/api/pets/me?person_id=person.alice")
+        assert resp.status_code == 200
+        assert resp.json()["pet_design"] in {"orange_black", "blue_black"}
+
+    def test_migration_adds_pet_design_column(self, tmp_path, monkeypatch):
+        """Simulate a pre-0.3.1 DB (pet_states without pet_design) and confirm
+        initialize() migrates it in place with the correct default."""
+        db_path = str(tmp_path / "legacy.db")
+        legacy = sqlite3.connect(db_path)
+        legacy.execute(
+            """CREATE TABLE pet_states (
+                 person_id TEXT PRIMARY KEY,
+                 happiness INTEGER DEFAULT 80,
+                 pet_emoji TEXT DEFAULT '🐶',
+                 last_tick_at TIMESTAMP,
+                 last_bump_at TIMESTAMP,
+                 created_at TIMESTAMP)"""
+        )
+        legacy.execute(
+            "INSERT INTO pet_states (person_id, happiness) VALUES ('person.old', 55)"
+        )
+        legacy.commit()
+        legacy.close()
+
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        import database
+        database._conn = None
+        database.DB_PATH = db_path
+        database.initialize()
+        conn = database.get_connection()
+        cols = {r["name"]: r for r in conn.execute("PRAGMA table_info(pet_states)")}
+        assert "pet_design" in cols
+        row = conn.execute(
+            "SELECT pet_design FROM pet_states WHERE person_id = ?", ("person.old",)
+        ).fetchone()
+        assert row["pet_design"] == "orange_black"
+        database.close_connection()
+
+    def test_household_view_includes_design_per_pet(self, client, tmp_db):
+        _seed_person(tmp_db, "person.alice", "Alice")
+        _seed_person(tmp_db, "person.bob", "Bob")
+        import pets
+        pets.set_design(tmp_db, "person.bob", "blue_black")
+        resp = client.get("/api/pets/")
+        data = resp.json()
+        by_id = {p["person_id"]: p for p in data["pets"]}
+        assert by_id["person.alice"]["pet_design"] == "orange_black"
+        assert by_id["person.bob"]["pet_design"] == "blue_black"
 
 
 # ── Scheduler midnight decay ─────────────────────────────────────────────────

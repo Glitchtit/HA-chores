@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -17,6 +18,10 @@ router = APIRouter(prefix="/api/pets", tags=["pets"])
 
 class PetEmojiUpdate(BaseModel):
     emoji: str = Field(min_length=1, max_length=8)
+
+
+class PetDesignUpdate(BaseModel):
+    design: Literal["orange_black", "blue_black"]
 
 
 async def _resolve_person_id(request: Request, fallback: str | None) -> str | None:
@@ -66,7 +71,11 @@ async def get_household_pets():
 
 @router.put("/{person_id}/emoji")
 async def set_pet_emoji(person_id: str, body: PetEmojiUpdate):
-    """Update the emoji used to render a person's pet."""
+    """Update the emoji used to render a person's pet.
+
+    # TODO: remove in 0.4.0 — superseded by /design in 0.3.1. Kept so cached
+    # clients don't 404 during the rollout window.
+    """
     conn = get_connection()
     exists = conn.execute(
         "SELECT 1 FROM persons WHERE entity_id = ?", (person_id,)
@@ -79,4 +88,17 @@ async def set_pet_emoji(person_id: str, body: PetEmojiUpdate):
         (body.emoji, person_id),
     )
     conn.commit()
+    return pets.get_pet_view(conn, person_id)
+
+
+@router.put("/{person_id}/design")
+async def set_pet_design(person_id: str, body: PetDesignUpdate):
+    """Pick which axolotl design this person's pet uses."""
+    conn = get_connection()
+    exists = conn.execute(
+        "SELECT 1 FROM persons WHERE entity_id = ?", (person_id,)
+    ).fetchone()
+    if not exists:
+        raise HTTPException(404, "Person not found")
+    pets.set_design(conn, person_id, body.design)
     return pets.get_pet_view(conn, person_id)
