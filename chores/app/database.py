@@ -35,6 +35,7 @@ def initialize() -> int:
     _migrate(conn)
     _seed_badges(conn)
     _seed_notif_config(conn)
+    _seed_pet_states(conn)
     _recalc_levels(conn)
     # Run general badge validator to fix any incorrectly awarded revocable badges
     from gamification import validate_and_revoke_badges, revoke_incorrectly_awarded_badges
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS chores (
     xp_reward       INTEGER DEFAULT 10,
     difficulty      TEXT    DEFAULT 'medium'
                             CHECK (difficulty IN ('easy', 'medium', 'hard')),
+    category        TEXT    DEFAULT 'other',
     recurrence      TEXT,
     estimated_minutes INTEGER,
     assignment_mode TEXT    DEFAULT 'manual'
@@ -142,6 +144,15 @@ CREATE TABLE IF NOT EXISTS person_powerups (
 
 CREATE INDEX IF NOT EXISTS idx_powerups_person
     ON person_powerups(person_id);
+
+CREATE TABLE IF NOT EXISTS pet_states (
+    person_id     TEXT PRIMARY KEY REFERENCES persons(entity_id) ON DELETE CASCADE,
+    happiness     INTEGER DEFAULT 80 CHECK (happiness BETWEEN 0 AND 100),
+    pet_emoji     TEXT    DEFAULT '🐶',
+    last_tick_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_bump_at  TIMESTAMP,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 
@@ -225,6 +236,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("persons", "last_month_end_seen",  "TEXT DEFAULT ''"),
         # chores columns (v0.2.70)
         ("chores", "followup_chore_id", "INTEGER DEFAULT NULL REFERENCES chores(id) ON DELETE SET NULL"),
+        # chores columns (v0.3.0 — pet feature)
+        ("chores", "category", "TEXT DEFAULT 'other'"),
     ]
     for table, col, defn in migrations:
         try:
@@ -269,4 +282,12 @@ def _seed_notif_config(conn: sqlite3.Connection) -> None:
             "INSERT OR IGNORE INTO config (key, value) VALUES (?, ?)",
             (key, _json.dumps(default)),
         )
+    conn.commit()
+
+
+def _seed_pet_states(conn: sqlite3.Connection) -> None:
+    """Ensure every person has a pet_states row. Idempotent."""
+    conn.execute(
+        "INSERT OR IGNORE INTO pet_states (person_id) SELECT entity_id FROM persons"
+    )
     conn.commit()

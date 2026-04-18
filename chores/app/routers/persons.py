@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 from fastapi import APIRouter, Request
 from models import Person
-from database import get_connection
+from database import get_connection, _seed_pet_states
 from ha_client import get_persons as ha_get_persons
 
 router = APIRouter(prefix="/api/persons", tags=["persons"])
@@ -25,6 +25,7 @@ async def sync_persons_from_ha() -> list[dict]:
             (p["entity_id"], p["name"], p.get("avatar_url", ""), p.get("user_id", "")),
         )
     conn.commit()
+    _seed_pet_states(conn)
     return ha_persons
 
 

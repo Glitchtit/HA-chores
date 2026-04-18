@@ -1,3 +1,11 @@
+## 0.3.0
+
+- New Pet feature: each household member gets a virtual pet with happiness and cleanliness driven by chore completions and overdue state
+- Household Pet view shows all pets in a shared scene with unclaimed work piling up in the common area
+- Chores now have a category (dishes, laundry, cleaning, trash, cooking, other); existing chores default to "other"
+- Pets earn a happiness boost on every completion and lose a little each idle day
+- Customize your pet with any emoji
+
 ## 0.2.78
 Quick-done from the Chores tab now redirects to Dashboard and plays the full animation sequence. When a user confirms Quick-done, the app switches to Dashboard, fires a swoop animation (the chore pill flies from the Done button's position to the "Today's Chores" heading), creates the instance, then automatically triggers the full complete flow — balloon-pop, double confetti burst, impact rings, floating XP, XP bar sparkle, and level-up/badge/power-up overlays if earned.
 

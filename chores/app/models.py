@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Literal, Optional
+
+Category = Literal["dishes", "laundry", "cleaning", "trash", "cooking", "other"]
 
 
 # ── Chore definitions ────────────────────────────────────────────────────────
@@ -13,6 +15,7 @@ class ChoreCreate(BaseModel):
     icon: str = "🧹"
     xp_reward: int = 10
     difficulty: str = "medium"
+    category: Category = "other"
     recurrence: Optional[str] = None
     estimated_minutes: Optional[int] = None
     assignment_mode: str = "manual"
@@ -26,6 +29,7 @@ class ChoreUpdate(BaseModel):
     icon: Optional[str] = None
     xp_reward: Optional[int] = None
     difficulty: Optional[str] = None
+    category: Optional[Category] = None
     recurrence: Optional[str] = None
     estimated_minutes: Optional[int] = None
     assignment_mode: Optional[str] = None
@@ -41,6 +45,7 @@ class Chore(BaseModel):
     icon: str
     xp_reward: int
     difficulty: str
+    category: Category = "other"
     recurrence: Optional[str]
     estimated_minutes: Optional[int]
     assignment_mode: str
@@ -160,6 +165,8 @@ class CompleteResult(BaseModel):
     powerup_earned: Optional[PowerUp] = None
     followup_triggered: bool = False
     followup_name: Optional[str] = None
+    pet_happiness: Optional[int] = None
+    pet_delta: Optional[int] = None
 
 
 class PersonBadgeStatus(BaseModel):

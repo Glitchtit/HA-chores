@@ -7,12 +7,14 @@ import Leaderboard from './components/Leaderboard';
 import Achievements from './components/Achievements';
 import Settings from './components/Settings';
 import HouseholdOverview from './components/HouseholdOverview';
+import Pet from './components/Pet';
 import { GameEffectsProvider, useGameEffects } from './components/effects/GameEffects';
 
 const PERSONAL_TABS = [
   { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
   { id: 'chores',    icon: '📋', label: 'Chores' },
   { id: 'my',        icon: '✅', label: 'My Chores' },
+  { id: 'pet',       icon: '🐾', label: 'Pet' },
   { id: 'leader',    icon: '🏆', label: 'Leaderboard' },
   { id: 'badges',    icon: '🎖️', label: 'Achievements' },
   { id: 'settings',  icon: '⚙️', label: 'Settings' },
@@ -21,6 +23,7 @@ const PERSONAL_TABS = [
 const HOUSEHOLD_TABS = [
   { id: 'overview',  icon: '🏡', label: 'Overview' },
   { id: 'chores',    icon: '📋', label: 'Chores' },
+  { id: 'pet',       icon: '🐾', label: 'Pet' },
   { id: 'leader',    icon: '🏆', label: 'Leaderboard' },
   { id: 'badges',    icon: '🎖️', label: 'Achievements' },
   { id: 'settings',  icon: '⚙️', label: 'Settings' },
@@ -193,6 +196,8 @@ export default function App() {
                           onQuickDone={handleQuickDone} />;
       case 'my':
         return <MyChores activePerson={activePerson} persons={persons} addToast={addToast} />;
+      case 'pet':
+        return <Pet activePerson={activePerson} isHouseholdMode={isHouseholdMode && !activePerson} setActivePerson={setActivePerson} />;
       case 'leader':
         return <Leaderboard persons={persons} />;
       case 'badges':
