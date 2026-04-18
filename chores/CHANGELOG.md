@@ -1,3 +1,7 @@
+## 0.3.13
+
+- Increased pet and mess pile sprite size by 30% in the house scene
+
 ## 0.3.12
 
 - House background switches between day and night based on HA's sun.sun entity
