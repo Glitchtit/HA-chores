@@ -1,3 +1,8 @@
+## 0.3.17
+
+- Overdue chores no longer spawn a duplicate pending instance for the next scheduled date
+- While an overdue instance exists for a chore, the scheduler skips creating new pending ones until it is resolved (completed or skipped)
+
 ## 0.3.16
 
 - Fix rotation chores not assigning to persons correctly
