@@ -559,25 +559,27 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                       transform: 'translate(-50%, -100%)',
                     }}
                   >
-                    <button
-                      type="button"
-                      onClick={() => handlePetClick(pet.person_id)}
-                      className={`block p-0.5 rounded transition-all hover:bg-white/10
-                        ${isActive ? 'ring-2 ring-amber-400/60 rounded-lg' : ''}`}
-                      title={personName}
-                    >
-                      <SpriteFrame
-                        design={design}
-                        state={state}
-                        className={SPRITE_CLS}
-                        style={flip ? { transform: 'scaleX(-1)' } : undefined}
-                      />
-                    </button>
-                    <div className="flex justify-center mt-0.5 pointer-events-none
-                                    opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                      <span className="text-[9px] sm:text-[10px] bg-gray-900/80 px-1.5 py-0.5 rounded text-gray-200 whitespace-nowrap">
-                        {personName}
-                      </span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => handlePetClick(pet.person_id)}
+                        className={`block rounded transition-all hover:bg-white/10
+                          ${isActive ? 'ring-2 ring-amber-400/60 rounded-lg' : ''}`}
+                        title={personName}
+                      >
+                        <SpriteFrame
+                          design={design}
+                          state={state}
+                          className={SPRITE_CLS}
+                          style={flip ? { transform: 'scaleX(-1)' } : undefined}
+                        />
+                      </button>
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0.5 pointer-events-none
+                                      opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <span className="text-[9px] sm:text-[10px] bg-gray-900/80 px-1.5 py-0.5 rounded text-gray-200 whitespace-nowrap">
+                          {personName}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
