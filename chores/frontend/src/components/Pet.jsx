@@ -12,9 +12,11 @@ import houseBgNightRainFilthy from '../assets/pets/house/background-night-rain-f
 import orangeIdle     from '../assets/pets/orange_black/idle.png';
 import orangeHappy    from '../assets/pets/orange_black/happy.png';
 import orangeSad      from '../assets/pets/orange_black/sad.png';
+import orangePetted   from '../assets/pets/orange_black/petted.png';
 import blueIdle       from '../assets/pets/blue_black/idle.png';
 import blueHappy      from '../assets/pets/blue_black/happy.png';
 import blueSad        from '../assets/pets/blue_black/sad.png';
+import bluePetted     from '../assets/pets/blue_black/petted.png';
 import messDishes      from '../assets/pets/mess/dishes.png';
 import messLaundry     from '../assets/pets/mess/laundry.png';
 import messCleaning    from '../assets/pets/mess/cleaning.png';
@@ -43,14 +45,15 @@ const MESS_IMG = {
 const DESIGNS = ['orange_black', 'blue_black'];
 
 const SPRITES = {
-  orange_black: { idle: orangeIdle, happy: orangeHappy, sad: orangeSad },
-  blue_black:   { idle: blueIdle,   happy: blueHappy,   sad: blueSad   },
+  orange_black: { idle: orangeIdle, happy: orangeHappy, sad: orangeSad, petted: orangePetted },
+  blue_black:   { idle: blueIdle,   happy: blueHappy,   sad: blueSad,   petted: bluePetted   },
 };
 
 const STATE_ANIM = {
-  idle:  'animate-[pet-breathe_2.4s_ease-in-out_infinite]',
-  happy: 'animate-[pet-bounce_0.6s_ease-in-out_infinite]',
-  sad:   'animate-[pet-droop_2.6s_ease-in-out_infinite]',
+  idle:   'animate-[pet-breathe_2.4s_ease-in-out_infinite]',
+  happy:  'animate-[pet-bounce_0.6s_ease-in-out_infinite]',
+  sad:    'animate-[pet-droop_2.6s_ease-in-out_infinite]',
+  petted: 'animate-[pet-petted_0.5s_ease-in-out]',
 };
 
 const MOOD_TONE = {
@@ -145,7 +148,8 @@ function StaticPreview({ design, size = 48 }) {
   );
 }
 
-function stateFor(pet, celebrating) {
+function stateFor(pet, celebrating, pettedId) {
+  if (pettedId === pet.person_id) return 'petted';
   if (celebrating) return 'happy';
   if (pet.last_bump_at) {
     // SQLite CURRENT_TIMESTAMP is UTC without a timezone suffix — append Z before parsing
@@ -269,6 +273,9 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   const [household, setHousehold] = useState(null);
   const [celebratingId, setCelebratingId] = useState(null);
   const celebrateTimer = useRef(null);
+  const [pettedId, setPettedId] = useState(null);
+  const [pettedKey, setPettedKey] = useState(0);
+  const pettedTimer = useRef(null);
 
   // Spot state: loaded from backend (fixed) or shuffled defaults (random)
   const [spots, setSpots] = useState(null);        // { pet: [...], mess: [...] }
@@ -406,7 +413,14 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   /* ── Pet click ─────────────────────────────────────────────────────────── */
   const handlePetClick = (personId) => {
     if (editMode) return;
-    if (personId !== activePerson && setActivePerson) setActivePerson(personId);
+    if (personId === activePerson) {
+      setPettedId(personId);
+      setPettedKey(k => k + 1);
+      clearTimeout(pettedTimer.current);
+      pettedTimer.current = setTimeout(() => setPettedId(null), 3000);
+    } else if (setActivePerson) {
+      setActivePerson(personId);
+    }
   };
 
   /* ── Derived data ──────────────────────────────────────────────────────── */
@@ -496,7 +510,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                 const spot = displaySpots.pet[i % displaySpots.pet.length];
                 const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
                 const isActive = pet.person_id === activePerson;
-                const state = stateFor(pet, pet.person_id === celebratingId);
+                const state = stateFor(pet, pet.person_id === celebratingId, pettedId);
                 const personName = pet.pet_name || personsById.get(pet.person_id)?.name || pet.person_id;
                 const flip = i % 2 === 1;
 
@@ -531,6 +545,13 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                           {personName}
                         </span>
                       </div>
+                      {pet.person_id === pettedId && (
+                        <div key={pettedKey} className="absolute inset-x-0 bottom-full pointer-events-none flex justify-center gap-2">
+                          <span className="text-lg animate-[heart-float_1s_ease-out_0.1s_forwards] opacity-0">❤️</span>
+                          <span className="text-sm animate-[heart-float_1s_ease-out_0.3s_forwards] opacity-0" style={{ marginLeft: '-6px', marginTop: '4px' }}>❤️</span>
+                          <span className="text-base animate-[heart-float_1s_ease-out_0s_forwards] opacity-0" style={{ marginLeft: '-4px' }}>❤️</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
