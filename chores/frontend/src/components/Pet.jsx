@@ -419,12 +419,10 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   /* ── Pet click ─────────────────────────────────────────────────────────── */
   const handlePetClick = (personId) => {
     if (editMode) return;
-    if (personId === activePerson) {
-      setPettedId(personId);
-      setPettedKey(k => k + 1);
-      clearTimeout(pettedTimer.current);
-      pettedTimer.current = setTimeout(() => setPettedId(null), 3000);
-    }
+    setPettedId(personId);
+    setPettedKey(k => k + 1);
+    clearTimeout(pettedTimer.current);
+    pettedTimer.current = setTimeout(() => setPettedId(null), 3000);
     // Always update local viewed pet — never change global activePerson
     setViewedPerson(personId);
   };
