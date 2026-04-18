@@ -197,7 +197,7 @@ export default function App() {
       case 'my':
         return <MyChores activePerson={activePerson} persons={persons} addToast={addToast} />;
       case 'pet':
-        return <Pet activePerson={activePerson} isHouseholdMode={isHouseholdMode && !activePerson} setActivePerson={setActivePerson} />;
+        return <Pet activePerson={activePerson} persons={persons} isHouseholdMode={isHouseholdMode && !activePerson} setActivePerson={setActivePerson} />;
       case 'leader':
         return <Leaderboard persons={persons} />;
       case 'badges':

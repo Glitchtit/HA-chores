@@ -1,3 +1,12 @@
+## 0.3.4
+
+- Pet scene now shows all household pets together in the house with randomized positions
+- Pet and mess pile positions are derived from the background image layout and re-shuffled each visit
+- Mess piles no longer overlap with pet positions
+- Pet page scales properly on desktop with a max-width constraint
+- Hovering over a pet shows the owner's name (always visible on mobile)
+- Clicking another user's pet selects that person; clicking your own opens the design picker
+
 ## 0.3.3
 
 - Chores menu now groups chores by category with section headers

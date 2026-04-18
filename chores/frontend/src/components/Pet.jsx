@@ -50,14 +50,52 @@ const STATE_ANIM = {
   sad:   'animate-[pet-droop_2.6s_ease-in-out_infinite]',
 };
 
-const SPRITE_SIZE = 160;
-
 const MOOD_TONE = {
   ecstatic: 'text-emerald-300',
   happy:    'text-emerald-400',
   meh:      'text-amber-400',
   sad:      'text-rose-400',
 };
+
+// Spots in the background image where pets can sit (% from top-left).
+// Derived from the pixel-art cabin layout: floor areas, furniture surfaces, loft.
+const PET_SPOTS = [
+  { left: 10, top: 78 },   // on the rug
+  { left: 28, top: 75 },   // in front of bookshelf
+  { left: 42, top: 74 },   // center floor (sunlight patch)
+  { left: 56, top: 78 },   // right of center floor
+  { left: 72, top: 72 },   // by the fireplace
+  { left: 85, top: 80 },   // on the pet bed
+  { left: 46, top: 64 },   // at ladder base
+  { left: 18, top: 52 },   // on the windowsill
+  { left: 62, top: 24 },   // up in the loft
+  { left: 78, top: 86 },   // by the water bowl
+  { left: 6,  top: 86 },   // on the floor pillow
+];
+
+// Spots where mess piles appear — edges, corners, surfaces that don't
+// overlap with any pet spot.
+const MESS_SPOTS = [
+  { left: 3,  top: 82 },   // left wall floor
+  { left: 15, top: 60 },   // below the window
+  { left: 30, top: 42 },   // top of bookshelf
+  { left: 48, top: 20 },   // upper ladder / loft rail
+  { left: 86, top: 44 },   // right wall near lantern
+  { left: 92, top: 76 },   // fireplace hearth edge
+  { left: 92, top: 90 },   // bottom-right corner
+  { left: 4,  top: 92 },   // bottom-left corner
+  { left: 55, top: 10 },   // near string lights
+  { left: 80, top: 38 },   // above fireplace mantle
+];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 function Bar({ value, label, color }) {
   return (
@@ -74,7 +112,7 @@ function Bar({ value, label, color }) {
   );
 }
 
-function SpriteFrame({ design, state, size = SPRITE_SIZE }) {
+function SpriteFrame({ design, state, className = '', style = {} }) {
   const src = SPRITES[design]?.[state] || SPRITES.orange_black.idle;
   const anim = STATE_ANIM[state] || STATE_ANIM.idle;
   return (
@@ -82,10 +120,8 @@ function SpriteFrame({ design, state, size = SPRITE_SIZE }) {
       key={`${design}-${state}`}
       src={src}
       alt=""
-      width={size}
-      height={size}
-      className={`pixelated ${anim}`}
-      style={{ width: `${size}px`, height: `${size}px`, objectFit: 'contain' }}
+      className={`pixelated ${anim} ${className}`}
+      style={{ objectFit: 'contain', ...style }}
     />
   );
 }
@@ -104,14 +140,18 @@ function StaticPreview({ design, size = 48 }) {
   );
 }
 
-function MessPile({ category, count, position }) {
+function MessPile({ category, count, spot }) {
   if (count <= 0) return null;
   const src = MESS_IMG[category] || MESS_IMG.other;
   const size = Math.min(count, 5);
   return (
     <div
-      className="absolute flex gap-0.5 items-end"
-      style={position}
+      className="absolute flex gap-0.5 items-end pointer-events-none"
+      style={{
+        left: `${spot.left}%`,
+        top: `${spot.top}%`,
+        transform: 'translate(-50%, -100%)',
+      }}
       title={`${count} overdue ${CATEGORY_LABEL[category].toLowerCase()}`}
     >
       {Array.from({ length: size }).map((_, i) => (
@@ -119,25 +159,16 @@ function MessPile({ category, count, position }) {
           key={i}
           src={src}
           alt=""
-          className="w-8 h-8 pixelated animate-[mess-jitter_2.4s_ease-in-out_infinite]"
+          className="w-6 h-6 sm:w-8 sm:h-8 pixelated animate-[mess-jitter_2.4s_ease-in-out_infinite]"
           style={{ animationDelay: `${i * 0.15}s` }}
         />
       ))}
       {count > 5 && (
-        <span className="text-xs text-gray-400 self-end ml-1">+{count - 5}</span>
+        <span className="text-[9px] sm:text-xs text-gray-400 self-end ml-0.5">+{count - 5}</span>
       )}
     </div>
   );
 }
-
-const CORNER_POSITIONS = {
-  dishes:   { left: '12px', bottom: '12px' },
-  laundry:  { right: '12px', bottom: '12px' },
-  trash:    { right: '12px', top: '12px' },
-  cooking:  { left: '12px', top: '12px' },
-  cleaning: { left: '50%', bottom: '12px', transform: 'translateX(-50%)' },
-  other:    { left: '50%', top: '12px',    transform: 'translateX(-50%)' },
-};
 
 function stateFor(pet, celebrating) {
   if (celebrating) return 'happy';
@@ -145,11 +176,14 @@ function stateFor(pet, celebrating) {
   return 'idle';
 }
 
-function PetScene({ pet, onOpenPicker, celebrating }) {
-  const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
-  const state = stateFor(pet, celebrating);
+function HouseScene({ household, petSpots, messSpots, personsById, activePerson, celebratingId, onPetClick }) {
+  if (!household) return <div className="text-gray-400 text-sm">Loading…</div>;
+
+  const { pets, shared } = household;
+  const activeMessCategories = Object.entries(shared.mess_counts).filter(([, v]) => v > 0);
+
   return (
-    <div className="bg-gray-800 rounded-lg p-4 space-y-4">
+    <div className="bg-gray-800 rounded-lg p-2 sm:p-4">
       <div
         className="relative aspect-[4/3] rounded-md overflow-hidden bg-gray-900"
         style={{
@@ -158,33 +192,71 @@ function PetScene({ pet, onOpenPicker, celebrating }) {
           backgroundPosition: 'center',
         }}
       >
-        {Object.entries(pet.mess_counts).map(([cat, count]) => (
+        {/* Mess piles at randomized positions */}
+        {activeMessCategories.map(([cat, count], i) => (
           <MessPile
             key={cat}
             category={cat}
             count={count}
-            position={CORNER_POSITIONS[cat] || CORNER_POSITIONS.other}
+            spot={messSpots[i % messSpots.length]}
           />
         ))}
 
-        <div className="absolute inset-0 flex items-center justify-center">
-          <button
-            type="button"
-            onClick={onOpenPicker}
-            className="p-1 rounded hover:bg-white/10"
-            title="Tap to change your axolotl"
-          >
-            <SpriteFrame design={design} state={state} />
-          </button>
-        </div>
+        {/* All pets at randomized positions */}
+        {pets.map((pet, i) => {
+          const spot = petSpots[i % petSpots.length];
+          const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
+          const isActive = pet.person_id === activePerson;
+          const state = stateFor(pet, pet.person_id === celebratingId);
+          const personName = personsById.get(pet.person_id)?.name || pet.person_id;
+          const flip = i % 2 === 1;
 
-        <div className="absolute top-2 left-2 text-xs uppercase tracking-widest bg-gray-900/70 px-2 py-0.5 rounded">
-          <span className={MOOD_TONE[pet.mood] || 'text-gray-300'}>{pet.mood}</span>
-        </div>
+          return (
+            <div
+              key={pet.person_id}
+              className="absolute group"
+              style={{
+                left: `${spot.left}%`,
+                top: `${spot.top}%`,
+                transform: 'translate(-50%, -100%)',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => onPetClick?.(pet.person_id)}
+                className={`block p-0.5 rounded transition-all hover:bg-white/10
+                  ${isActive ? 'ring-2 ring-amber-400/60 rounded-lg' : ''}`}
+                title={personName}
+              >
+                <SpriteFrame
+                  design={design}
+                  state={state}
+                  className="w-[clamp(48px,18vw,120px)]"
+                  style={flip ? { transform: 'scaleX(-1)' } : undefined}
+                />
+              </button>
+              {/* Name label: visible on hover (desktop) or always on mobile */}
+              <div className="flex justify-center mt-0.5 pointer-events-none
+                              opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                <span className="text-[9px] sm:text-[10px] bg-gray-900/80 px-1.5 py-0.5 rounded text-gray-200 whitespace-nowrap">
+                  {personName}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Mood badge for active person */}
+        {(() => {
+          const myPet = pets.find(p => p.person_id === activePerson);
+          if (!myPet) return null;
+          return (
+            <div className="absolute top-2 left-2 text-xs uppercase tracking-widest bg-gray-900/70 px-2 py-0.5 rounded">
+              <span className={MOOD_TONE[myPet.mood] || 'text-gray-300'}>{myPet.mood}</span>
+            </div>
+          );
+        })()}
       </div>
-
-      <Bar value={pet.happiness} label="❤️ Happiness"  color="bg-pink-500" />
-      <Bar value={pet.cleanliness} label="🛁 Cleanliness" color="bg-sky-500" />
     </div>
   );
 }
@@ -250,64 +322,26 @@ function HouseholdShared({ shared }) {
   );
 }
 
-function HouseholdScene({ data, onSelectPerson, personsById }) {
-  return (
-    <div className="space-y-4">
-      <HouseholdShared shared={data.shared} />
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {data.pets.map(pet => {
-          const p = personsById.get(pet.person_id);
-          const design = DESIGNS.includes(pet.pet_design) ? pet.pet_design : 'orange_black';
-          return (
-            <button
-              key={pet.person_id}
-              onClick={() => onSelectPerson?.(pet.person_id)}
-              className="bg-gray-800 hover:bg-gray-750 rounded-lg p-3 text-left transition-colors"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold truncate">{p?.name || pet.person_id}</span>
-                <span className={`text-[10px] uppercase ${MOOD_TONE[pet.mood] || 'text-gray-400'}`}>
-                  {pet.mood}
-                </span>
-              </div>
-              <div className="flex items-center justify-center my-2">
-                <StaticPreview design={design} size={64} />
-              </div>
-              <div className="space-y-1 text-[10px] text-gray-400">
-                <div className="flex justify-between"><span>❤️</span><span>{pet.happiness}</span></div>
-                <div className="flex justify-between"><span>🛁</span><span>{pet.cleanliness}</span></div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export default function Pet({ activePerson, persons = [], isHouseholdMode, setActivePerson }) {
-  const isHousehold = isHouseholdMode && !activePerson;
-  const [pet, setPet] = useState(null);
   const [household, setHousehold] = useState(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [celebrating, setCelebrating] = useState(false);
+  const [celebratingId, setCelebratingId] = useState(null);
   const celebrateTimer = useRef(null);
   const personsById = useMemo(
     () => new Map(persons.map(p => [p.entity_id, p])),
     [persons],
   );
 
+  // Randomize positions on mount — re-shuffled each time user navigates to pet tab
+  const [petSpots] = useState(() => shuffle(PET_SPOTS));
+  const [messSpots] = useState(() => shuffle(MESS_SPOTS));
+
   const load = useCallback(async () => {
     try {
-      if (isHousehold) {
-        const data = await api.getHouseholdPets();
-        setHousehold(data);
-      } else if (activePerson) {
-        const data = await api.getMyPet();
-        setPet(data);
-      }
+      const data = await api.getHouseholdPets();
+      setHousehold(data);
     } catch { /* ignore */ }
-  }, [isHousehold, activePerson]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -321,52 +355,79 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
 
   useEffect(() => {
     const onCompleted = (e) => {
-      const { person_id, pet_delta, pet_happiness } = e.detail || {};
-      if (!isHousehold && person_id === activePerson) {
-        setPet(prev => prev ? {
-          ...prev,
-          happiness: pet_happiness ?? Math.min(100, prev.happiness + (pet_delta || 0)),
-        } : prev);
-        setCelebrating(true);
+      const { person_id } = e.detail || {};
+      if (person_id) {
+        setCelebratingId(person_id);
         if (celebrateTimer.current) clearTimeout(celebrateTimer.current);
-        celebrateTimer.current = setTimeout(() => setCelebrating(false), 1300);
+        celebrateTimer.current = setTimeout(() => setCelebratingId(null), 1300);
       }
       setTimeout(load, 800);
     };
     window.addEventListener('chore-completed', onCompleted);
     return () => window.removeEventListener('chore-completed', onCompleted);
-  }, [activePerson, isHousehold, load]);
+  }, [load]);
 
   const handlePickDesign = async (design) => {
     if (!activePerson) return;
     setPickerOpen(false);
-    setPet(prev => prev ? { ...prev, pet_design: design } : prev);
+    setHousehold(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        pets: prev.pets.map(p =>
+          p.person_id === activePerson ? { ...p, pet_design: design } : p
+        ),
+      };
+    });
     try {
-      const updated = await api.setPetDesign(activePerson, design);
-      setPet(updated);
+      await api.setPetDesign(activePerson, design);
+      load();
     } catch { /* rollback handled by next poll */ }
   };
 
-  if (isHousehold) {
-    if (!household) return <div className="text-gray-400 text-sm">Loading…</div>;
-    return <HouseholdScene data={household} personsById={personsById} onSelectPerson={setActivePerson} />;
-  }
+  const handlePetClick = (personId) => {
+    if (personId === activePerson) {
+      setPickerOpen(true);
+    } else if (setActivePerson) {
+      setActivePerson(personId);
+    }
+  };
 
-  if (!activePerson) {
-    return <div className="text-gray-400 text-sm">Pick a profile from the header to meet your axolotl.</div>;
-  }
-  if (!pet) return <div className="text-gray-400 text-sm">Loading your axolotl…</div>;
+  const myPet = household?.pets?.find(p => p.person_id === activePerson);
 
   return (
-    <div className="space-y-4">
-      <PetScene
-        pet={pet}
-        onOpenPicker={() => setPickerOpen(true)}
-        celebrating={celebrating}
+    <div className="space-y-4 max-w-2xl mx-auto">
+      <HouseScene
+        household={household}
+        petSpots={petSpots}
+        messSpots={messSpots}
+        personsById={personsById}
+        activePerson={activePerson}
+        celebratingId={celebratingId}
+        onPetClick={handlePetClick}
       />
-      {pickerOpen && (
+
+      {/* Personal stats for the active person */}
+      {myPet && (
+        <div className="bg-gray-800 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2 text-sm text-gray-300">
+            <StaticPreview design={myPet.pet_design} size={28} />
+            <span className="font-semibold">{personsById.get(activePerson)?.name || 'Your pet'}</span>
+            <span className={`ml-auto text-xs uppercase ${MOOD_TONE[myPet.mood] || 'text-gray-400'}`}>
+              {myPet.mood}
+            </span>
+          </div>
+          <Bar value={myPet.happiness}   label="❤️ Happiness"   color="bg-pink-500" />
+          <Bar value={myPet.cleanliness} label="🛁 Cleanliness" color="bg-sky-500" />
+        </div>
+      )}
+
+      {/* Shared household mess summary */}
+      {household && <HouseholdShared shared={household.shared} />}
+
+      {pickerOpen && myPet && (
         <DesignPicker
-          current={pet.pet_design}
+          current={myPet.pet_design}
           onPick={handlePickDesign}
           onClose={() => setPickerOpen(false)}
         />
