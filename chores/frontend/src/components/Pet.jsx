@@ -190,13 +190,15 @@ function Ghost({ spot, type, index, onDragStart }) {
       }}
       onPointerDown={e => { e.preventDefault(); onDragStart(e, type, index); }}
     >
-      <img
-        src={src}
-        alt=""
-        className={`${SPRITE_CLS} pixelated opacity-40 grayscale pointer-events-none`}
-      />
-      <div className="text-center mt-0.5 pointer-events-none">
-        <span className={`text-[9px] px-1.5 py-0.5 rounded ${badgeCls}`}>{badge}</span>
+      <div className="relative pointer-events-none">
+        <img
+          src={src}
+          alt=""
+          className={`${SPRITE_CLS} pixelated opacity-40 grayscale`}
+        />
+        <span className={`absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] px-1.5 py-0.5 rounded ${badgeCls}`}>
+          {badge}
+        </span>
       </div>
     </div>
   );
