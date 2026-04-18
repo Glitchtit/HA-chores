@@ -150,8 +150,7 @@ function stateFor(pet, celebrating) {
 
 /* ── Mess pile (single large image + count badge) ─────────────────────────── */
 
-function MessPile({ category, count, spot }) {
-  if (count <= 0) return null;
+function MessPile({ category, spot }) {
   const src = MESS_IMG[category] || MESS_IMG.other;
   return (
     <div
@@ -162,25 +161,11 @@ function MessPile({ category, count, spot }) {
         transform: 'translate(-50%, -100%)',
       }}
     >
-      <div className="relative">
-        <img
-          src={src}
-          alt=""
-          className={`${SPRITE_CLS} pixelated animate-[mess-jitter_2.4s_ease-in-out_infinite]`}
-        />
-        {count > 1 && (
-          <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] sm:text-xs
-                           font-bold rounded-full min-w-5 h-5 sm:min-w-6 sm:h-6
-                           flex items-center justify-center px-1">
-            {count}
-          </span>
-        )}
-      </div>
-      <div className="text-center mt-0.5">
-        <span className="text-[9px] sm:text-[10px] bg-gray-900/80 px-1 py-0.5 rounded text-gray-400 whitespace-nowrap">
-          {CATEGORY_LABEL[category]}
-        </span>
-      </div>
+      <img
+        src={src}
+        alt=""
+        className={`${SPRITE_CLS} pixelated animate-[mess-jitter_2.4s_ease-in-out_infinite]`}
+      />
     </div>
   );
 }
@@ -512,15 +497,17 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
           ) : household && displaySpots ? (
             /* ── Normal mode: live pets + mess piles ───────────────────── */
             <>
-              {/* Mess piles */}
-              {activeMessCategories.map(([cat, count], i) => (
-                <MessPile
-                  key={cat}
-                  category={cat}
-                  count={count}
-                  spot={displaySpots.mess[i % displaySpots.mess.length]}
-                />
-              ))}
+              {/* Mess piles — one pile per individual overdue chore */}
+              {activeMessCategories
+                .flatMap(([cat, count]) => Array.from({ length: count }, (_, j) => ({ cat, j })))
+                .map(({ cat, j }, i) => (
+                  <MessPile
+                    key={`${cat}-${j}`}
+                    category={cat}
+                    spot={displaySpots.mess[i % displaySpots.mess.length]}
+                  />
+                ))
+              }
 
               {/* All pets */}
               {household.pets.map((pet, i) => {
