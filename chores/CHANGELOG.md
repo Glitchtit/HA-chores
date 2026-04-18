@@ -1,3 +1,11 @@
+## 0.3.5
+
+- "Change placement" toggle lets you drag-and-drop pet and mess sprites to custom positions
+- Custom positions persist to the backend and are loaded on subsequent visits
+- Reset button reverts to randomized default placement
+- Mess piles now render at the same size as pet sprites (single large image + count badge)
+- Layout API: GET/PUT/DELETE /api/pets/layout for persistent spot positions
+
 ## 0.3.4
 
 - Pet scene now shows all household pets together in the house with randomized positions

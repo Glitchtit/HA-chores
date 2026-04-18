@@ -8,6 +8,8 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+import json
+
 import pets
 from database import get_connection
 from routers.persons import sync_persons_from_ha
@@ -89,6 +91,50 @@ async def set_pet_emoji(person_id: str, body: PetEmojiUpdate):
     )
     conn.commit()
     return pets.get_pet_view(conn, person_id)
+
+
+class LayoutSpot(BaseModel):
+    left: float = Field(ge=0, le=100)
+    top: float = Field(ge=0, le=100)
+
+
+class LayoutUpdate(BaseModel):
+    pet_spots: list[LayoutSpot]
+    mess_spots: list[LayoutSpot]
+
+
+@router.get("/layout")
+async def get_layout():
+    """Return saved pet/mess layout positions, or null if using defaults."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT value FROM config WHERE key = 'pet_layout'"
+    ).fetchone()
+    if row:
+        return json.loads(row["value"])
+    return None
+
+
+@router.put("/layout")
+async def save_layout(body: LayoutUpdate):
+    """Save custom pet/mess layout positions."""
+    conn = get_connection()
+    data = body.model_dump()
+    conn.execute(
+        "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
+        ("pet_layout", json.dumps(data)),
+    )
+    conn.commit()
+    return data
+
+
+@router.delete("/layout")
+async def delete_layout():
+    """Delete saved layout, reverting to random placement."""
+    conn = get_connection()
+    conn.execute("DELETE FROM config WHERE key = 'pet_layout'")
+    conn.commit()
+    return {"ok": True}
 
 
 @router.put("/{person_id}/design")
