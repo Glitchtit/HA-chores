@@ -131,6 +131,13 @@ def generate_instances(days_ahead: int = 7) -> int:
             except (json.JSONDecodeError, TypeError):
                 rotation_order = None
 
+        # If any overdue instance exists for this chore, don't schedule new pending
+        # ones — the user must resolve the overdue instance first.
+        has_overdue = bool(conn.execute(
+            "SELECT id FROM chore_instances WHERE chore_id = ? AND status = 'overdue' LIMIT 1",
+            (chore["id"],),
+        ).fetchone())
+
         for day_offset in range(days_ahead):
             target = today + timedelta(days=day_offset)
             target_str = target.isoformat()
@@ -138,7 +145,7 @@ def generate_instances(days_ahead: int = 7) -> int:
             if not should_schedule_on(chore["recurrence"], target):
                 continue
 
-            # Check if instance already exists
+            # Check if instance already exists for this date
             existing = conn.execute(
                 "SELECT id FROM chore_instances WHERE chore_id = ? AND due_date = ?",
                 (chore["id"], target_str),
@@ -146,11 +153,15 @@ def generate_instances(days_ahead: int = 7) -> int:
             if existing:
                 continue
 
-            # Purge stale overdue/pending instances from previous cycles before
-            # creating the new one — prevents old missed entries piling up.
+            # Don't create a new pending instance while an overdue one is outstanding
+            if has_overdue:
+                continue
+
+            # Purge stale pending instances from past dates (safety net for when
+            # mark_overdue hasn't run yet). Overdue instances are left intact.
             conn.execute(
                 """DELETE FROM chore_instances
-                   WHERE chore_id = ? AND due_date < ? AND status IN ('overdue', 'pending')""",
+                   WHERE chore_id = ? AND due_date < ? AND status = 'pending'""",
                 (chore["id"], today.isoformat()),
             )
 
