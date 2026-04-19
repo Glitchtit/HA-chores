@@ -1,3 +1,9 @@
+## 0.3.24
+- Apply GlitchyRee design system: brand-orange nav active state, "you" badge, XP bar gradient (orange → xp-gold)
+- Add CSS design tokens at src/styles/design-tokens.css
+- Self-hosted Space Grotesk / Inter / JetBrains Mono fonts
+- Wire Tailwind theme.extend to expose brand.* / semantic.* / font-display utilities
+
 ## 0.3.23
 
 - Preload all pet sprites on mount so state transitions are instant
