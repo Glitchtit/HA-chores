@@ -231,7 +231,7 @@ export default function App() {
             className={`flex flex-col items-center gap-0.5 px-2 py-1 transition-all
                         lg:w-full lg:py-3 lg:px-0 lg:rounded-none
                         ${tab === t.id
-                          ? 'grayscale-0 opacity-100 text-amber-400'
+                          ? 'grayscale-0 opacity-100 text-brand-orange'
                           : 'grayscale opacity-50 text-gray-400 hover:opacity-75'
                         }`}
           >
@@ -268,7 +268,7 @@ export default function App() {
                   {persons.find(p => p.entity_id === activePerson)?.name || ''}
                 </span>
                 {autoDetected
-                  ? <span className="text-xs bg-emerald-800/60 text-emerald-400 px-1.5 py-0.5 rounded">you</span>
+                  ? <span className="text-xs bg-brand-orange text-white px-1.5 py-0.5 rounded">you</span>
                   : <span className="text-xs bg-amber-800/60 text-amber-400 px-1.5 py-0.5 rounded" title="Could not auto-detect your profile — tap to select">▾</span>
                 }
               </button>

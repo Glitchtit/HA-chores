@@ -222,7 +222,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
             </div>
             <div ref={xpBarRef} className="h-3 bg-gray-700 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-amber-500 to-yellow-400 rounded-full animate-xp-fill"
+                className="h-full bg-gradient-to-r from-brand-orange to-xp-gold rounded-full animate-xp-fill"
                 style={{ width: `${Math.min(Math.max(xpProgress, 0), 100)}%` }}
               />
             </div>
