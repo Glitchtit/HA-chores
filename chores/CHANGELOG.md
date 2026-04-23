@@ -1,3 +1,8 @@
+## 0.3.25
+- Seed three "Other" catch-all chores (one per difficulty) so ad-hoc tasks can be logged without creating a dedicated chore
+- Difficulty is now shown with a heart count that scales with effort: easy ❤️, medium 💖💖, hard ❤️‍🔥❤️‍🔥❤️‍🔥
+- Added a last-chance streak-break warning at 23:30 for anyone with an active streak who hasn't completed a chore today
+
 ## 0.3.24
 - Apply GlitchyRee design system: brand-orange nav active state, "you" badge, XP bar gradient (orange → xp-gold)
 - Add CSS design tokens at src/styles/design-tokens.css

@@ -36,6 +36,7 @@ def initialize() -> int:
     _seed_badges(conn)
     _seed_notif_config(conn)
     _seed_pet_states(conn)
+    _seed_other_chores(conn)
     _recalc_levels(conn)
     # Run general badge validator to fix any incorrectly awarded revocable badges
     from gamification import validate_and_revoke_badges, revoke_incorrectly_awarded_badges
@@ -296,4 +297,38 @@ def _seed_pet_states(conn: sqlite3.Connection) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO pet_states (person_id) SELECT entity_id FROM persons"
     )
+    conn.commit()
+
+
+# Catch-all ad-hoc chores — one per difficulty — so any small task can be
+# logged without creating a dedicated chore first.
+SEED_OTHER_CHORES = [
+    ("Other (easy)",   "Log a small ad-hoc task",  "📦",  5, "easy"),
+    ("Other (medium)", "Log a medium ad-hoc task", "📦", 10, "medium"),
+    ("Other (hard)",   "Log a big ad-hoc task",    "📦", 20, "hard"),
+]
+
+
+def _seed_other_chores(conn: sqlite3.Connection) -> None:
+    """Seed three "Other" catch-all chores (one per difficulty) on first run.
+
+    Re-inserts any that are missing by name so users can't accidentally end up
+    with only two of them, but won't duplicate if they already exist. Tests
+    that need a pristine chores table set ``CHORES_SKIP_SEED_OTHER=1``.
+    """
+    if os.environ.get("CHORES_SKIP_SEED_OTHER") == "1":
+        return
+    for name, desc, icon, xp, diff in SEED_OTHER_CHORES:
+        exists = conn.execute(
+            "SELECT 1 FROM chores WHERE name = ? LIMIT 1", (name,)
+        ).fetchone()
+        if exists:
+            continue
+        conn.execute(
+            """INSERT INTO chores
+                 (name, description, icon, xp_reward, difficulty, category,
+                  assignment_mode, active)
+               VALUES (?, ?, ?, ?, ?, 'other', 'claim', 1)""",
+            (name, desc, icon, xp, diff),
+        )
     conn.commit()

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import * as api from '../api';
 import PersonPickerModal from './PersonPickerModal';
 
+const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖💖', hard: '❤️‍🔥❤️‍🔥❤️‍🔥' };
+
 export default function HouseholdOverview({ persons, addToast, onSelectPerson }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [todayChores, setTodayChores] = useState([]);
@@ -141,7 +143,7 @@ export default function HouseholdOverview({ persons, addToast, onSelectPerson })
                     </div>
                     <div className="text-xs text-gray-400 flex items-center gap-1.5 flex-wrap mt-0.5">
                       {ci.status === 'overdue' && <span className="text-red-400">Overdue ·</span>}
-                      <span className="capitalize">{ci.chore_difficulty}</span>
+                      <span>{DIFFICULTY_LABELS[ci.chore_difficulty] || ci.chore_difficulty}</span>
                       <span>·</span>
                       {isCompleted ? (
                         <span className="text-emerald-400">
