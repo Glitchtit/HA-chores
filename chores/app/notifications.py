@@ -78,6 +78,22 @@ async def notify_streak_warning(person_entity_id: str, streak_days: int) -> None
     )
 
 
+async def notify_streak_final_warning(person_entity_id: str, streak_days: int) -> None:
+    """Last-chance warning just before midnight when streak is still at risk.
+
+    Gated by the same ``notif_streak`` config as the earlier warning — if a
+    user silences streak notifications they shouldn't get pinged again here.
+    """
+    cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18}, person_entity_id)
+    if not cfg.get("enabled"):
+        return
+    await send_notification(
+        person_entity_id,
+        title="🚨 Last chance — streak about to break!",
+        message=f"Only 30 min left to save your {streak_days}-day streak. Knock out a quick chore now!",
+    )
+
+
 async def notify_level_up(person_entity_id: str, new_level: int) -> None:
     cfg = get_notif_config("notif_levelup", {"enabled": True}, person_entity_id)
     if not cfg.get("enabled"):
