@@ -8,7 +8,7 @@ const DIFFICULTY_COLORS = {
 };
 
 const DIFFICULTY_XP = { easy: 5, medium: 10, hard: 20 };
-const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖', hard: '❤️‍🔥' };
+const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖💖', hard: '❤️‍🔥❤️‍🔥❤️‍🔥' };
 
 const CATEGORY_META = {
   dishes:   { label: 'Dishes',   icon: '🍽️' },
@@ -312,8 +312,8 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
                     className="w-full bg-gray-700 rounded px-2 py-2"
                   >
                     <option value="easy">❤️ (5 XP)</option>
-                    <option value="medium">💖 (10 XP)</option>
-                    <option value="hard">❤️‍🔥 (20 XP)</option>
+                    <option value="medium">💖💖 (10 XP)</option>
+                    <option value="hard">❤️‍🔥❤️‍🔥❤️‍🔥 (20 XP)</option>
                   </select>
                 </div>
                 <div>

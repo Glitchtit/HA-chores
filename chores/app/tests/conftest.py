@@ -14,6 +14,7 @@ def tmp_db(tmp_path, monkeypatch):
     """Create a temporary SQLite database for testing."""
     db_path = str(tmp_path / "test_chores.db")
     monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("CHORES_SKIP_SEED_OTHER", "1")
 
     import database
     database._conn = None

@@ -6,7 +6,7 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖', hard: '❤️‍🔥' };
+const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖💖', hard: '❤️‍🔥❤️‍🔥❤️‍🔥' };
 
 function timeUntilExpiry(expiresAt) {
   if (!expiresAt) return null;

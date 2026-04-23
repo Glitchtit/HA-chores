@@ -29,6 +29,7 @@ from ha_client import get_ha_timezone
 from notifications import (
     notify_chore_overdue,
     notify_streak_warning,
+    notify_streak_final_warning,
     notify_weekly_summary,
     notify_badge_earned,
     notify_chore_reminder,
@@ -53,6 +54,7 @@ except Exception:
 _current_day: str = ""  # tracks current day for clearing daily sets
 _reminder_sent_today: set[str] = set()  # "person_id:instance_id"
 _streak_warned_today: set[str] = set()  # person_id
+_streak_final_warned_today: set[str] = set()  # person_id (23:30 last-chance)
 _weekly_sent_today: set[str] = set()    # person_id
 _last_person_sync_hour: int = -1  # tracks last hour persons were re-synced
 _is_startup: bool = True  # suppress notifications on first scheduler run
@@ -60,7 +62,7 @@ _is_startup: bool = True  # suppress notifications on first scheduler run
 
 async def _scheduler_loop():
     """Periodically generate instances, mark overdue, send notifications."""
-    global _current_day, _reminder_sent_today, _streak_warned_today, _weekly_sent_today, _last_person_sync_hour, _is_startup
+    global _current_day, _reminder_sent_today, _streak_warned_today, _streak_final_warned_today, _weekly_sent_today, _last_person_sync_hour, _is_startup
 
     while True:
         try:
@@ -93,6 +95,7 @@ async def _scheduler_loop():
                 _current_day = today_str
                 _reminder_sent_today.clear()
                 _streak_warned_today.clear()
+                _streak_final_warned_today.clear()
                 _weekly_sent_today.clear()
                 from gamification import decay_streaks, expire_old_powerups
                 try:
@@ -160,6 +163,26 @@ async def _scheduler_loop():
                             await notify_streak_warning(p_id, at_risk_map[p_id]["streak"])
                         except Exception as e:
                             logger.error("Streak warning failed for %s: %s", p_id, e)
+
+                # ── Final 23:30 streak last-chance warning ──
+                # Re-query so a chore completed between the evening warning and
+                # now correctly removes the person from the at-risk set.
+                if now.hour == 23 and now.minute >= 30:
+                    final_at_risk = {p["entity_id"]: p for p in get_streak_at_risk_persons()}
+                    for person_row in all_persons:
+                        p_id = person_row["entity_id"]
+                        if p_id in _streak_final_warned_today:
+                            continue
+                        if p_id not in final_at_risk:
+                            continue
+                        s_cfg = get_notif_config("notif_streak", {"enabled": True, "hour": 18}, p_id)
+                        if not s_cfg.get("enabled"):
+                            continue
+                        _streak_final_warned_today.add(p_id)
+                        try:
+                            await notify_streak_final_warning(p_id, final_at_risk[p_id]["streak"])
+                        except Exception as e:
+                            logger.error("Final streak warning failed for %s: %s", p_id, e)
 
                     # Check perfect_week badge on same evening pass (once per person per day)
                     from gamification import check_and_award_badges
