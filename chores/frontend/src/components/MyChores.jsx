@@ -126,7 +126,11 @@ export default function MyChores({ activePerson, persons, addToast }) {
                   <div className="font-medium">{ci.chore_name}</div>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {statusBadge(ci.status)}
-                    <span className="text-xs text-gray-500">📅 {ci.due_date}</span>
+                    <span className="text-xs text-gray-500">
+                      📅 {ci.status === 'completed' && ci.completed_at
+                        ? ci.completed_at.slice(0, 10)
+                        : ci.due_date}
+                    </span>
                     {ci.assigned_to && (
                       <span className="text-xs text-gray-400">
                         👤 {personName(ci.assigned_to)}
