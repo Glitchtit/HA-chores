@@ -1,3 +1,6 @@
+## 0.3.26
+- Fix: completed chores in My Chores history now show the completion date instead of the original due date
+
 ## 0.3.25
 - Seed three "Other" catch-all chores (one per difficulty) so ad-hoc tasks can be logged without creating a dedicated chore
 - Difficulty is now shown with a heart count that scales with effort: easy ❤️, medium 💖💖, hard ❤️‍🔥❤️‍🔥❤️‍🔥
