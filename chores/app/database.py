@@ -245,6 +245,9 @@ def _migrate(conn: sqlite3.Connection) -> None:
         ("pet_states", "pet_design", "TEXT DEFAULT 'orange_black'"),
         # pet_states columns (v0.3.18 — pet name)
         ("pet_states", "pet_name", "TEXT DEFAULT NULL"),
+        # chore_instances columns (v0.3.27 — track who created/claimed the instance
+        # so self-managed chores can suppress assigned/reminder notifications)
+        ("chore_instances", "created_by", "TEXT DEFAULT NULL"),
     ]
     for table, col, defn in migrations:
         try:

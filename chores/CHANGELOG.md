@@ -1,3 +1,6 @@
+## 0.3.27
+- Fix: suppress "chore assigned" notification and daily reminders when a user adds, claims, or assigns a chore to themselves — these self-managed instances no longer ping the user. Reminders for chores assigned by someone else (or by the rotation/scheduler) still fire as before.
+
 ## 0.3.26
 - Fix: completed chores in My Chores history now show the completion date instead of the original due date
 

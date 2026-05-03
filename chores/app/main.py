@@ -131,7 +131,7 @@ async def _scheduler_loop():
                     when = r_cfg.get("when", "day_of")
                     target_date = today_str if when == "day_of" else (now + timedelta(days=1)).strftime("%Y-%m-%d")
                     due_instances = conn.execute(
-                        """SELECT ci.id, ci.due_date, ci.assigned_to, c.name as chore_name
+                        """SELECT ci.id, ci.due_date, ci.assigned_to, ci.created_by, c.name as chore_name
                            FROM chore_instances ci
                            JOIN chores c ON c.id = ci.chore_id
                            WHERE ci.due_date = ?
@@ -140,6 +140,10 @@ async def _scheduler_loop():
                         (target_date, p_id),
                     ).fetchall()
                     for inst in due_instances:
+                        # Suppress reminders when this person is reminding themselves
+                        # about a chore they self-claimed or self-assigned.
+                        if inst["assigned_to"] == p_id and inst["created_by"] == p_id:
+                            continue
                         key = f"{p_id}:{inst['id']}"
                         if key not in _reminder_sent_today:
                             try:

@@ -163,6 +163,7 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
         chore_id: assignChore.id,
         due_date: assignForm.due_date,
         assigned_to: assignForm.person_id,
+        created_by: activePerson,
       });
       addToast(`Assigned to ${persons.find(p => p.entity_id === assignForm.person_id)?.name || 'person'}`, 'success');
       setAssignChore(null);
