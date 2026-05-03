@@ -62,6 +62,7 @@ class InstanceCreate(BaseModel):
     chore_id: int
     due_date: str
     assigned_to: Optional[str] = None
+    created_by: Optional[str] = None
 
 
 class InstanceComplete(BaseModel):
@@ -71,6 +72,7 @@ class InstanceComplete(BaseModel):
 
 class InstanceClaim(BaseModel):
     person_id: str
+    assigned_by: Optional[str] = None
 
 
 class ChoreInstance(BaseModel):
@@ -84,6 +86,7 @@ class ChoreInstance(BaseModel):
     xp_awarded: int
     notes: str
     created_at: str
+    created_by: Optional[str] = None
     chore_name: Optional[str] = None
     chore_icon: Optional[str] = None
     chore_difficulty: Optional[str] = None

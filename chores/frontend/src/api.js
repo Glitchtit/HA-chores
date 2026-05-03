@@ -35,8 +35,8 @@ export const claimInstance = (id, personId) =>
 export const completeInstance = (id, completedBy, notes = '') =>
   api.post(`/assignments/${id}/complete`, { completed_by: completedBy, notes }).then(r => r.data);
 export const skipInstance = (id) => api.post(`/assignments/${id}/skip`).then(r => r.data);
-export const assignInstance = (id, personId) =>
-  api.post(`/assignments/${id}/assign`, { person_id: personId }).then(r => r.data);
+export const assignInstance = (id, personId, assignedBy = null) =>
+  api.post(`/assignments/${id}/assign`, { person_id: personId, assigned_by: assignedBy }).then(r => r.data);
 
 // ── Persons ─────────────────────────────────────────────────────────────────
 export const getPersons = () => api.get('/persons/').then(r => r.data);

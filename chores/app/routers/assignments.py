@@ -90,14 +90,16 @@ async def create_instance(body: InstanceCreate, bg: BackgroundTasks):
         raise HTTPException(404, "Chore not found")
 
     cursor = conn.execute(
-        """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status)
-           VALUES (?, ?, ?, 'pending')""",
-        (body.chore_id, body.due_date, body.assigned_to),
+        """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status, created_by)
+           VALUES (?, ?, ?, 'pending', ?)""",
+        (body.chore_id, body.due_date, body.assigned_to, body.created_by),
     )
     conn.commit()
     instance_id = cursor.lastrowid
 
-    if body.assigned_to:
+    # Suppress the "assigned" notification when a user assigns a chore to themselves
+    # (self-managed chores don't need a ping — the user already knows).
+    if body.assigned_to and body.assigned_to != body.created_by:
         bg.add_task(notify_chore_assigned, body.assigned_to, chore["name"], body.due_date)
 
     row = conn.execute(
@@ -122,8 +124,11 @@ async def claim_instance(instance_id: int, body: InstanceClaim):
         raise HTTPException(400, "Instance already assigned to someone else")
 
     conn.execute(
-        "UPDATE chore_instances SET assigned_to = ?, status = 'claimed' WHERE id = ?",
-        (body.person_id, instance_id),
+        """UPDATE chore_instances
+           SET assigned_to = ?, status = 'claimed',
+               created_by = COALESCE(created_by, ?)
+           WHERE id = ?""",
+        (body.person_id, body.person_id, instance_id),
     )
     conn.commit()
 
@@ -309,12 +314,16 @@ async def assign_instance(instance_id: int, body: InstanceClaim, bg: BackgroundT
         raise HTTPException(404, "Instance not found")
 
     conn.execute(
-        "UPDATE chore_instances SET assigned_to = ? WHERE id = ?",
-        (body.person_id, instance_id),
+        """UPDATE chore_instances
+           SET assigned_to = ?, created_by = COALESCE(created_by, ?)
+           WHERE id = ?""",
+        (body.person_id, body.assigned_by, instance_id),
     )
     conn.commit()
 
-    bg.add_task(notify_chore_assigned, body.person_id, row["chore_name"], row["due_date"])
+    # Skip the assigned notification when the assigner is also the assignee.
+    if body.person_id != body.assigned_by:
+        bg.add_task(notify_chore_assigned, body.person_id, row["chore_name"], row["due_date"])
 
     updated = conn.execute(
         """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode

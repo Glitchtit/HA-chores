@@ -84,6 +84,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
           chore_id: pendingQuickDone.chore.id,
           due_date: today,
           assigned_to: activePerson,
+          created_by: activePerson,
         });
         // Wait for swoop to land before reloading
         await new Promise(r => setTimeout(r, 600));
@@ -167,7 +168,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
   const handleAdd = async (chore) => {
     triggerSwoop(tileRefs.current[chore.id], todayChoresRef.current, chore.icon, chore.name);
     try {
-      await api.createInstance({ chore_id: chore.id, due_date: todayISO(), assigned_to: activePerson });
+      await api.createInstance({ chore_id: chore.id, due_date: todayISO(), assigned_to: activePerson, created_by: activePerson });
       load();
     } catch {
       addToast('Failed to add chore', 'error');
