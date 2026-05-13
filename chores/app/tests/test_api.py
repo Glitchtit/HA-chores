@@ -163,3 +163,65 @@ class TestPendingCelebrationsSchema:
             "PRAGMA table_info(pending_celebrations)"
         ).fetchall()}
         assert cols == {"id", "person_id", "payload", "created_at", "seen_at"}
+
+
+class TestPendingCelebrationsWrite:
+    def _seed_person_at_threshold(self, tmp_db, xp_total=95, level=1):
+        tmp_db.execute(
+            "INSERT INTO persons (entity_id, name, xp_total, level) VALUES (?, ?, ?, ?)",
+            ("person.lvltest", "LevelTest", xp_total, level),
+        )
+        tmp_db.commit()
+
+    def _seed_chore_and_instance(self, tmp_db, xp_reward=10):
+        tmp_db.execute(
+            "INSERT INTO chores (name, xp_reward, difficulty, assignment_mode) VALUES (?, ?, 'medium', 'manual')",
+            ("LevelUp Chore", xp_reward),
+        )
+        chore_id = tmp_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        from datetime import date
+        tmp_db.execute(
+            "INSERT INTO chore_instances (chore_id, due_date, status) VALUES (?, ?, 'pending')",
+            (chore_id, date.today().isoformat()),
+        )
+        inst_id = tmp_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        tmp_db.commit()
+        return chore_id, inst_id
+
+    def test_levelup_writes_pending_celebration(self, client, tmp_db):
+        self._seed_person_at_threshold(tmp_db, xp_total=95, level=1)
+        _, inst_id = self._seed_chore_and_instance(tmp_db, xp_reward=10)
+        resp = client.post(f"/api/assignments/{inst_id}/complete",
+                           json={"completed_by": "person.lvltest"})
+        assert resp.status_code == 200
+        assert resp.json()["leveled_up"] is True
+        rows = tmp_db.execute(
+            "SELECT payload FROM pending_celebrations WHERE person_id = ?",
+            ("person.lvltest",),
+        ).fetchall()
+        assert len(rows) == 1
+        import json
+        payload = json.loads(rows[0]["payload"])
+        assert payload["leveled_up"] is True
+        assert payload["new_level"] == 2
+
+    def test_no_celebration_when_nothing_earned(self, client, tmp_db):
+        self._seed_person_at_threshold(tmp_db, xp_total=0, level=1)
+        # Pre-award all existing badges so check_and_award_badges returns nothing new.
+        badge_ids = [r[0] for r in tmp_db.execute("SELECT id FROM badges").fetchall()]
+        for bid in badge_ids:
+            tmp_db.execute(
+                "INSERT OR IGNORE INTO person_badges (person_id, badge_id) VALUES (?, ?)",
+                ("person.lvltest", bid),
+            )
+        tmp_db.commit()
+        _, inst_id = self._seed_chore_and_instance(tmp_db, xp_reward=5)
+        resp = client.post(f"/api/assignments/{inst_id}/complete",
+                           json={"completed_by": "person.lvltest"})
+        assert resp.status_code == 200
+        assert resp.json()["leveled_up"] is False
+        rows = tmp_db.execute(
+            "SELECT 1 FROM pending_celebrations WHERE person_id = ?",
+            ("person.lvltest",),
+        ).fetchall()
+        assert rows == []
