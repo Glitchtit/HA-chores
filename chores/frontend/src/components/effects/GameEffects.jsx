@@ -7,6 +7,7 @@
  *   3. After completing a chore call triggerEffects(completeResult, buttonEl, xpBarEl)
  */
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { getPendingCelebrations, ackPendingCelebrations } from '../../api';
 
 const GameEffectsContext = createContext(null);
 
@@ -577,6 +578,58 @@ export function GameEffectsProvider({ children }) {
       if (current?.type === 'monthend') current.onSeen?.();
       return prev.slice(1);
     });
+  }, []);
+
+  // Drain any pending celebrations that were recorded while the frontend was
+  // not mounted (e.g. triggered by a shopping-hook or server-side completion).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const rows = await getPendingCelebrations();
+        if (cancelled || !rows?.length) return;
+
+        // Translate each row's payload into the same modal-queue entries the
+        // post-completion flow already uses (level-up first, badges next,
+        // power-up last).
+        const entries = [];
+        const ackIds = [];
+        for (const row of rows) {
+          const p = row.payload || {};
+          ackIds.push(row.id);
+          if (p.leveled_up) {
+            entries.push({
+              type: 'levelup',
+              oldLevel: p.old_level,
+              newLevel: p.new_level,
+              _ackId: row.id,
+            });
+          }
+          for (const b of (p.new_badges || [])) {
+            entries.push({ type: 'badge', ...b, _ackId: row.id });
+          }
+          if (p.powerup_earned) {
+            entries.push({ type: 'powerup', ...p.powerup_earned, _ackId: row.id });
+          }
+        }
+        if (entries.length === 0) {
+          // Payloads existed but produced no visible modal — ack them so they
+          // don't accumulate.
+          if (ackIds.length) ackPendingCelebrations(ackIds).catch(() => {});
+          return;
+        }
+
+        setModalQueue(prev => [...prev, ...entries]);
+
+        // Ack the rows whose entries we just queued. We ack at enqueue time
+        // (rather than per-dismiss) to avoid re-firing if the component
+        // remounts before the queue drains.
+        ackPendingCelebrations(ackIds).catch(() => {});
+      } catch (err) {
+        console.warn('Failed to load pending celebrations:', err);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress, tileEl) => {
