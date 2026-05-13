@@ -149,3 +149,17 @@ class TestGamification:
         badges = resp.json()
         assert len(badges) > 0
         assert any(b["id"] == "first_chore" for b in badges)
+
+
+class TestPendingCelebrationsSchema:
+    def test_table_exists_after_initialize(self, tmp_db):
+        row = tmp_db.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='pending_celebrations'"
+        ).fetchone()
+        assert row is not None
+
+    def test_table_columns(self, tmp_db):
+        cols = {r["name"] for r in tmp_db.execute(
+            "PRAGMA table_info(pending_celebrations)"
+        ).fetchall()}
+        assert cols == {"id", "person_id", "payload", "created_at", "seen_at"}
