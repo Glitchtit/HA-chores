@@ -1,6 +1,6 @@
 {
   "name": "Chores",
-  "version": "0.3.27",
+  "version": "0.4.0",
   "slug": "ha_chores",
   "description": "Gamified household chore management with HA integration",
   "url": "https://github.com/Glitchtit/HA-chores",
@@ -22,6 +22,12 @@
   "init": false,
   "panel_icon": "mdi:broom",
   "panel_title": "Chores",
+  "ports": {
+    "8100/tcp": null
+  },
+  "ports_description": {
+    "8100/tcp": "Internal FastAPI port for sibling add-on access"
+  },
   "map": [
     "share:rw"
   ],
