@@ -116,6 +116,35 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
   const [resetting, setResetting] = useState(false);
   const saveTimers = useRef({});
 
+  // Cross-app integration: chore-id pickers
+  const [allChores, setAllChores] = useState([]);
+  const [shoppingChoreId, setShoppingChoreId] = useState('');
+  const [scanChoreId, setScanChoreId] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [chores, shopCfg, scanCfg] = await Promise.all([
+          api.getChores(true),
+          api.getConfigValue('shopping_chore_id').catch(() => ({ value: null })),
+          api.getConfigValue('scan_chore_id').catch(() => ({ value: null })),
+        ]);
+        if (cancelled) return;
+        setAllChores(chores);
+        setShoppingChoreId(shopCfg?.value ?? '');
+        setScanChoreId(scanCfg?.value ?? '');
+      } catch (err) {
+        console.warn('Failed to load chores/config:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const persistChoreId = async (key, value) => {
+    await api.setConfigValue(key, String(value || ''));
+  };
+
   // Pet state
   const [petData, setPetData] = useState(null); // { pet_design, pet_name, ... }
   const [petName, setPetName] = useState('');
@@ -450,6 +479,48 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
           </div>
         </div>
         </>)}
+      </div>
+
+      {/* Cross-app integrations */}
+      <div className="bg-gray-800 rounded-xl p-5 space-y-3">
+        <h3 className="font-medium">🔗 Cross-app integrations</h3>
+        <p className="text-xs text-gray-500">
+          Pick which chores HA-grocy-stock credits when a shopping session finishes.
+        </p>
+
+        <div>
+          <label className="text-xs text-gray-500 block mb-1.5">Shopping chore</label>
+          <select
+            className="w-full bg-gray-700 border border-gray-600 focus:border-amber-500 focus:outline-none rounded-lg px-3 py-2 text-sm"
+            value={shoppingChoreId}
+            onChange={async (e) => {
+              setShoppingChoreId(e.target.value);
+              await persistChoreId('shopping_chore_id', e.target.value);
+            }}
+          >
+            <option value="">— pick a chore —</option>
+            {allChores.map(c => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs text-gray-500 block mb-1.5">Scan / unpack chore</label>
+          <select
+            className="w-full bg-gray-700 border border-gray-600 focus:border-amber-500 focus:outline-none rounded-lg px-3 py-2 text-sm"
+            value={scanChoreId}
+            onChange={async (e) => {
+              setScanChoreId(e.target.value);
+              await persistChoreId('scan_chore_id', e.target.value);
+            }}
+          >
+            <option value="">— pick a chore —</option>
+            {allChores.map(c => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* HA Sync */}
