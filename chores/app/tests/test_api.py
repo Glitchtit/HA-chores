@@ -329,3 +329,53 @@ class TestShoppingHook:
             "suppress_followup": False,
         })
         assert resp.status_code == 404
+
+
+class TestPendingCelebrationsAPI:
+    def _seed_person_with_ha_user(self, tmp_db, entity_id="person.cele",
+                                  ha_user_id="ha-user-1"):
+        tmp_db.execute(
+            "INSERT INTO persons (entity_id, name, ha_user_id) VALUES (?, ?, ?)",
+            (entity_id, "Cele", ha_user_id),
+        )
+        tmp_db.commit()
+
+    def _insert_celebration(self, tmp_db, person_id, payload='{"leveled_up":true}',
+                            seen_at=None):
+        tmp_db.execute(
+            "INSERT INTO pending_celebrations (person_id, payload, seen_at) VALUES (?, ?, ?)",
+            (person_id, payload, seen_at),
+        )
+        tmp_db.commit()
+        return tmp_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    def test_get_returns_unseen_only(self, client, tmp_db):
+        self._seed_person_with_ha_user(tmp_db)
+        unseen_id = self._insert_celebration(tmp_db, "person.cele")
+        self._insert_celebration(tmp_db, "person.cele", seen_at="2025-01-01T00:00:00")
+        resp = client.get(
+            "/api/persons/me/pending-celebrations",
+            headers={"X-Remote-User-Id": "ha-user-1"},
+        )
+        assert resp.status_code == 200
+        rows = resp.json()
+        assert len(rows) == 1
+        assert rows[0]["id"] == unseen_id
+
+    def test_get_returns_empty_when_no_user_header(self, client, tmp_db):
+        self._seed_person_with_ha_user(tmp_db)
+        self._insert_celebration(tmp_db, "person.cele")
+        resp = client.get("/api/persons/me/pending-celebrations")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_get_payload_is_parsed_as_json(self, client, tmp_db):
+        self._seed_person_with_ha_user(tmp_db)
+        self._insert_celebration(tmp_db, "person.cele",
+                                 payload='{"leveled_up":true,"new_level":5}')
+        resp = client.get(
+            "/api/persons/me/pending-celebrations",
+            headers={"X-Remote-User-Id": "ha-user-1"},
+        )
+        rows = resp.json()
+        assert rows[0]["payload"]["new_level"] == 5

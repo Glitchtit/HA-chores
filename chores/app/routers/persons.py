@@ -3,7 +3,8 @@
 from __future__ import annotations
 from typing import Optional
 from fastapi import APIRouter, Request
-from models import Person
+import json as _json
+from models import Person, PendingCelebration
 from database import get_connection, _seed_pet_states
 from ha_client import get_persons as ha_get_persons
 
@@ -80,6 +81,34 @@ async def whoami_debug(request: Request):
         "all_ingress_headers": {k: v for k, v in request.headers.items() if "hass" in k.lower() or "ingress" in k.lower() or "remote" in k.lower() or "x-" in k.lower()},
         "persons_in_db": [{"entity_id": r["entity_id"], "name": r["name"], "ha_user_id": r["ha_user_id"]} for r in persons_db],
     }
+
+
+@router.get("/me/pending-celebrations", response_model=list[PendingCelebration])
+async def get_pending_celebrations(request: Request):
+    """Return unseen celebration popups for the requesting HA user."""
+    ha_user_id = request.headers.get("X-Remote-User-Id", "")
+    if not ha_user_id:
+        return []
+    conn = get_connection()
+    person = conn.execute(
+        "SELECT entity_id FROM persons WHERE ha_user_id = ?", (ha_user_id,)
+    ).fetchone()
+    if not person:
+        return []
+    rows = conn.execute(
+        """SELECT id, payload, created_at FROM pending_celebrations
+           WHERE person_id = ? AND seen_at IS NULL
+           ORDER BY id ASC""",
+        (person["entity_id"],),
+    ).fetchall()
+    out = []
+    for r in rows:
+        try:
+            payload = _json.loads(r["payload"])
+        except Exception:
+            payload = {}
+        out.append({"id": r["id"], "payload": payload, "created_at": r["created_at"]})
+    return out
 
 
 @router.get("/", response_model=list[Person])

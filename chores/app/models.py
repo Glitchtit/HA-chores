@@ -212,6 +212,14 @@ class MonthEndCheck(BaseModel):
     entries: list[MonthEndEntry]
 
 
+# ── Pending celebrations ─────────────────────────────────────────────────────
+
+class PendingCelebration(BaseModel):
+    id: int
+    payload: dict
+    created_at: str
+
+
 # ── Shopping hook ────────────────────────────────────────────────────────────
 
 class HookCompleteBody(BaseModel):
