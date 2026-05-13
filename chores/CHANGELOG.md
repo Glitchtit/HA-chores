@@ -1,3 +1,6 @@
+## 0.4.1
+- Doc-only: shopping-hook router docstring and Settings.jsx helper text now refer to `HA-stock` instead of the renamed `HA-grocy-stock`. No behaviour change
+
 ## 0.4.0
 
 - Add `/api/shopping-hook/complete` endpoint for cross-add-on chore attribution (used by HA-grocy-stock to credit shopping/scanning chores per person and inhibit the duplicate `Unpack & scan` follow-up).

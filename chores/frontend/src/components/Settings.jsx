@@ -485,7 +485,7 @@ export default function Settings({ persons, activePerson, setActivePerson, addTo
       <div className="bg-gray-800 rounded-xl p-5 space-y-3">
         <h3 className="font-medium">🔗 Cross-app integrations</h3>
         <p className="text-xs text-gray-500">
-          Pick which chores HA-grocy-stock credits when a shopping session finishes.
+          Pick which chores HA-stock credits when a shopping session finishes.
         </p>
 
         <div>

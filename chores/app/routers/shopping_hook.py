@@ -1,4 +1,4 @@
-"""Chores – Shopping-hook endpoint for HA-grocy-stock attribution."""
+"""Chores – Shopping-hook endpoint for HA-stock attribution."""
 
 from __future__ import annotations
 from datetime import date
