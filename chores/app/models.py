@@ -212,6 +212,15 @@ class MonthEndCheck(BaseModel):
     entries: list[MonthEndEntry]
 
 
+# ── Shopping hook ────────────────────────────────────────────────────────────
+
+class HookCompleteBody(BaseModel):
+    chore_id: int
+    person: str
+    suppress_followup: bool = False
+    notes: str = ""
+
+
 # ── Config ───────────────────────────────────────────────────────────────────
 
 class ConfigEntry(BaseModel):

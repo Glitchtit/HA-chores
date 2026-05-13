@@ -225,3 +225,107 @@ class TestPendingCelebrationsWrite:
             ("person.lvltest",),
         ).fetchall()
         assert rows == []
+
+
+class TestShoppingHook:
+    def _seed_basic(self, tmp_db):
+        tmp_db.execute(
+            "INSERT INTO persons (entity_id, name) VALUES ('person.shopper', 'Shopper')"
+        )
+        tmp_db.execute(
+            "INSERT INTO chores (name, xp_reward, difficulty, assignment_mode) VALUES ('Shopping', 10, 'medium', 'manual')"
+        )
+        shop_id = tmp_db.execute("SELECT id FROM chores WHERE name='Shopping'").fetchone()["id"]
+        tmp_db.execute(
+            "INSERT INTO chores (name, xp_reward, difficulty, assignment_mode) VALUES ('Unpack', 5, 'easy', 'manual')"
+        )
+        scan_id = tmp_db.execute("SELECT id FROM chores WHERE name='Unpack'").fetchone()["id"]
+        tmp_db.execute("UPDATE chores SET followup_chore_id = ? WHERE id = ?", (scan_id, shop_id))
+        tmp_db.commit()
+        return shop_id, scan_id
+
+    def test_hook_creates_instance_when_missing(self, client, tmp_db):
+        shop_id, _ = self._seed_basic(tmp_db)
+        resp = client.post("/api/shopping-hook/complete", json={
+            "chore_id": shop_id,
+            "person": "person.shopper",
+            "suppress_followup": False,
+        })
+        assert resp.status_code == 200
+        from datetime import date
+        rows = tmp_db.execute(
+            "SELECT * FROM chore_instances WHERE chore_id = ? AND due_date = ?",
+            (shop_id, date.today().isoformat()),
+        ).fetchall()
+        assert len(rows) == 1
+        assert rows[0]["status"] == "completed"
+        assert rows[0]["completed_by"] == "person.shopper"
+
+    def test_hook_completes_existing_pending_instance(self, client, tmp_db):
+        shop_id, _ = self._seed_basic(tmp_db)
+        from datetime import date
+        tmp_db.execute(
+            "INSERT INTO chore_instances (chore_id, due_date, status) VALUES (?, ?, 'pending')",
+            (shop_id, date.today().isoformat()),
+        )
+        existing_id = tmp_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        tmp_db.commit()
+        resp = client.post("/api/shopping-hook/complete", json={
+            "chore_id": shop_id,
+            "person": "person.shopper",
+            "suppress_followup": False,
+        })
+        assert resp.status_code == 200
+        row = tmp_db.execute(
+            "SELECT * FROM chore_instances WHERE id = ?", (existing_id,)
+        ).fetchone()
+        assert row["status"] == "completed"
+        # Should NOT have created a duplicate
+        count = tmp_db.execute(
+            "SELECT COUNT(*) FROM chore_instances WHERE chore_id = ? AND due_date = ?",
+            (shop_id, date.today().isoformat()),
+        ).fetchone()[0]
+        assert count == 1
+
+    def test_hook_suppress_followup_blocks_spawn(self, client, tmp_db):
+        shop_id, scan_id = self._seed_basic(tmp_db)
+        resp = client.post("/api/shopping-hook/complete", json={
+            "chore_id": shop_id,
+            "person": "person.shopper",
+            "suppress_followup": True,
+        })
+        assert resp.status_code == 200
+        from datetime import date
+        followups = tmp_db.execute(
+            "SELECT * FROM chore_instances WHERE chore_id = ? AND due_date = ?",
+            (scan_id, date.today().isoformat()),
+        ).fetchall()
+        assert followups == []
+
+    def test_hook_spawns_followup_when_not_suppressed(self, client, tmp_db):
+        shop_id, scan_id = self._seed_basic(tmp_db)
+        resp = client.post("/api/shopping-hook/complete", json={
+            "chore_id": shop_id,
+            "person": "person.shopper",
+            "suppress_followup": False,
+        })
+        assert resp.status_code == 200
+        from datetime import date
+        followups = tmp_db.execute(
+            "SELECT * FROM chore_instances WHERE chore_id = ? AND due_date = ?",
+            (scan_id, date.today().isoformat()),
+        ).fetchall()
+        assert len(followups) == 1
+        assert followups[0]["status"] == "pending"
+
+    def test_hook_unknown_chore_returns_404(self, client, tmp_db):
+        tmp_db.execute(
+            "INSERT INTO persons (entity_id, name) VALUES ('person.x', 'X')"
+        )
+        tmp_db.commit()
+        resp = client.post("/api/shopping-hook/complete", json={
+            "chore_id": 99999,
+            "person": "person.x",
+            "suppress_followup": False,
+        })
+        assert resp.status_code == 404
