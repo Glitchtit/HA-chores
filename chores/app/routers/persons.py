@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 from fastapi import APIRouter, Request
 import json as _json
-from models import Person, PendingCelebration
+from models import Person, PendingCelebration, CelebrationAckBody
 from database import get_connection, _seed_pet_states
 from ha_client import get_persons as ha_get_persons
 
@@ -109,6 +109,33 @@ async def get_pending_celebrations(request: Request):
             payload = {}
         out.append({"id": r["id"], "payload": payload, "created_at": r["created_at"]})
     return out
+
+
+@router.post("/me/pending-celebrations/ack")
+async def ack_pending_celebrations(request: Request, body: CelebrationAckBody):
+    """Mark the given celebration rows as seen, scoped to the requesting user."""
+    ha_user_id = request.headers.get("X-Remote-User-Id", "")
+    if not ha_user_id or not body.ids:
+        return {"acked": 0}
+    conn = get_connection()
+    person = conn.execute(
+        "SELECT entity_id FROM persons WHERE ha_user_id = ?", (ha_user_id,)
+    ).fetchone()
+    if not person:
+        return {"acked": 0}
+    placeholders = ",".join("?" * len(body.ids))
+    from datetime import datetime as _dt
+    now = _dt.now().isoformat()
+    cursor = conn.execute(
+        f"""UPDATE pending_celebrations
+            SET seen_at = ?
+            WHERE seen_at IS NULL
+              AND person_id = ?
+              AND id IN ({placeholders})""",
+        (now, person["entity_id"], *body.ids),
+    )
+    conn.commit()
+    return {"acked": cursor.rowcount}
 
 
 @router.get("/", response_model=list[Person])
