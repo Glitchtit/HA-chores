@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 import json
-import json as _json
 import logging
 from datetime import date, datetime
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -220,18 +219,14 @@ def apply_completion(
             "new_level": new_level,
             "leveled_up": leveled_up,
             "new_badges": new_badges,
-            "powerup_earned": (
-                {**earned_powerup,
-                 "expires_at": earned_powerup.get("expires_at")}
-                if earned_powerup else None
-            ),
+            "powerup_earned": earned_powerup,
             "source": "shopping-hook" if bg is None else "assignment",
             "completed_at": now,
         }
         try:
             conn.execute(
                 "INSERT INTO pending_celebrations (person_id, payload) VALUES (?, ?)",
-                (completed_by, _json.dumps(payload, default=str)),
+                (completed_by, json.dumps(payload, default=str)),
             )
             conn.commit()
         except Exception as e:
