@@ -379,3 +379,39 @@ class TestPendingCelebrationsAPI:
         )
         rows = resp.json()
         assert rows[0]["payload"]["new_level"] == 5
+
+    def test_ack_marks_rows_seen(self, client, tmp_db):
+        self._seed_person_with_ha_user(tmp_db)
+        c1 = self._insert_celebration(tmp_db, "person.cele")
+        c2 = self._insert_celebration(tmp_db, "person.cele")
+        resp = client.post(
+            "/api/persons/me/pending-celebrations/ack",
+            headers={"X-Remote-User-Id": "ha-user-1"},
+            json={"ids": [c1, c2]},
+        )
+        assert resp.status_code == 200
+        unseen = tmp_db.execute(
+            "SELECT COUNT(*) FROM pending_celebrations WHERE seen_at IS NULL"
+        ).fetchone()[0]
+        assert unseen == 0
+
+    def test_ack_only_scopes_to_requester(self, client, tmp_db):
+        self._seed_person_with_ha_user(tmp_db, "person.cele", "ha-user-1")
+        self._seed_person_with_ha_user(tmp_db, "person.other", "ha-user-2")
+        my_id = self._insert_celebration(tmp_db, "person.cele")
+        other_id = self._insert_celebration(tmp_db, "person.other")
+        resp = client.post(
+            "/api/persons/me/pending-celebrations/ack",
+            headers={"X-Remote-User-Id": "ha-user-1"},
+            json={"ids": [my_id, other_id]},
+        )
+        assert resp.status_code == 200
+        # Mine acked, theirs still unseen
+        mine = tmp_db.execute(
+            "SELECT seen_at FROM pending_celebrations WHERE id = ?", (my_id,)
+        ).fetchone()
+        theirs = tmp_db.execute(
+            "SELECT seen_at FROM pending_celebrations WHERE id = ?", (other_id,)
+        ).fetchone()
+        assert mine["seen_at"] is not None
+        assert theirs["seen_at"] is None

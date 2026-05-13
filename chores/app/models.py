@@ -220,6 +220,10 @@ class PendingCelebration(BaseModel):
     created_at: str
 
 
+class CelebrationAckBody(BaseModel):
+    ids: list[int]
+
+
 # ── Shopping hook ────────────────────────────────────────────────────────────
 
 class HookCompleteBody(BaseModel):
