@@ -1,3 +1,9 @@
+## 0.4.0
+
+- Add `/api/shopping-hook/complete` endpoint for cross-add-on chore attribution (used by HA-grocy-stock to credit shopping/scanning chores per person and inhibit the duplicate `Unpack & scan` follow-up).
+- Add `pending_celebrations` table and `/api/persons/me/pending-celebrations` GET + ACK endpoints so level-up / badge / power-up popups triggered by external completions appear in the Chores UI on next mount.
+- Expose FastAPI port 8100 on the container network so sibling add-ons can reach the new hook.
+
 ## 0.3.27
 - Fix: suppress "chore assigned" notification and daily reminders when a user adds, claims, or assigns a chore to themselves — these self-managed instances no longer ping the user. Reminders for chores assigned by someone else (or by the rotation/scheduler) still fire as before.
 
