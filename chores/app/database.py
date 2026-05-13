@@ -156,6 +156,18 @@ CREATE TABLE IF NOT EXISTS pet_states (
     last_bump_at  TIMESTAMP,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS pending_celebrations (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id   TEXT    NOT NULL REFERENCES persons(entity_id) ON DELETE CASCADE,
+    payload     TEXT    NOT NULL,
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    seen_at     TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_celebrations_person_unseen
+    ON pending_celebrations(person_id, created_at)
+    WHERE seen_at IS NULL;
 """
 
 
