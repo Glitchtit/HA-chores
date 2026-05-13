@@ -85,6 +85,14 @@ export const getSunState = () => api.get('/pets/sun').then(r => r.data);
 
 // ── Config ──────────────────────────────────────────────────────────────────
 export const getConfig = () => api.get('/config/').then(r => r.data);
-export const getConfigValue = (key) => api.get(`/config/${key}`).then(r => r.data);
+export const getConfigValue = (key) =>
+  api.get(`/config/${encodeURIComponent(key)}`).then(r => r.data);
 export const setConfigValue = (key, value) =>
-  api.put(`/config/${key}`, { key, value }).then(r => r.data);
+  api.put(`/config/${encodeURIComponent(key)}`, { key, value }).then(r => r.data);
+
+// ── Pending celebrations (cross-app completions) ────────────────────────────
+export const getPendingCelebrations = () =>
+  api.get('/persons/me/pending-celebrations').then(r => r.data);
+
+export const ackPendingCelebrations = (ids) =>
+  api.post('/persons/me/pending-celebrations/ack', { ids }).then(r => r.data);
