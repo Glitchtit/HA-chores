@@ -141,34 +141,30 @@ async def claim_instance(instance_id: int, body: InstanceClaim):
     return _row_to_instance(updated)
 
 
-@router.post("/{instance_id}/complete", response_model=CompleteResult)
-async def complete_instance(instance_id: int, body: InstanceComplete, bg: BackgroundTasks):
-    """Mark a chore instance as completed, awarding XP and checking badges."""
-    conn = get_connection()
-    row = conn.execute(
-        """SELECT ci.*, c.xp_reward, c.assignment_mode, c.difficulty as chore_difficulty,
-                  c.followup_chore_id
-           FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
-           WHERE ci.id = ?""",
-        (instance_id,),
-    ).fetchone()
-    if not row:
-        raise HTTPException(404, "Instance not found")
+def apply_completion(
+    conn,
+    instance_row,
+    completed_by: str,
+    notes: str,
+    *,
+    bg: BackgroundTasks | None,
+    suppress_followup: bool = False,
+) -> dict:
+    """Shared completion logic. Returns the same dict shape as CompleteResult."""
+    row = instance_row
     if row["status"] == "completed":
         raise HTTPException(400, "Already completed")
 
     was_overdue = row["status"] == "overdue"
 
-    # Get person's current streak and level for XP calculation
     person = conn.execute(
-        "SELECT * FROM persons WHERE entity_id = ?", (body.completed_by,)
+        "SELECT * FROM persons WHERE entity_id = ?", (completed_by,)
     ).fetchone()
     streak = person["current_streak"] if person else 0
     old_level = person["level"] if person else 1
 
-    # Calculate XP with bonuses
     early = date.fromisoformat(row["due_date"]) > date.today()
-    claimed = row["assignment_mode"] == "claim" and row["assigned_to"] == body.completed_by
+    claimed = row["assignment_mode"] == "claim" and row["assigned_to"] == completed_by
     xp = calculate_xp(
         base_xp=row["xp_reward"],
         streak=streak,
@@ -176,9 +172,8 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
         claimed=claimed,
     )
 
-    # Apply any active power-up multiplier
     difficulty = row["chore_difficulty"] or "medium"
-    powerup_multiplier, consumed_powerup = apply_powerup_to_xp(body.completed_by, difficulty)
+    powerup_multiplier, consumed_powerup = apply_powerup_to_xp(completed_by, difficulty)
     if powerup_multiplier != 1.0:
         xp = max(1, int(xp * powerup_multiplier))
 
@@ -188,57 +183,53 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
            SET status = 'completed', completed_at = ?, completed_by = ?,
                xp_awarded = ?, notes = ?
            WHERE id = ?""",
-        (now, body.completed_by, xp, body.notes, instance_id),
+        (now, completed_by, xp, notes, row["id"]),
     )
     conn.commit()
 
-    # Update streak and add XP
-    new_streak, _ = update_streak(body.completed_by)
-    new_total, new_level, leveled_up = add_xp(body.completed_by, xp)
+    new_streak, _ = update_streak(completed_by)
+    new_total, new_level, leveled_up = add_xp(completed_by, xp)
 
-    # Award a power-up on level-up
     earned_powerup = None
     if leveled_up:
         try:
-            earned_powerup = award_levelup_powerup(body.completed_by, new_level)
+            earned_powerup = award_levelup_powerup(completed_by, new_level)
         except Exception as e:
             logger.warning("Failed to award level-up power-up: %s", e)
 
-    # Pet happiness bump for the completer (not the assignee)
     try:
-        pets.ensure_pet(conn, body.completed_by)
+        pets.ensure_pet(conn, completed_by)
         old_happiness = conn.execute(
             "SELECT happiness FROM pet_states WHERE person_id = ?",
-            (body.completed_by,),
+            (completed_by,),
         ).fetchone()
         prev_happiness = old_happiness["happiness"] if old_happiness else 80
-        new_happiness = pets.bump_happiness(conn, body.completed_by, was_overdue=was_overdue)
+        new_happiness = pets.bump_happiness(conn, completed_by, was_overdue=was_overdue)
         pet_delta = new_happiness - prev_happiness
     except Exception as e:
         logger.warning("Failed to bump pet happiness: %s", e)
         new_happiness = None
         pet_delta = None
 
-    # Check for new badges
-    new_badges = check_and_award_badges(body.completed_by)
-    for badge in new_badges:
-        bg.add_task(
-            notify_badge_earned, body.completed_by, badge["name"], badge["icon"]
-        )
-    if leveled_up:
-        bg.add_task(notify_level_up, body.completed_by, new_level)
+    new_badges = check_and_award_badges(completed_by)
+    if bg is not None:
+        for badge in new_badges:
+            bg.add_task(
+                notify_badge_earned, completed_by, badge["name"], badge["icon"]
+            )
+        if leveled_up:
+            bg.add_task(notify_level_up, completed_by, new_level)
 
     updated = conn.execute(
         """SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty, c.assignment_mode as chore_assignment_mode
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
-        (instance_id,),
+        (row["id"],),
     ).fetchone()
 
-    # Spawn follow-up instance if configured
     followup_name: str | None = None
     followup_chore_id = row["followup_chore_id"]
-    if followup_chore_id:
+    if followup_chore_id and not suppress_followup:
         followup_chore = conn.execute(
             "SELECT * FROM chores WHERE id = ? AND active = 1", (followup_chore_id,)
         ).fetchone()
@@ -273,6 +264,22 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
         "pet_happiness": new_happiness,
         "pet_delta": pet_delta,
     }
+
+
+@router.post("/{instance_id}/complete", response_model=CompleteResult)
+async def complete_instance(instance_id: int, body: InstanceComplete, bg: BackgroundTasks):
+    """Mark a chore instance as completed, awarding XP and checking badges."""
+    conn = get_connection()
+    row = conn.execute(
+        """SELECT ci.*, c.xp_reward, c.assignment_mode, c.difficulty as chore_difficulty,
+                  c.followup_chore_id
+           FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
+           WHERE ci.id = ?""",
+        (instance_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Instance not found")
+    return apply_completion(conn, row, body.completed_by, body.notes, bg=bg)
 
 
 @router.post("/{instance_id}/skip", response_model=ChoreInstance)
