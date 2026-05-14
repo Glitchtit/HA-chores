@@ -100,6 +100,9 @@ import hatFlowerCrown from '../assets/pets/cosmetics/hats/hat_flower_crown.png';
 import hatSanta       from '../assets/pets/cosmetics/hats/hat_santa.png';
 import hatSun         from '../assets/pets/cosmetics/hats/hat_sun.png';
 import hatBeret       from '../assets/pets/cosmetics/hats/hat_beret.png';
+import hatGraduate    from '../assets/pets/cosmetics/hats/hat_graduate.png';
+import hatHalo        from '../assets/pets/cosmetics/hats/hat_halo.png';
+import hatLaurel      from '../assets/pets/cosmetics/hats/hat_laurel.png';
 import particleSparkle  from '../assets/pets/cosmetics/particles/particle_sparkle.png';
 import particleHearts   from '../assets/pets/cosmetics/particles/particle_hearts.png';
 import particleFire     from '../assets/pets/cosmetics/particles/particle_fire.png';
@@ -111,6 +114,14 @@ import particleMusic    from '../assets/pets/cosmetics/particles/particle_music.
 import particleBubbles  from '../assets/pets/cosmetics/particles/particle_bubbles.png';
 import particlePaws     from '../assets/pets/cosmetics/particles/particle_paws.png';
 import particleRainbow  from '../assets/pets/cosmetics/particles/particle_rainbow.png';
+import particleStars    from '../assets/pets/cosmetics/particles/particle_stars.png';
+import bgMeadow         from '../assets/pets/cosmetics/backgrounds/bg_meadow.png';
+import bgBeach          from '../assets/pets/cosmetics/backgrounds/bg_beach.png';
+import bgSpace          from '../assets/pets/cosmetics/backgrounds/bg_space.png';
+import bgForest         from '../assets/pets/cosmetics/backgrounds/bg_forest.png';
+import bgAurora         from '../assets/pets/cosmetics/backgrounds/bg_aurora.png';
+import plateGold        from '../assets/pets/cosmetics/nameplates/plate_gold.png';
+import plateSilver      from '../assets/pets/cosmetics/nameplates/plate_silver.png';
 import messDishes      from '../assets/pets/mess/dishes.png';
 import messLaundry     from '../assets/pets/mess/laundry.png';
 import messCleaning    from '../assets/pets/mess/cleaning.png';
@@ -263,6 +274,9 @@ const COSMETIC_IMG = {
   hat_santa:         hatSanta,
   hat_sun:           hatSun,
   hat_beret:         hatBeret,
+  hat_graduate:      hatGraduate,
+  hat_halo:          hatHalo,
+  hat_laurel:        hatLaurel,
   particle_sparkle:  particleSparkle,
   particle_hearts:   particleHearts,
   particle_fire:     particleFire,
@@ -274,6 +288,14 @@ const COSMETIC_IMG = {
   particle_bubbles:  particleBubbles,
   particle_paws:     particlePaws,
   particle_rainbow:  particleRainbow,
+  particle_stars:    particleStars,
+  bg_meadow:         bgMeadow,
+  bg_beach:          bgBeach,
+  bg_space:          bgSpace,
+  bg_forest:         bgForest,
+  bg_aurora:         bgAurora,
+  plate_gold:        plateGold,
+  plate_silver:      plateSilver,
 };
 
 const STATE_ANIM = {
@@ -594,6 +616,9 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   // v0.4.3 sub-tab: house | shop | wardrobe
   const [subTab, setSubTab] = useState('house');
 
+  // v0.7.0 — placed nameplates (one per household member, visible to all)
+  const [placedNameplates, setPlacedNameplates] = useState([]);
+
   const personsById = useMemo(
     () => new Map(persons.map(p => [p.entity_id, p])),
     [persons],
@@ -653,6 +678,80 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
     }, 10000);
     return () => { cancelled = true; clearInterval(id); };
   }, [load]);
+
+  /* ── Load placed nameplates (every 10s + on mount) ─────────────────────── */
+  const loadNameplates = useCallback(async () => {
+    try {
+      const rows = await api.getPlacedNameplates();
+      setPlacedNameplates(rows || []);
+    } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { loadNameplates(); }, [loadNameplates]);
+  useEffect(() => {
+    let cancelled = false;
+    const id = setInterval(() => {
+      if (!cancelled && document.visibilityState === 'visible') loadNameplates();
+    }, 10000);
+    return () => { cancelled = true; clearInterval(id); };
+  }, [loadNameplates]);
+
+  /* ── Drag handler for the current user's placed nameplate ──────────────── */
+  const startDragNameplate = useCallback((e, np) => {
+    if (np.person_id !== activePerson) return;
+    e.preventDefault();
+    const sceneEl = sceneRef.current;
+    if (!sceneEl) return;
+    let latest = { ...np };
+    const updatePos = (clientX, clientY) => {
+      const rect = sceneEl.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((clientY - rect.top) / rect.height) * 100));
+      latest = { ...latest, x, y };
+      // Optimistic local update so the user sees the nameplate follow the cursor
+      setPlacedNameplates((prev) => prev.map((p) =>
+        p.person_id === np.person_id ? { ...p, x, y } : p,
+      ));
+    };
+    const onMove = (ev) => updatePos(ev.clientX, ev.clientY);
+    const onTouchMove = (ev) => {
+      if (ev.touches[0]) { ev.preventDefault(); updatePos(ev.touches[0].clientX, ev.touches[0].clientY); }
+    };
+    const cleanup = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onUp);
+    };
+    const onUp = async () => {
+      cleanup();
+      try {
+        await api.placeNameplate(latest.person_id, latest.cosmetic_id, latest.x, latest.y);
+      } catch (err) {
+        // Revert by reloading from backend
+        loadNameplates();
+      }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onUp);
+  }, [activePerson, loadNameplates]);
+
+  const handlePlaceMyNameplate = useCallback(async () => {
+    const equipped = household?.pets?.find((p) => p.person_id === activePerson)?.equipped?.nameplate;
+    if (!equipped?.id) return;
+    try {
+      await api.placeNameplate(activePerson, equipped.id, 50, 50);
+      loadNameplates();
+    } catch { /* ignore */ }
+  }, [activePerson, household, loadNameplates]);
+
+  const handleRemoveMyNameplate = useCallback(async () => {
+    try {
+      await api.removeNameplate(activePerson);
+      loadNameplates();
+    } catch { /* ignore */ }
+  }, [activePerson, loadNameplates]);
 
   /* ── Chore-completion celebration ──────────────────────────────────────── */
   useEffect(() => {
@@ -810,17 +909,45 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
         )}
       </div>
 
+      {/* Nameplate placement controls (v0.7.0) — only in edit mode */}
+      {editMode && (() => {
+        const myPlate = placedNameplates.find((n) => n.person_id === activePerson);
+        const equipped = household?.pets?.find((p) => p.person_id === activePerson)?.equipped?.nameplate;
+        if (!myPlate && !equipped) return null;
+        return (
+          <div className="flex items-center gap-2 text-[11px]">
+            {myPlate ? (
+              <button onClick={handleRemoveMyNameplate}
+                      className="bg-rose-900/40 hover:bg-rose-800/60 border border-rose-700 text-rose-200 px-2.5 py-1 rounded">
+                🗑️ Remove my nameplate
+              </button>
+            ) : (
+              <button onClick={handlePlaceMyNameplate}
+                      className="bg-orange-500 hover:bg-orange-400 text-white px-2.5 py-1 rounded">
+                📍 Place my nameplate
+              </button>
+            )}
+            {myPlate && <span className="text-gray-500">drag to move</span>}
+          </div>
+        );
+      })()}
+
       {/* House scene */}
       <div className="bg-gray-800 rounded-lg p-2 sm:p-4">
         <div
           ref={sceneRef}
           className={`relative aspect-[4/3] rounded-md overflow-hidden bg-gray-900 ${editMode ? 'ring-2 ring-amber-400/40' : ''}`}
           style={{
-            backgroundImage: `url(${getHouseBackground(
-              isDay,
-              isRaining,
-              (household?.shared?.cleanliness ?? 100) < 30,
-            )})`,
+            backgroundImage: `url(${
+              // v0.7.0: an equipped 'background' cosmetic for the viewed person
+              // overrides the seasonal cabin. Otherwise fall back to the house bg.
+              (myPet?.equipped?.background?.id && COSMETIC_IMG[myPet.equipped.background.id])
+                || getHouseBackground(
+                  isDay,
+                  isRaining,
+                  (household?.shared?.cleanliness ?? 100) < 30,
+                )
+            })`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
@@ -915,6 +1042,47 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                   <span className={MOOD_TONE[myPet.mood] || 'text-gray-300'}>{myPet.mood}</span>
                 </div>
               )}
+
+              {/* Placed nameplates (v0.7.0) — visible to all; owner can drag in edit mode */}
+              {placedNameplates.map((np) => {
+                const isMine = np.person_id === activePerson;
+                const draggable = editMode && isMine;
+                const img = COSMETIC_IMG[np.cosmetic_id];
+                return (
+                  <div
+                    key={np.person_id}
+                    className={`absolute select-none ${draggable ? 'cursor-grab active:cursor-grabbing ring-2 ring-orange-400/60 rounded' : ''}`}
+                    style={{
+                      left: `${np.x}%`,
+                      top: `${np.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: 25,
+                    }}
+                    onMouseDown={draggable ? (e) => startDragNameplate(e, np) : undefined}
+                    onTouchStart={draggable ? (e) => {
+                      const t = e.touches[0];
+                      if (t) startDragNameplate({ ...e, clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault() }, np);
+                    } : undefined}
+                    title={`${np.display_name}'s nameplate`}
+                  >
+                    <div className="relative">
+                      {img ? (
+                        <img src={img} alt="" className="pixelated w-[clamp(48px,18vw,128px)]"
+                             style={{ objectFit: 'contain' }} />
+                      ) : (
+                        <div className="bg-gray-700 text-gray-100 px-3 py-1 rounded text-xs">
+                          {np.cosmetic_icon || '🏷️'}
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span className="text-[9px] sm:text-[10px] font-bold text-gray-900 drop-shadow-sm px-1 truncate max-w-[80%]">
+                          {np.display_name}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">Loading…</div>

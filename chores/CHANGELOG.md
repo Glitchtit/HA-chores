@@ -1,3 +1,20 @@
+## 0.7.0
+- **Equipped background cosmetic overrides the house backdrop per viewer.** When you have a `background` slot cosmetic equipped (Meadow / Beach / Outer Space / Forest / Aurora), the house scene swaps the seasonal cabin for that backdrop. Each household member sees their own override; no equipped background = the normal cabin
+- **Nameplates are now placeable, drag-and-drop in the house view.** Each user can place ONE nameplate visible to every household member. Activate edit mode ("Change placement" toggle) → use the new "📍 Place my nameplate" / "🗑️ Remove" buttons → drag the nameplate to position it. The placing user's pet_name (or display name) shows centered on the nameplate sprite
+- New SQLite table `placed_nameplates` (PK = person_id, one nameplate per user) and three endpoints under `/api/cosmetics/nameplates/placed/`:
+  - `GET` lists all placed nameplates household-wide with their owner's pet_name + cosmetic art
+  - `PUT /{entity_id}` places or moves (clamps x/y to 0–100, idempotent overwrite)
+  - `DELETE /{entity_id}` removes
+- Backend rejects placing a non-nameplate cosmetic or one the user doesn't own (403/422). 7 new pytest cases (`TestPlacedNameplates`)
+
+## 0.6.3
+- Replace remaining emoji icons in the cosmetics shop with pixel-art sprites — 11 new generated assets:
+  - 3 hats: Graduate Cap, Halo, Spring Laurel
+  - 1 particle: Stardust
+  - 5 backgrounds: Meadow, Beach, Outer Space, Forest, Aurora (new `assets/pets/cosmetics/backgrounds/` dir)
+  - 2 nameplates: Gold and Silver banners (new `assets/pets/cosmetics/nameplates/` dir)
+- Catalog is unchanged; this swaps the shop-tile fallback emoji for actual sprites. PetWithCosmetics still only overlays hats and particles on the pet (background and nameplate rendering remain a future enhancement)
+
 ## 0.6.2
 - Add **"What's new"** popup — when you open Chores after an update, a dismissable modal shows the changelog entries for every version released since your last visit
 - Markers persist per-browser via `localStorage` (`chores_whatsnew_lastSeen`); first visit on a fresh browser silently marks the current version as seen, so users don't get a wall of historical changelog on first install

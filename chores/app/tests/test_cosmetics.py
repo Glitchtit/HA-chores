@@ -269,6 +269,118 @@ class TestPetViewIntegration:
         assert data["equipped"]["hat"]["id"] == "hat_party"
 
 
+# ── Placed nameplates (v0.7.0) ───────────────────────────────────────────────
+
+class TestPlacedNameplates:
+    def _setup_owner(self, client, tmp_db, entity_id="person.alice", plate_id="plate_gold"):
+        _seed_person(tmp_db, entity_id, tokens=1000)
+        # Buy the nameplate so the person owns it
+        resp = client.post(
+            f"/api/cosmetics/{entity_id}/purchase",
+            json={"cosmetic_id": plate_id},
+        )
+        assert resp.status_code == 200, resp.text
+        return entity_id, plate_id
+
+    def test_place_writes_row(self, client, tmp_db):
+        eid, plate = self._setup_owner(client, tmp_db)
+        resp = client.put(
+            f"/api/cosmetics/nameplates/placed/{eid}",
+            json={"cosmetic_id": plate, "x": 25.0, "y": 60.0},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["x"] == 25.0
+        row = tmp_db.execute(
+            "SELECT cosmetic_id, x, y FROM placed_nameplates WHERE person_id = ?", (eid,)
+        ).fetchone()
+        assert row["cosmetic_id"] == plate
+        assert row["x"] == 25.0
+        assert row["y"] == 60.0
+
+    def test_place_clamps_coordinates(self, client, tmp_db):
+        eid, plate = self._setup_owner(client, tmp_db)
+        resp = client.put(
+            f"/api/cosmetics/nameplates/placed/{eid}",
+            json={"cosmetic_id": plate, "x": -50.0, "y": 9999.0},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["x"] == 0.0
+        assert resp.json()["y"] == 100.0
+
+    def test_place_is_idempotent_overwrite(self, client, tmp_db):
+        eid, plate = self._setup_owner(client, tmp_db)
+        client.put(
+            f"/api/cosmetics/nameplates/placed/{eid}",
+            json={"cosmetic_id": plate, "x": 10.0, "y": 10.0},
+        )
+        client.put(
+            f"/api/cosmetics/nameplates/placed/{eid}",
+            json={"cosmetic_id": plate, "x": 80.0, "y": 80.0},
+        )
+        count = tmp_db.execute(
+            "SELECT COUNT(*) AS c FROM placed_nameplates WHERE person_id = ?", (eid,)
+        ).fetchone()["c"]
+        row = tmp_db.execute(
+            "SELECT x, y FROM placed_nameplates WHERE person_id = ?", (eid,)
+        ).fetchone()
+        assert count == 1
+        assert row["x"] == 80.0
+
+    def test_place_requires_ownership(self, client, tmp_db):
+        _seed_person(tmp_db, "person.bob", tokens=0)
+        resp = client.put(
+            "/api/cosmetics/nameplates/placed/person.bob",
+            json={"cosmetic_id": "plate_gold", "x": 50, "y": 50},
+        )
+        assert resp.status_code == 403
+
+    def test_place_rejects_non_nameplate(self, client, tmp_db):
+        _seed_person(tmp_db, "person.alice", tokens=1000)
+        client.post(
+            "/api/cosmetics/person.alice/purchase",
+            json={"cosmetic_id": "hat_party"},
+        )
+        resp = client.put(
+            "/api/cosmetics/nameplates/placed/person.alice",
+            json={"cosmetic_id": "hat_party", "x": 50, "y": 50},
+        )
+        assert resp.status_code == 422
+
+    def test_list_includes_pet_name(self, client, tmp_db):
+        eid, plate = self._setup_owner(client, tmp_db)
+        # Give the pet a custom name so we can verify it surfaces
+        tmp_db.execute(
+            "INSERT OR REPLACE INTO pet_states (person_id, pet_name) VALUES (?, ?)",
+            (eid, "Squiggle"),
+        )
+        tmp_db.commit()
+        client.put(
+            f"/api/cosmetics/nameplates/placed/{eid}",
+            json={"cosmetic_id": plate, "x": 33, "y": 66},
+        )
+        resp = client.get("/api/cosmetics/nameplates/placed")
+        assert resp.status_code == 200
+        rows = resp.json()
+        assert len(rows) == 1
+        assert rows[0]["person_id"] == eid
+        assert rows[0]["display_name"] == "Squiggle"
+        assert rows[0]["cosmetic_id"] == plate
+
+    def test_delete_removes_row(self, client, tmp_db):
+        eid, plate = self._setup_owner(client, tmp_db)
+        client.put(
+            f"/api/cosmetics/nameplates/placed/{eid}",
+            json={"cosmetic_id": plate, "x": 50, "y": 50},
+        )
+        resp = client.delete(f"/api/cosmetics/nameplates/placed/{eid}")
+        assert resp.status_code == 200
+        assert resp.json()["rows"] == 1
+        count = tmp_db.execute(
+            "SELECT COUNT(*) AS c FROM placed_nameplates WHERE person_id = ?", (eid,)
+        ).fetchone()["c"]
+        assert count == 0
+
+
 # ── Migration ────────────────────────────────────────────────────────────────
 
 class TestMigration:

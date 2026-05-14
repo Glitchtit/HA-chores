@@ -193,6 +193,15 @@ CREATE TABLE IF NOT EXISTS person_cosmetics (
     PRIMARY KEY (person_id, cosmetic_id)
 );
 
+-- ── v0.7.0: placed nameplates (one per person, visible to all) ────────────
+CREATE TABLE IF NOT EXISTS placed_nameplates (
+    person_id   TEXT PRIMARY KEY REFERENCES persons(entity_id) ON DELETE CASCADE,
+    cosmetic_id TEXT NOT NULL REFERENCES cosmetics(id) ON DELETE CASCADE,
+    x           REAL NOT NULL DEFAULT 50.0,
+    y           REAL NOT NULL DEFAULT 90.0,
+    placed_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ── v0.4.5: Daily quests ───────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS daily_quests (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
