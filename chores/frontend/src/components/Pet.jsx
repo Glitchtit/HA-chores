@@ -82,15 +82,35 @@ import stageBlueAdultPetted    from '../assets/pets/blue_black/stages/adult/pett
 import stageBlueMythicIdle     from '../assets/pets/blue_black/stages/mythic/idle.png';
 import stageBlueMythicHappy    from '../assets/pets/blue_black/stages/mythic/happy.png';
 import stageBlueMythicPetted   from '../assets/pets/blue_black/stages/mythic/petted.png';
-// Cosmetic overlays (v0.5.1)
-import hatParty   from '../assets/pets/cosmetics/hats/hat_party.png';
-import hatCrown   from '../assets/pets/cosmetics/hats/hat_crown.png';
-import hatChef    from '../assets/pets/cosmetics/hats/hat_chef.png';
-import hatTop     from '../assets/pets/cosmetics/hats/hat_top.png';
-import hatWizard  from '../assets/pets/cosmetics/hats/hat_wizard.png';
-import particleSparkle from '../assets/pets/cosmetics/particles/particle_sparkle.png';
-import particleHearts  from '../assets/pets/cosmetics/particles/particle_hearts.png';
-import particleFire    from '../assets/pets/cosmetics/particles/particle_fire.png';
+// Cosmetic overlays (v0.5.1, v0.6.1 expansion)
+import hatParty       from '../assets/pets/cosmetics/hats/hat_party.png';
+import hatCrown       from '../assets/pets/cosmetics/hats/hat_crown.png';
+import hatChef        from '../assets/pets/cosmetics/hats/hat_chef.png';
+import hatTop         from '../assets/pets/cosmetics/hats/hat_top.png';
+import hatWizard      from '../assets/pets/cosmetics/hats/hat_wizard.png';
+import hatBeanie      from '../assets/pets/cosmetics/hats/hat_beanie.png';
+import hatCowboy      from '../assets/pets/cosmetics/hats/hat_cowboy.png';
+import hatPirate      from '../assets/pets/cosmetics/hats/hat_pirate.png';
+import hatViking      from '../assets/pets/cosmetics/hats/hat_viking.png';
+import hatPropeller   from '../assets/pets/cosmetics/hats/hat_propeller.png';
+import hatCatEars     from '../assets/pets/cosmetics/hats/hat_cat_ears.png';
+import hatFoxEars     from '../assets/pets/cosmetics/hats/hat_fox_ears.png';
+import hatBunnyEars   from '../assets/pets/cosmetics/hats/hat_bunny_ears.png';
+import hatFlowerCrown from '../assets/pets/cosmetics/hats/hat_flower_crown.png';
+import hatSanta       from '../assets/pets/cosmetics/hats/hat_santa.png';
+import hatSun         from '../assets/pets/cosmetics/hats/hat_sun.png';
+import hatBeret       from '../assets/pets/cosmetics/hats/hat_beret.png';
+import particleSparkle  from '../assets/pets/cosmetics/particles/particle_sparkle.png';
+import particleHearts   from '../assets/pets/cosmetics/particles/particle_hearts.png';
+import particleFire     from '../assets/pets/cosmetics/particles/particle_fire.png';
+import particleSnow     from '../assets/pets/cosmetics/particles/particle_snow.png';
+import particleLeaves   from '../assets/pets/cosmetics/particles/particle_leaves.png';
+import particleBlossoms from '../assets/pets/cosmetics/particles/particle_blossoms.png';
+import particleLightning from '../assets/pets/cosmetics/particles/particle_lightning.png';
+import particleMusic    from '../assets/pets/cosmetics/particles/particle_music.png';
+import particleBubbles  from '../assets/pets/cosmetics/particles/particle_bubbles.png';
+import particlePaws     from '../assets/pets/cosmetics/particles/particle_paws.png';
+import particleRainbow  from '../assets/pets/cosmetics/particles/particle_rainbow.png';
 import messDishes      from '../assets/pets/mess/dishes.png';
 import messLaundry     from '../assets/pets/mess/laundry.png';
 import messCleaning    from '../assets/pets/mess/cleaning.png';
@@ -226,14 +246,34 @@ const STAGE_SPRITES = {
 // Cosmetic id → image asset. Items without an asset fall back to their emoji
 // icon, so adding a catalog entry doesn't require an image to be present.
 const COSMETIC_IMG = {
-  hat_party:        hatParty,
-  hat_crown:        hatCrown,
-  hat_chef:         hatChef,
-  hat_top:          hatTop,
-  hat_wizard:       hatWizard,
-  particle_sparkle: particleSparkle,
-  particle_hearts:  particleHearts,
-  particle_fire:    particleFire,
+  hat_party:         hatParty,
+  hat_crown:         hatCrown,
+  hat_chef:          hatChef,
+  hat_top:           hatTop,
+  hat_wizard:        hatWizard,
+  hat_beanie:        hatBeanie,
+  hat_cowboy:        hatCowboy,
+  hat_pirate:        hatPirate,
+  hat_viking:        hatViking,
+  hat_propeller:     hatPropeller,
+  hat_cat_ears:      hatCatEars,
+  hat_fox_ears:      hatFoxEars,
+  hat_bunny_ears:    hatBunnyEars,
+  hat_flower_crown:  hatFlowerCrown,
+  hat_santa:         hatSanta,
+  hat_sun:           hatSun,
+  hat_beret:         hatBeret,
+  particle_sparkle:  particleSparkle,
+  particle_hearts:   particleHearts,
+  particle_fire:     particleFire,
+  particle_snow:     particleSnow,
+  particle_leaves:   particleLeaves,
+  particle_blossoms: particleBlossoms,
+  particle_lightning: particleLightning,
+  particle_music:    particleMusic,
+  particle_bubbles:  particleBubbles,
+  particle_paws:     particlePaws,
+  particle_rainbow:  particleRainbow,
 };
 
 const STATE_ANIM = {
