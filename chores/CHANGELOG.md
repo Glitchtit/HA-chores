@@ -1,3 +1,7 @@
+## 0.5.3
+- Sprite fixes — blue mythic "happy" regenerated (the previous version had extra limbs because the model re-posed the quadrupedal idle into a bipedal cheer)
+- Blue egg sprites (idle / happy / petted) rescaled to match the orange egg's subject size so both designs render at the same on-screen scale; nearest-neighbor upscale preserves pixel-art chunkiness
+
 ## 0.5.2
 - Add **happy** and **petted** sprites for every pet evolution stage — 20 new pixel-art assets (5 stages × 2 designs × 2 states) so the pet visibly reacts at every life stage, not just as an adult
 - Each stage's "happy" sprite shows raised arms / open-mouth grin / brighter aura; the "petted" sprite shows closed eyes in bliss / soft smile / floating heart symbols. Egg stage uses a softer glow + sparkles (happy) or hearts around the orb (petted)
