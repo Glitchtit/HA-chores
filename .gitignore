@@ -4,3 +4,4 @@ __pycache__/
 .env
 .vite/
 .pytest_cache/
+chores/frontend/dist/
