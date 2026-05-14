@@ -56,7 +56,7 @@ async def complete_via_hook(body: HookCompleteBody):
 
     row = conn.execute(
         """SELECT ci.*, c.xp_reward, c.assignment_mode, c.difficulty as chore_difficulty,
-                  c.followup_chore_id
+                  c.category as chore_category, c.followup_chore_id
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),

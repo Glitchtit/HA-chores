@@ -162,14 +162,28 @@ def apply_completion(
     ).fetchone()
     streak = person["current_streak"] if person else 0
     old_level = person["level"] if person else 1
+    old_xp_total = person["xp_total"] if person else 0
+    old_stage = pets.compute_stage(old_xp_total)
 
     early = date.fromisoformat(row["due_date"]) > date.today()
     claimed = row["assignment_mode"] == "claim" and row["assigned_to"] == completed_by
+    try:
+        chore_category = row["chore_category"]
+    except (IndexError, KeyError):
+        chore_category = None
+    class_id = None
+    if person:
+        try:
+            class_id = person["class_id"]
+        except (IndexError, KeyError):
+            class_id = None
     xp = calculate_xp(
         base_xp=row["xp_reward"],
         streak=streak,
         early=early,
         claimed=claimed,
+        category=chore_category,
+        class_id=class_id,
     )
 
     difficulty = row["chore_difficulty"] or "medium"
@@ -213,13 +227,68 @@ def apply_completion(
 
     new_badges = check_and_award_badges(completed_by)
 
-    if leveled_up or new_badges or earned_powerup:
+    # Daily quest progress + possible bundle reward (v0.4.5)
+    try:
+        import quests as _quests
+        chore_for_quests = {
+            "category": chore_category,
+            "assignment_mode": row["assignment_mode"],
+        }
+        quest_result = _quests.bump_on_completion(
+            conn, completed_by, chore_for_quests, completed_at=datetime.fromisoformat(now)
+        )
+    except Exception as e:
+        logger.warning("Daily quest bump failed for %s: %s", completed_by, e)
+        quest_result = {"bumped": [], "bundle_awarded": False, "bundle_powerup": None}
+
+    # Household challenge progress (v0.4.6)
+    try:
+        import challenges as _challenges
+        challenge_completed = _challenges.bump_progress(
+            conn,
+            completed_by=completed_by,
+            chore_category=chore_category,
+            xp=xp,
+        )
+    except Exception as e:
+        logger.warning("Challenge bump failed: %s", e)
+        challenge_completed = None
+
+    # Seasonal boss objective progress (v0.5.0)
+    try:
+        import bosses as _bosses
+        boss_defeated = _bosses.bump_on_completion(conn, row["chore_id"])
+    except Exception as e:
+        logger.warning("Boss bump failed: %s", e)
+        boss_defeated = None
+
+    new_stage = pets.compute_stage(new_total)
+    stage_changed = new_stage != old_stage
+
+    # Class-pick prompt at level 5 — only if person hasn't picked one yet.
+    from classes import CLASS_PICK_LEVEL as _PICK_LVL
+    class_prompt = (
+        leveled_up
+        and old_level < _PICK_LVL <= new_level
+        and not (class_id or "")
+    )
+
+    bundle_powerup = quest_result.get("bundle_powerup") if quest_result else None
+    bundle_awarded = bool(quest_result and quest_result.get("bundle_awarded"))
+
+    if leveled_up or new_badges or earned_powerup or stage_changed or class_prompt or bundle_awarded:
         payload = {
             "old_level": old_level,
             "new_level": new_level,
             "leveled_up": leveled_up,
             "new_badges": new_badges,
             "powerup_earned": earned_powerup,
+            "pet_evolved": stage_changed,
+            "old_stage": old_stage if stage_changed else None,
+            "new_stage": new_stage if stage_changed else None,
+            "class_pick_prompt": class_prompt,
+            "daily_bundle": bundle_awarded,
+            "daily_bundle_powerup": bundle_powerup,
             "source": "shopping-hook" if bg is None else "assignment",
             "completed_at": now,
         }
@@ -284,6 +353,8 @@ def apply_completion(
         "followup_name": followup_name,
         "pet_happiness": new_happiness,
         "pet_delta": pet_delta,
+        "pet_evolved": stage_changed,
+        "pet_stage": new_stage,
     }
 
 
@@ -293,7 +364,7 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
     conn = get_connection()
     row = conn.execute(
         """SELECT ci.*, c.xp_reward, c.assignment_mode, c.difficulty as chore_difficulty,
-                  c.followup_chore_id
+                  c.category as chore_category, c.followup_chore_id
            FROM chore_instances ci JOIN chores c ON ci.chore_id = c.id
            WHERE ci.id = ?""",
         (instance_id,),

@@ -164,10 +164,13 @@ async def reset_person_progress(entity_id: str):
     # Reset gamification stats
     conn.execute(
         """UPDATE persons SET xp_total = 0, level = 1, current_streak = 0,
-           longest_streak = 0, last_completion_date = NULL
+           longest_streak = 0, last_completion_date = NULL, tokens = 0
            WHERE entity_id = ?""",
         (entity_id,),
     )
+
+    # Reset cosmetics (forfeit unlocks but don't touch the catalog)
+    conn.execute("DELETE FROM person_cosmetics WHERE person_id = ?", (entity_id,))
 
     # Remove all badges
     conn.execute("DELETE FROM person_badges WHERE person_id = ?", (entity_id,))

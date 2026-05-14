@@ -32,20 +32,39 @@ class ChoresCoordinator(DataUpdateCoordinator):
                         f"{self.addon_url}/api/assignments/",
                         params={"status": "pending,claimed,overdue"},
                     ),
+                    client.get(f"{self.addon_url}/api/challenges/active"),
+                    client.get(f"{self.addon_url}/api/bosses/active"),
                     return_exceptions=True,
                 )
 
-                # Check for connection errors
-                for r in results:
+                # Check for connection errors on required endpoints (first 4 only)
+                for r in results[:4]:
                     if isinstance(r, Exception):
                         raise r
 
-                health_resp, persons_resp, leaderboard_resp, instances_resp = results
+                health_resp, persons_resp, leaderboard_resp, instances_resp, challenge_resp, boss_resp = results
 
                 persons = persons_resp.json() if persons_resp.status_code == 200 else []
                 leaderboard = leaderboard_resp.json() if leaderboard_resp.status_code == 200 else {}
                 instances = instances_resp.json() if instances_resp.status_code == 200 else []
                 health = health_resp.json() if health_resp.status_code == 200 else {}
+                # Active challenge is optional — older add-ons don't expose it
+                if isinstance(challenge_resp, Exception) or getattr(challenge_resp, "status_code", 0) != 200:
+                    challenge = None
+                else:
+                    try:
+                        challenge = challenge_resp.json()
+                    except Exception:
+                        challenge = None
+
+                # Active boss is optional too
+                if isinstance(boss_resp, Exception) or getattr(boss_resp, "status_code", 0) != 200:
+                    active_boss = None
+                else:
+                    try:
+                        active_boss = boss_resp.json()
+                    except Exception:
+                        active_boss = None
 
                 overdue_count = sum(1 for i in instances if i.get("status") == "overdue")
 
@@ -55,6 +74,8 @@ class ChoresCoordinator(DataUpdateCoordinator):
                     "leaderboard": leaderboard,
                     "instances": instances,
                     "overdue_count": overdue_count,
+                    "active_challenge": challenge,
+                    "active_boss": active_boss,
                 }
         except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
             raise UpdateFailed(

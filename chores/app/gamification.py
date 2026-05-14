@@ -33,12 +33,17 @@ def calculate_xp(
     streak: int = 0,
     early: bool = False,
     claimed: bool = False,
+    *,
+    category: str | None = None,
+    class_id: str | None = None,
 ) -> int:
     """Compute actual XP with bonuses.
 
     - Streak bonus: +10% per day, capped at +100%
     - Early bird: +25% if completed before due date
     - Claim bonus: +15% if voluntarily claimed
+    - Class bonus: +15% if completing a chore in the person's class category
+                   (+5% for generalists across every category) — v0.4.4
     """
     multiplier = 1.0
     # Streak bonus: 10% per day, max 100%
@@ -48,6 +53,10 @@ def calculate_xp(
         multiplier += 0.25
     if claimed:
         multiplier += 0.15
+    # Class specialization bonus
+    if class_id:
+        from classes import class_multiplier  # local import avoids cycles
+        multiplier += class_multiplier(class_id, category)
     return max(1, int(base_xp * multiplier))
 
 
@@ -788,8 +797,15 @@ def check_and_award_badges(person_entity_id: str) -> list[dict]:
     return newly_earned
 
 
+TOKENS_PER_XP_DIVISOR = 10  # v0.4.3: 1 token per 10 XP earned
+
+
 def add_xp(person_entity_id: str, xp: int) -> tuple[int, int, bool]:
-    """Add XP to a person, updating their level. Returns (new_total, new_level, leveled_up)."""
+    """Add XP to a person, updating their level and minting cosmetic-shop tokens.
+
+    Tokens accrue at 1 per 10 XP earned (rounded down). XP itself remains monotonic.
+    Returns (new_total, new_level, leveled_up).
+    """
     conn = get_connection()
     row = conn.execute(
         "SELECT xp_total, level FROM persons WHERE entity_id = ?",
@@ -801,10 +817,46 @@ def add_xp(person_entity_id: str, xp: int) -> tuple[int, int, bool]:
     new_total = row["xp_total"] + xp
     new_level = level_from_xp(new_total)
     leveled_up = new_level > row["level"]
+    tokens_earned = max(0, xp // TOKENS_PER_XP_DIVISOR) if xp > 0 else 0
 
     conn.execute(
-        "UPDATE persons SET xp_total = ?, level = ? WHERE entity_id = ?",
-        (new_total, new_level, person_entity_id),
+        "UPDATE persons SET xp_total = ?, level = ?, tokens = COALESCE(tokens, 0) + ? WHERE entity_id = ?",
+        (new_total, new_level, tokens_earned, person_entity_id),
     )
     conn.commit()
     return new_total, new_level, leveled_up
+
+
+def award_tokens(person_entity_id: str, amount: int, reason: str = "") -> int:
+    """Grant tokens to a person outside the normal XP path (e.g. challenge rewards).
+
+    Returns the new token balance.
+    """
+    if amount <= 0:
+        return 0
+    conn = get_connection()
+    conn.execute(
+        "UPDATE persons SET tokens = COALESCE(tokens, 0) + ? WHERE entity_id = ?",
+        (amount, person_entity_id),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT tokens FROM persons WHERE entity_id = ?", (person_entity_id,)
+    ).fetchone()
+    new_balance = row["tokens"] if row else 0
+    logger.info("Awarded %d tokens to %s (%s) → balance %d",
+                amount, person_entity_id, reason or "no reason", new_balance)
+    return new_balance
+
+
+def spend_tokens(person_entity_id: str, amount: int) -> bool:
+    """Atomically deduct *amount* tokens. Returns True on success, False if insufficient."""
+    if amount <= 0:
+        return True
+    conn = get_connection()
+    cursor = conn.execute(
+        "UPDATE persons SET tokens = tokens - ? WHERE entity_id = ? AND tokens >= ?",
+        (amount, person_entity_id, amount),
+    )
+    conn.commit()
+    return cursor.rowcount > 0

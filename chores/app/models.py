@@ -105,6 +105,8 @@ class Person(BaseModel):
     longest_streak: int = 0
     last_completion_date: Optional[str] = None
     avatar_url: str = ""
+    tokens: int = 0  # v0.4.3: cosmetic-shop currency
+    class_id: str = ""  # v0.4.4: skill specialization
 
 
 class PersonStats(Person):
@@ -170,6 +172,8 @@ class CompleteResult(BaseModel):
     followup_name: Optional[str] = None
     pet_happiness: Optional[int] = None
     pet_delta: Optional[int] = None
+    pet_evolved: bool = False
+    pet_stage: Optional[str] = None
 
 
 class PersonBadgeStatus(BaseModel):
