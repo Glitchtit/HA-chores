@@ -405,6 +405,30 @@ SEED_COSMETICS = [
     # ── Boss-defeat exclusives (revealed at defeat; hidden until then) ───────
     ("hat_laurel",        "Spring Laurel",        "hat", "🌿", 0, "boss", "spring_cleaning", "", 1),
     ("bg_aurora",         "Aurora",               "background", "🌠", 0, "boss", "deep_clean", "", 1),
+
+    # ── Expansion pack (v0.6.1): 12 new hats + 8 new particles ──────────────
+    # Hats (tokens)
+    ("hat_beanie",        "Cozy Beanie",          "hat", "🧣", 70,  "shop", "", "", 0),
+    ("hat_cowboy",        "Cowboy Hat",           "hat", "🤠", 120, "shop", "", "", 0),
+    ("hat_pirate",        "Pirate Tricorn",       "hat", "🏴‍☠️", 220, "shop", "", "", 0),
+    ("hat_viking",        "Viking Helmet",        "hat", "⚒️", 200, "shop", "", "", 0),
+    ("hat_propeller",     "Propeller Beanie",     "hat", "🎈", 90,  "shop", "", "", 0),
+    ("hat_cat_ears",      "Cat Ears",             "hat", "🐱", 80,  "shop", "", "", 0),
+    ("hat_fox_ears",      "Fox Ears",             "hat", "🦊", 90,  "shop", "", "", 0),
+    ("hat_bunny_ears",    "Bunny Ears",           "hat", "🐰", 80,  "shop", "", "", 0),
+    ("hat_flower_crown",  "Flower Crown",         "hat", "🌸", 150, "shop", "", "", 0),
+    ("hat_santa",         "Santa Hat",            "hat", "🎅", 100, "shop", "", "", 0),
+    ("hat_sun",           "Straw Sun Hat",        "hat", "👒", 90,  "shop", "", "", 0),
+    ("hat_beret",         "Black Beret",          "hat", "🎨", 120, "shop", "", "", 0),
+    # Particles (tokens)
+    ("particle_snow",      "Snowfall",            "particle", "❄️", 130, "shop", "", "", 0),
+    ("particle_leaves",    "Autumn Leaves",       "particle", "🍂", 130, "shop", "", "", 0),
+    ("particle_blossoms",  "Cherry Petals",       "particle", "🌸", 150, "shop", "", "", 0),
+    ("particle_lightning", "Lightning",           "particle", "⚡", 220, "shop", "", "", 0),
+    ("particle_music",     "Music Notes",         "particle", "🎵", 160, "shop", "", "", 0),
+    ("particle_bubbles",   "Bubbles",             "particle", "🫧", 110, "shop", "", "", 0),
+    ("particle_paws",      "Paw Prints",          "particle", "🐾", 140, "shop", "", "", 0),
+    ("particle_rainbow",   "Rainbow Swirls",      "particle", "🌈", 250, "shop", "", "", 0),
 ]
 
 
