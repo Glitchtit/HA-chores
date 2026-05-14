@@ -55,6 +55,87 @@ def _qualifies_for_level_unlock(person_level: int, cosmetic) -> bool:
     return person_level >= required
 
 
+# ── v0.7.0 placed-nameplate routes (declared BEFORE the /{person_id} routes
+# so the static path doesn't get swallowed by FastAPI's path-param match) ──
+
+
+class NameplatePlaceBody(BaseModel):
+    cosmetic_id: str
+    x: float = 50.0
+    y: float = 90.0
+
+
+@router.get("/nameplates/placed")
+def list_placed_nameplates():
+    """Return every household nameplate currently placed in the house view,
+    annotated with the placing user's pet_name + cosmetic icon. Visible to all."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT pn.person_id, pn.cosmetic_id, pn.x, pn.y, pn.placed_at,
+                  c.name AS cosmetic_name, c.icon AS cosmetic_icon, c.slot AS cosmetic_slot,
+                  COALESCE(NULLIF(ps.pet_name, ''), p.name) AS display_name
+           FROM placed_nameplates pn
+           JOIN cosmetics c ON c.id = pn.cosmetic_id
+           JOIN persons p ON p.entity_id = pn.person_id
+           LEFT JOIN pet_states ps ON ps.person_id = pn.person_id
+           ORDER BY pn.placed_at"""
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+@router.put("/nameplates/placed/{entity_id}")
+def place_nameplate(entity_id: str, body: NameplatePlaceBody):
+    """Place or move *entity_id*'s nameplate. The cosmetic must be owned by
+    that person and have slot='nameplate'. Idempotent — re-calling moves it."""
+    conn = get_connection()
+    person = conn.execute(
+        "SELECT entity_id FROM persons WHERE entity_id = ?", (entity_id,)
+    ).fetchone()
+    if not person:
+        raise HTTPException(404, "Person not found")
+    cosmetic = _cosmetic_row(conn, body.cosmetic_id)
+    if not cosmetic:
+        raise HTTPException(404, "Cosmetic not found")
+    if cosmetic["slot"] != "nameplate":
+        raise HTTPException(422, "That cosmetic isn't a nameplate")
+    owned = conn.execute(
+        "SELECT 1 FROM person_cosmetics WHERE person_id = ? AND cosmetic_id = ?",
+        (entity_id, body.cosmetic_id),
+    ).fetchone()
+    if not owned:
+        raise HTTPException(403, "You don't own this nameplate")
+    x = max(0.0, min(100.0, float(body.x)))
+    y = max(0.0, min(100.0, float(body.y)))
+    conn.execute(
+        """INSERT INTO placed_nameplates (person_id, cosmetic_id, x, y)
+           VALUES (?, ?, ?, ?)
+           ON CONFLICT(person_id) DO UPDATE SET
+             cosmetic_id = excluded.cosmetic_id,
+             x = excluded.x,
+             y = excluded.y,
+             placed_at = CURRENT_TIMESTAMP""",
+        (entity_id, body.cosmetic_id, x, y),
+    )
+    conn.commit()
+    logger.info("Nameplate %s placed by %s at (%.1f, %.1f)",
+                body.cosmetic_id, entity_id, x, y)
+    return {"status": "placed", "person_id": entity_id, "cosmetic_id": body.cosmetic_id, "x": x, "y": y}
+
+
+@router.delete("/nameplates/placed/{entity_id}")
+def remove_nameplate(entity_id: str):
+    """Remove *entity_id*'s placed nameplate. Idempotent — no error if none."""
+    conn = get_connection()
+    cursor = conn.execute(
+        "DELETE FROM placed_nameplates WHERE person_id = ?", (entity_id,)
+    )
+    conn.commit()
+    return {"status": "removed", "rows": cursor.rowcount}
+
+
+# ── Catalog routes ────────────────────────────────────────────────────────
+
+
 @router.get("/")
 def list_catalog(include_hidden: bool = False):
     """Return the full cosmetics catalog. Hidden boss-rewards are excluded by default."""

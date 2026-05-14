@@ -17,6 +17,9 @@ import hatFlowerCrown from '../assets/pets/cosmetics/hats/hat_flower_crown.png';
 import hatSanta       from '../assets/pets/cosmetics/hats/hat_santa.png';
 import hatSun         from '../assets/pets/cosmetics/hats/hat_sun.png';
 import hatBeret       from '../assets/pets/cosmetics/hats/hat_beret.png';
+import hatGraduate    from '../assets/pets/cosmetics/hats/hat_graduate.png';
+import hatHalo        from '../assets/pets/cosmetics/hats/hat_halo.png';
+import hatLaurel      from '../assets/pets/cosmetics/hats/hat_laurel.png';
 import particleSparkle   from '../assets/pets/cosmetics/particles/particle_sparkle.png';
 import particleHearts    from '../assets/pets/cosmetics/particles/particle_hearts.png';
 import particleFire      from '../assets/pets/cosmetics/particles/particle_fire.png';
@@ -28,6 +31,14 @@ import particleMusic     from '../assets/pets/cosmetics/particles/particle_music
 import particleBubbles   from '../assets/pets/cosmetics/particles/particle_bubbles.png';
 import particlePaws      from '../assets/pets/cosmetics/particles/particle_paws.png';
 import particleRainbow   from '../assets/pets/cosmetics/particles/particle_rainbow.png';
+import particleStars     from '../assets/pets/cosmetics/particles/particle_stars.png';
+import bgMeadow          from '../assets/pets/cosmetics/backgrounds/bg_meadow.png';
+import bgBeach           from '../assets/pets/cosmetics/backgrounds/bg_beach.png';
+import bgSpace           from '../assets/pets/cosmetics/backgrounds/bg_space.png';
+import bgForest          from '../assets/pets/cosmetics/backgrounds/bg_forest.png';
+import bgAurora          from '../assets/pets/cosmetics/backgrounds/bg_aurora.png';
+import plateGold         from '../assets/pets/cosmetics/nameplates/plate_gold.png';
+import plateSilver       from '../assets/pets/cosmetics/nameplates/plate_silver.png';
 
 const COSMETIC_IMG = {
   hat_party:          hatParty,
@@ -47,6 +58,9 @@ const COSMETIC_IMG = {
   hat_santa:          hatSanta,
   hat_sun:            hatSun,
   hat_beret:          hatBeret,
+  hat_graduate:       hatGraduate,
+  hat_halo:           hatHalo,
+  hat_laurel:         hatLaurel,
   particle_sparkle:   particleSparkle,
   particle_hearts:    particleHearts,
   particle_fire:      particleFire,
@@ -58,6 +72,14 @@ const COSMETIC_IMG = {
   particle_bubbles:   particleBubbles,
   particle_paws:      particlePaws,
   particle_rainbow:   particleRainbow,
+  particle_stars:     particleStars,
+  bg_meadow:          bgMeadow,
+  bg_beach:           bgBeach,
+  bg_space:           bgSpace,
+  bg_forest:          bgForest,
+  bg_aurora:          bgAurora,
+  plate_gold:         plateGold,
+  plate_silver:       plateSilver,
 };
 
 const SLOT_LABEL = {

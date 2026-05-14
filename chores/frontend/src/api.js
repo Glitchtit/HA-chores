@@ -108,6 +108,14 @@ export const equipCosmetic = (entityId, cosmeticId) =>
 export const unequipCosmetic = (entityId, slot) =>
   api.post(`/cosmetics/${entityId}/unequip`, { slot }).then(r => r.data);
 
+// ── Placed nameplates (v0.7.0) ──────────────────────────────────────────────
+export const getPlacedNameplates = () =>
+  api.get('/cosmetics/nameplates/placed').then(r => r.data);
+export const placeNameplate = (entityId, cosmeticId, x, y) =>
+  api.put(`/cosmetics/nameplates/placed/${entityId}`, { cosmetic_id: cosmeticId, x, y }).then(r => r.data);
+export const removeNameplate = (entityId) =>
+  api.delete(`/cosmetics/nameplates/placed/${entityId}`).then(r => r.data);
+
 // ── Class specialization (v0.4.4) ────────────────────────────────────────────
 export const getClassCatalog = () => api.get('/classes/').then(r => r.data);
 export const setPersonClass = (entityId, classId) =>
