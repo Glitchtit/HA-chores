@@ -1,3 +1,8 @@
+## 0.6.2
+- Add **"What's new"** popup — when you open Chores after an update, a dismissable modal shows the changelog entries for every version released since your last visit
+- Markers persist per-browser via `localStorage` (`chores_whatsnew_lastSeen`); first visit on a fresh browser silently marks the current version as seen, so users don't get a wall of historical changelog on first install
+- CHANGELOG is injected into the bundle at build time via `vite.config.js`, so no runtime fetch is needed
+
 ## 0.6.1
 - Cosmetic accessory pack — 20 new pixel-art items added to the shop catalog:
   - 12 new hats: Cozy Beanie, Cowboy Hat, Pirate Tricorn, Viking Helmet, Propeller Beanie, Cat Ears, Fox Ears, Bunny Ears, Flower Crown, Santa Hat, Straw Sun Hat, Black Beret (prices 70–220 tokens)
