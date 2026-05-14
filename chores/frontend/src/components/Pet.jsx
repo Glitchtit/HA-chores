@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../api';
+import PetShop from './PetShop';
 
 import houseBgDay            from '../assets/pets/house/background-day.png';
 import houseBgDayRain        from '../assets/pets/house/background-day-rain.png';
@@ -17,6 +18,26 @@ import blueIdle       from '../assets/pets/blue_black/idle.png';
 import blueHappy      from '../assets/pets/blue_black/happy.png';
 import blueSad        from '../assets/pets/blue_black/sad.png';
 import bluePetted     from '../assets/pets/blue_black/petted.png';
+// Evolution stage sprites (v0.5.1)
+import stageOrangeEgg    from '../assets/pets/orange_black/stages/egg.png';
+import stageOrangeBaby   from '../assets/pets/orange_black/stages/baby.png';
+import stageOrangeTeen   from '../assets/pets/orange_black/stages/teen.png';
+import stageOrangeAdult  from '../assets/pets/orange_black/stages/adult.png';
+import stageOrangeMythic from '../assets/pets/orange_black/stages/mythic.png';
+import stageBlueEgg      from '../assets/pets/blue_black/stages/egg.png';
+import stageBlueBaby     from '../assets/pets/blue_black/stages/baby.png';
+import stageBlueTeen     from '../assets/pets/blue_black/stages/teen.png';
+import stageBlueAdult    from '../assets/pets/blue_black/stages/adult.png';
+import stageBlueMythic   from '../assets/pets/blue_black/stages/mythic.png';
+// Cosmetic overlays (v0.5.1)
+import hatParty   from '../assets/pets/cosmetics/hats/hat_party.png';
+import hatCrown   from '../assets/pets/cosmetics/hats/hat_crown.png';
+import hatChef    from '../assets/pets/cosmetics/hats/hat_chef.png';
+import hatTop     from '../assets/pets/cosmetics/hats/hat_top.png';
+import hatWizard  from '../assets/pets/cosmetics/hats/hat_wizard.png';
+import particleSparkle from '../assets/pets/cosmetics/particles/particle_sparkle.png';
+import particleHearts  from '../assets/pets/cosmetics/particles/particle_hearts.png';
+import particleFire    from '../assets/pets/cosmetics/particles/particle_fire.png';
 import messDishes      from '../assets/pets/mess/dishes.png';
 import messLaundry     from '../assets/pets/mess/laundry.png';
 import messCleaning    from '../assets/pets/mess/cleaning.png';
@@ -47,6 +68,38 @@ const DESIGNS = ['orange_black', 'blue_black'];
 const SPRITES = {
   orange_black: { idle: orangeIdle, happy: orangeHappy, sad: orangeSad, petted: orangePetted },
   blue_black:   { idle: blueIdle,   happy: blueHappy,   sad: blueSad,   petted: bluePetted   },
+};
+
+// Stage-specific idle sprites override the base idle. Other animation states
+// (happy/sad/petted) are transient celebrations and reuse the adult-form sprite.
+const STAGE_SPRITES = {
+  orange_black: {
+    egg: stageOrangeEgg,
+    baby: stageOrangeBaby,
+    teen: stageOrangeTeen,
+    adult: stageOrangeAdult,
+    mythic: stageOrangeMythic,
+  },
+  blue_black: {
+    egg: stageBlueEgg,
+    baby: stageBlueBaby,
+    teen: stageBlueTeen,
+    adult: stageBlueAdult,
+    mythic: stageBlueMythic,
+  },
+};
+
+// Cosmetic id → image asset. Items without an asset fall back to their emoji
+// icon, so adding a catalog entry doesn't require an image to be present.
+const COSMETIC_IMG = {
+  hat_party:        hatParty,
+  hat_crown:        hatCrown,
+  hat_chef:         hatChef,
+  hat_top:          hatTop,
+  hat_wizard:       hatWizard,
+  particle_sparkle: particleSparkle,
+  particle_hearts:  particleHearts,
+  particle_fire:    particleFire,
 };
 
 const STATE_ANIM = {
@@ -120,12 +173,18 @@ function Bar({ value, label, color }) {
   );
 }
 
-function SpriteFrame({ design, state, className = '', style = {} }) {
-  const src = SPRITES[design]?.[state] || SPRITES.orange_black.idle;
+function SpriteFrame({ design, state, stage, className = '', style = {} }) {
+  // Use the stage-specific sprite when idle so evolution is visible. The other
+  // animation states (happy/sad/petted) reuse the existing single sprite — they
+  // only show briefly during interactions.
+  const useStage = state === 'idle' && stage && STAGE_SPRITES[design]?.[stage];
+  const src = useStage
+    ? STAGE_SPRITES[design][stage]
+    : (SPRITES[design]?.[state] || SPRITES.orange_black.idle);
   const anim = STATE_ANIM[state] || STATE_ANIM.idle;
   return (
     <img
-      key={`${design}-${state}`}
+      key={`${design}-${state}-${stage || ''}`}
       src={src}
       alt=""
       className={`pixelated ${anim} ${className}`}
@@ -134,8 +193,8 @@ function SpriteFrame({ design, state, className = '', style = {} }) {
   );
 }
 
-function StaticPreview({ design, size = 48 }) {
-  const src = SPRITES[design]?.idle || SPRITES.orange_black.idle;
+function StaticPreview({ design, stage, size = 48 }) {
+  const src = (stage && STAGE_SPRITES[design]?.[stage]) || SPRITES[design]?.idle || SPRITES.orange_black.idle;
   return (
     <img
       src={src}
@@ -145,6 +204,66 @@ function StaticPreview({ design, size = 48 }) {
       className="pixelated"
       style={{ width: `${size}px`, height: `${size}px`, objectFit: 'contain' }}
     />
+  );
+}
+
+/* Wraps a SpriteFrame with equipped-cosmetic overlays (hat on top, particle
+ * orbiting around). Falls back to nothing when no cosmetics are equipped. */
+function PetWithCosmetics({ design, state, stage, equipped, flip, className = '' }) {
+  const hat = equipped?.hat;
+  const particle = equipped?.particle;
+  const hatImg = hat && COSMETIC_IMG[hat.id];
+  const particleImg = particle && COSMETIC_IMG[particle.id];
+
+  return (
+    <div className={`relative inline-block ${className}`}>
+      <SpriteFrame
+        design={design}
+        state={state}
+        stage={stage}
+        className="w-full"
+        style={flip ? { transform: 'scaleX(-1)' } : undefined}
+      />
+      {/* Particle overlay — soft float animation, doesn't flip with the pet */}
+      {particle && (
+        particleImg ? (
+          <img
+            src={particleImg}
+            alt=""
+            className="pixelated absolute inset-0 w-full h-full pointer-events-none animate-[pet-breathe_2.4s_ease-in-out_infinite] opacity-90"
+            style={{ objectFit: 'contain' }}
+          />
+        ) : (
+          <span className="absolute inset-0 flex items-start justify-end text-base pointer-events-none">
+            {particle.icon || '✨'}
+          </span>
+        )
+      )}
+      {/* Hat overlay — positioned at top-center of the sprite, follows the flip */}
+      {hat && (
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            // Anchor: top center of the sprite, sized ~45% of the sprite width
+            left: '50%',
+            top: '-12%',
+            width: '55%',
+            transform: `translateX(-50%) ${flip ? 'scaleX(-1)' : ''}`,
+          }}
+        >
+          {hatImg ? (
+            <img
+              src={hatImg}
+              alt=""
+              className="pixelated w-full"
+              style={{ objectFit: 'contain' }}
+            />
+          ) : (
+            <span className="text-lg leading-none">{hat.icon || '👑'}</span>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -296,6 +415,9 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
   const [isDay, setIsDay] = useState(true);
   const [isRaining, setIsRaining] = useState(false);
 
+  // v0.4.3 sub-tab: house | shop | wardrobe
+  const [subTab, setSubTab] = useState('house');
+
   const personsById = useMemo(
     () => new Map(persons.map(p => [p.entity_id, p])),
     [persons],
@@ -311,7 +433,11 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
 
   /* ── Preload all pet sprites on mount so swaps are instant ─────────────── */
   useEffect(() => {
-    const urls = Object.values(SPRITES).flatMap(s => Object.values(s));
+    const urls = [
+      ...Object.values(SPRITES).flatMap(s => Object.values(s)),
+      ...Object.values(STAGE_SPRITES).flatMap(s => Object.values(s)),
+      ...Object.values(COSMETIC_IMG),
+    ];
     urls.forEach(src => { const img = new Image(); img.src = src; });
   }, []);
 
@@ -442,9 +568,47 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
 
   if (!spotsLoaded) return <div className="text-gray-400 text-sm">Loading…</div>;
 
+  /* ── Tab strip (House / Shop / Wardrobe) ───────────────────────────────── */
+  const tabStrip = (
+    <div className="flex gap-1 bg-gray-800 rounded-xl p-1 text-sm">
+      {[
+        { id: 'house', label: '🏠 House' },
+        { id: 'shop', label: '🛒 Shop' },
+        { id: 'wardrobe', label: '👕 Wardrobe' },
+      ].map(t => (
+        <button
+          key={t.id}
+          onClick={() => setSubTab(t.id)}
+          className={`flex-1 rounded-lg px-3 py-1.5 transition-colors ${
+            subTab === t.id
+              ? 'bg-orange-500 text-white'
+              : 'text-gray-300 hover:bg-gray-700'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (subTab !== 'house') {
+    return (
+      <div className="space-y-4 max-w-3xl mx-auto">
+        {tabStrip}
+        <PetShop
+          personId={viewedPerson}
+          viewMode={subTab}
+          onChange={load}
+        />
+      </div>
+    );
+  }
+
   /* ── Render ────────────────────────────────────────────────────────────── */
   return (
     <div className="space-y-4 max-w-2xl mx-auto">
+
+      {tabStrip}
 
       {/* Toggle bar */}
       <div className="flex items-center justify-between">
@@ -540,11 +704,13 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                         className="block rounded transition-all hover:bg-white/10"
                         title={personName}
                       >
-                        <SpriteFrame
+                        <PetWithCosmetics
                           design={design}
                           state={state}
+                          stage={pet.stage}
+                          equipped={pet.equipped}
+                          flip={flip}
                           className={SPRITE_CLS}
-                          style={flip ? { transform: 'scaleX(-1)' } : undefined}
                         />
                       </button>
                       <div className="absolute top-full left-1/2 -translate-x-1/2 mt-0.5 pointer-events-none
@@ -582,8 +748,13 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
       {!editMode && myPet && (
         <div className="bg-gray-800 rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-2 text-sm text-gray-300">
-            <StaticPreview design={myPet.pet_design} size={28} />
+            <StaticPreview design={myPet.pet_design} stage={myPet.stage} size={32} />
             <span className="font-semibold">{myPet.pet_name || personsById.get(viewedPerson)?.name || 'Your pet'}</span>
+            {myPet.stage && (
+              <span className="text-[10px] uppercase tracking-wider bg-gray-700 text-gray-200 px-1.5 py-0.5 rounded">
+                {myPet.stage}
+              </span>
+            )}
             <span className={`ml-auto text-xs uppercase ${MOOD_TONE[myPet.mood] || 'text-gray-400'}`}>
               {myPet.mood}
             </span>

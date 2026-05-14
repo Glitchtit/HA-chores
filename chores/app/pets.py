@@ -19,6 +19,19 @@ CATEGORIES = ("dishes", "laundry", "cleaning", "trash", "cooking", "other")
 DESIGNS = ("orange_black", "blue_black")
 DEFAULT_DESIGN = "orange_black"
 
+# ── Evolution stages (XP thresholds, ascending) ──────────────────────────────
+STAGES = ("egg", "baby", "teen", "adult", "mythic")
+_STAGE_THRESHOLDS = ((200, "egg"), (800, "baby"), (2000, "teen"), (5000, "adult"))
+
+
+def compute_stage(xp_total: int) -> str:
+    """Map a person's lifetime XP to their pet's evolution stage."""
+    xp = xp_total or 0
+    for limit, name in _STAGE_THRESHOLDS:
+        if xp <= limit:
+            return name
+    return "mythic"
+
 
 def _empty_mess_counts() -> dict[str, int]:
     return {c: 0 for c in CATEGORIES}
@@ -203,11 +216,32 @@ def get_pet_view(conn: sqlite3.Connection, person_id: str) -> dict:
     last_bump = state["last_bump_at"] if state else None
     pet_name = state["pet_name"] if state else None
     cleanliness, mess_counts = compute_cleanliness(conn, person_id)
+    person_row = conn.execute(
+        "SELECT xp_total, tokens FROM persons WHERE entity_id = ?", (person_id,)
+    ).fetchone()
+    xp_total = person_row["xp_total"] if person_row else 0
+    tokens = (person_row["tokens"] if person_row else 0) or 0
+    stage = compute_stage(xp_total)
+    # Pull currently-equipped cosmetics (graceful if the table isn't there in tests)
+    equipped: dict[str, dict] = {}
+    try:
+        rows = conn.execute(
+            """SELECT c.* FROM cosmetics c
+               JOIN person_cosmetics pc ON pc.cosmetic_id = c.id
+               WHERE pc.person_id = ? AND pc.equipped = 1""",
+            (person_id,),
+        ).fetchall()
+        equipped = {r["slot"]: dict(r) for r in rows}
+    except sqlite3.OperationalError:
+        equipped = {}
     return {
         "person_id": person_id,
         "pet_emoji": emoji,
         "pet_design": _state_design(state),
         "pet_name": pet_name,
+        "stage": stage,
+        "tokens": tokens,
+        "equipped": equipped,
         "happiness": happiness,
         "cleanliness": cleanliness,
         "mess_counts": mess_counts,

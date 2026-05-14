@@ -116,6 +116,30 @@ async def _scheduler_loop():
                         logger.info("Midnight pet happiness decay applied to %d pet(s)", decayed_pets)
                 except Exception as e:
                     logger.error("Pet decay failed: %s", e)
+                try:
+                    import quests as _quests
+                    from database import get_connection as _get_conn
+                    generated = _quests.generate_for_all_today(_get_conn())
+                    if generated:
+                        logger.info("Daily quests generated for %d person(s)", generated)
+                except Exception as e:
+                    logger.error("Daily quest generation failed: %s", e)
+                try:
+                    import challenges as _challenges
+                    from database import get_connection as _get_conn
+                    tick_result = _challenges.tick(_get_conn())
+                    if tick_result.get("expired") or tick_result.get("created"):
+                        logger.info("Challenge tick: %s", tick_result)
+                except Exception as e:
+                    logger.error("Challenge tick failed: %s", e)
+                try:
+                    import bosses as _bosses
+                    from database import get_connection as _get_conn
+                    boss_tick = _bosses.tick(_get_conn())
+                    if boss_tick.get("activated") or boss_tick.get("expired"):
+                        logger.info("Boss tick: %s", boss_tick)
+                except Exception as e:
+                    logger.error("Boss tick failed: %s", e)
 
             from database import get_connection
             conn = get_connection()
@@ -317,7 +341,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Register routers ────────────────────────────────────────────────────────
-from routers import health, chores, persons, assignments, gamification, config, calendar, powerups, pets as pets_router, shopping_hook
+from routers import health, chores, persons, assignments, gamification, config, calendar, powerups, pets as pets_router, shopping_hook, cosmetics, classes as classes_router, quests as quests_router, challenges as challenges_router, bosses as bosses_router
 
 app.include_router(health.router)
 app.include_router(chores.router)
@@ -329,6 +353,11 @@ app.include_router(calendar.router)
 app.include_router(powerups.router)
 app.include_router(pets_router.router)
 app.include_router(shopping_hook.router)
+app.include_router(cosmetics.router)
+app.include_router(classes_router.router)
+app.include_router(quests_router.router)
+app.include_router(challenges_router.router)
+app.include_router(bosses_router.router)
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────

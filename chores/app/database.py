@@ -34,6 +34,7 @@ def initialize() -> int:
     conn.executescript(SCHEMA)
     _migrate(conn)
     _seed_badges(conn)
+    _seed_cosmetics(conn)
     _seed_notif_config(conn)
     _seed_pet_states(conn)
     _seed_other_chores(conn)
@@ -168,6 +169,106 @@ CREATE TABLE IF NOT EXISTS pending_celebrations (
 CREATE INDEX IF NOT EXISTS idx_pending_celebrations_person_unseen
     ON pending_celebrations(person_id, created_at)
     WHERE seen_at IS NULL;
+
+-- ── v0.4.3: Cosmetics shop ─────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS cosmetics (
+    id            TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    slot          TEXT NOT NULL
+                       CHECK (slot IN ('hat', 'background', 'particle', 'nameplate', 'evolution')),
+    icon          TEXT DEFAULT '✨',
+    cost_tokens   INTEGER DEFAULT 0,
+    unlock_type   TEXT DEFAULT 'shop'
+                       CHECK (unlock_type IN ('shop', 'boss', 'level', 'gift')),
+    unlock_value  TEXT DEFAULT '',
+    pet_design    TEXT DEFAULT '',
+    hidden        INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS person_cosmetics (
+    person_id    TEXT NOT NULL REFERENCES persons(entity_id) ON DELETE CASCADE,
+    cosmetic_id  TEXT NOT NULL REFERENCES cosmetics(id) ON DELETE CASCADE,
+    equipped     INTEGER DEFAULT 0,
+    acquired_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (person_id, cosmetic_id)
+);
+
+-- ── v0.4.5: Daily quests ───────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS daily_quests (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id     TEXT NOT NULL REFERENCES persons(entity_id) ON DELETE CASCADE,
+    quest_date    TEXT NOT NULL,
+    quest_type    TEXT NOT NULL,
+    target        INTEGER DEFAULT 1,
+    target_extra  TEXT DEFAULT '',
+    progress      INTEGER DEFAULT 0,
+    completed_at  TIMESTAMP,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_daily_quests_unique
+    ON daily_quests(person_id, quest_date, quest_type, target_extra);
+CREATE INDEX IF NOT EXISTS idx_daily_quests_person_date
+    ON daily_quests(person_id, quest_date);
+
+CREATE TABLE IF NOT EXISTS daily_quest_bundles (
+    person_id        TEXT NOT NULL REFERENCES persons(entity_id) ON DELETE CASCADE,
+    quest_date       TEXT NOT NULL,
+    all_complete_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (person_id, quest_date)
+);
+
+-- ── v0.4.6: Team household challenges ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS household_challenges (
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    name              TEXT NOT NULL,
+    description       TEXT DEFAULT '',
+    goal_type         TEXT NOT NULL
+                          CHECK (goal_type IN ('completions_total', 'category_total', 'xp_total', 'claims_total')),
+    goal_value        INTEGER NOT NULL,
+    target_category   TEXT DEFAULT '',
+    progress          INTEGER DEFAULT 0,
+    period_start      TEXT NOT NULL,
+    period_end        TEXT NOT NULL,
+    status            TEXT DEFAULT 'active'
+                          CHECK (status IN ('active', 'completed', 'expired')),
+    reward_multiplier REAL DEFAULT 1.5,
+    reward_hours      INTEGER DEFAULT 24,
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_challenges_active_period
+    ON household_challenges(status, period_start, period_end);
+
+-- ── v0.5.0: Seasonal boss chores ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS boss_events (
+    id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+    name               TEXT NOT NULL,
+    description        TEXT DEFAULT '',
+    icon               TEXT DEFAULT '👹',
+    start_date         TEXT NOT NULL,
+    end_date           TEXT NOT NULL,
+    status             TEXT DEFAULT 'upcoming'
+                            CHECK (status IN ('upcoming', 'active', 'defeated', 'expired')),
+    reward_cosmetic_id TEXT REFERENCES cosmetics(id) ON DELETE SET NULL,
+    reward_badge_id    TEXT REFERENCES badges(id) ON DELETE SET NULL,
+    created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_boss_events_status_dates
+    ON boss_events(status, start_date, end_date);
+
+CREATE TABLE IF NOT EXISTS boss_objectives (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    boss_id       INTEGER NOT NULL REFERENCES boss_events(id) ON DELETE CASCADE,
+    chore_id      INTEGER NOT NULL REFERENCES chores(id) ON DELETE CASCADE,
+    target_count  INTEGER DEFAULT 1,
+    progress      INTEGER DEFAULT 0,
+    sort_order    INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_boss_objectives_chore
+    ON boss_objectives(chore_id);
 """
 
 
@@ -260,6 +361,13 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # chore_instances columns (v0.3.27 — track who created/claimed the instance
         # so self-managed chores can suppress assigned/reminder notifications)
         ("chore_instances", "created_by", "TEXT DEFAULT NULL"),
+        # pet_states columns (v0.4.2 — pet evolution stages: egg → baby → teen → adult → mythic)
+        ("pet_states", "stage", "TEXT DEFAULT 'egg'"),
+        # persons columns (v0.4.3 — cosmetic-shop currency, 1 token per 10 XP earned)
+        ("persons", "tokens", "INTEGER DEFAULT 0"),
+        # persons columns (v0.4.4 — skill specialization / class picks)
+        ("persons", "class_id", "TEXT DEFAULT ''"),
+        ("persons", "class_chosen_at", "TEXT DEFAULT ''"),
     ]
     for table, col, defn in migrations:
         try:
@@ -268,6 +376,48 @@ def _migrate(conn: sqlite3.Connection) -> None:
             logger.info("Migration: added column '%s.%s'", table, col)
         except Exception:
             pass  # Column already exists
+
+
+SEED_COSMETICS = [
+    # (id, name, slot, icon, cost_tokens, unlock_type, unlock_value, pet_design, hidden)
+    # ── Hats (tokens) ────────────────────────────────────────────────────────
+    ("hat_party",         "Party Hat",            "hat", "🎉", 50,   "shop",  "",       "", 0),
+    ("hat_crown",         "Crown",                "hat", "👑", 250,  "shop",  "",       "", 0),
+    ("hat_chef",          "Chef Hat",             "hat", "👨‍🍳", 80,   "shop",  "",       "", 0),
+    ("hat_top",           "Top Hat",              "hat", "🎩", 120,  "shop",  "",       "", 0),
+    ("hat_wizard",        "Wizard Hat",           "hat", "🧙", 180,  "shop",  "",       "", 0),
+    # ── Backgrounds (tokens) ─────────────────────────────────────────────────
+    ("bg_meadow",         "Meadow",               "background", "🌼", 60,  "shop", "", "", 0),
+    ("bg_beach",          "Beach",                "background", "🏖️", 120, "shop", "", "", 0),
+    ("bg_space",          "Outer Space",          "background", "🌌", 200, "shop", "", "", 0),
+    ("bg_forest",         "Forest",               "background", "🌲", 100, "shop", "", "", 0),
+    # ── Particles (tokens) ───────────────────────────────────────────────────
+    ("particle_sparkle",  "Sparkles",             "particle", "✨", 100, "shop", "", "", 0),
+    ("particle_hearts",   "Hearts",               "particle", "💖", 150, "shop", "", "", 0),
+    ("particle_fire",     "Fire",                 "particle", "🔥", 200, "shop", "", "", 0),
+    # ── Nameplates (tokens) ──────────────────────────────────────────────────
+    ("plate_gold",        "Gold Nameplate",       "nameplate", "🏷️", 200, "shop",  "",  "", 0),
+    ("plate_silver",      "Silver Nameplate",     "nameplate", "🥈", 100, "shop",  "",  "", 0),
+    # ── Level-locked unlocks (free at the milestone) ─────────────────────────
+    ("hat_graduate",      "Graduate Cap",         "hat", "🎓", 0, "level", "10", "", 0),
+    ("hat_halo",          "Halo",                 "hat", "😇", 0, "level", "20", "", 0),
+    ("particle_stars",    "Stardust",             "particle", "💫", 0, "level", "15", "", 0),
+    # ── Boss-defeat exclusives (revealed at defeat; hidden until then) ───────
+    ("hat_laurel",        "Spring Laurel",        "hat", "🌿", 0, "boss", "spring_cleaning", "", 1),
+    ("bg_aurora",         "Aurora",               "background", "🌠", 0, "boss", "deep_clean", "", 1),
+]
+
+
+def _seed_cosmetics(conn: sqlite3.Connection) -> None:
+    """Insert predefined cosmetics if they don't already exist."""
+    for cid, name, slot, icon, cost, utype, uval, pdesign, hidden in SEED_COSMETICS:
+        conn.execute(
+            """INSERT OR IGNORE INTO cosmetics
+                 (id, name, slot, icon, cost_tokens, unlock_type, unlock_value, pet_design, hidden)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (cid, name, slot, icon, cost, utype, uval, pdesign, hidden),
+        )
+    conn.commit()
 
 
 def _seed_badges(conn: sqlite3.Connection) -> None:
@@ -294,6 +444,7 @@ NOTIF_DEFAULTS = {
     "notif_reminder": {"enabled": True, "when": "day_of", "hour": 8},
     "notif_streak":   {"enabled": True, "hour": 18},
     "notif_weekly":   {"enabled": True, "weekday": 0, "hour": 9},
+    "auto_generate_weekly_challenge": True,  # v0.4.6
 }
 
 

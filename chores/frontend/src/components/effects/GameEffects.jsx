@@ -8,6 +8,7 @@
  */
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { getPendingCelebrations, ackPendingCelebrations } from '../../api';
+import ClassPickerModal from '../ClassPickerModal';
 
 const GameEffectsContext = createContext(null);
 
@@ -611,6 +612,9 @@ export function GameEffectsProvider({ children }) {
           if (p.powerup_earned) {
             entries.push({ type: 'powerup', ...p.powerup_earned, _ackId: row.id });
           }
+          if (p.class_pick_prompt) {
+            entries.push({ type: 'classpick', personId: null, _ackId: row.id });
+          }
         }
         if (entries.length === 0) {
           // Payloads existed but produced no visible modal — ack them so they
@@ -633,7 +637,7 @@ export function GameEffectsProvider({ children }) {
   }, []);
 
   const triggerEffects = useCallback((result, buttonEl, xpBarEl, oldXPProgress, newXPProgress, tileEl) => {
-    const { xp_awarded, leveled_up, old_level, new_level, new_badges, powerup_earned, pet_delta, pet_happiness, instance } = result;
+    const { xp_awarded, leveled_up, old_level, new_level, new_badges, powerup_earned, pet_delta, pet_happiness, instance, class_pick_prompt } = result;
 
     // Notify Pet view (and any other listeners) that a chore was completed
     if (typeof window !== 'undefined' && (pet_delta != null || pet_happiness != null)) {
@@ -683,6 +687,9 @@ export function GameEffectsProvider({ children }) {
     }
     if (powerup_earned) {
       entries.push({ type: 'powerup', ...powerup_earned });
+    }
+    if (class_pick_prompt) {
+      entries.push({ type: 'classpick', personId: instance?.completed_by ?? null });
     }
     if (entries.length > 0) {
       // Delay so XP sparkle plays first
@@ -803,6 +810,14 @@ export function GameEffectsProvider({ children }) {
           key={`monthend-${currentModal.month}`}
           monthName={currentModal.month_name}
           entries={currentModal.entries}
+          onDone={dismissModal}
+        />
+      )}
+
+      {currentModal?.type === 'classpick' && (
+        <ClassPickerModal
+          key={`classpick-${currentModal._ackId ?? 'inline'}`}
+          personId={currentModal.personId}
           onDone={dismissModal}
         />
       )}

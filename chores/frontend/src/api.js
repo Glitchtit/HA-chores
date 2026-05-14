@@ -96,3 +96,47 @@ export const getPendingCelebrations = () =>
 
 export const ackPendingCelebrations = (ids) =>
   api.post('/persons/me/pending-celebrations/ack', { ids }).then(r => r.data);
+
+// ── Cosmetics shop (v0.4.3) ─────────────────────────────────────────────────
+export const getCosmeticCatalog = () => api.get('/cosmetics/').then(r => r.data);
+export const getMyCosmetics = (entityId) =>
+  api.get(`/cosmetics/${entityId}`).then(r => r.data);
+export const purchaseCosmetic = (entityId, cosmeticId) =>
+  api.post(`/cosmetics/${entityId}/purchase`, { cosmetic_id: cosmeticId }).then(r => r.data);
+export const equipCosmetic = (entityId, cosmeticId) =>
+  api.post(`/cosmetics/${entityId}/equip`, { cosmetic_id: cosmeticId }).then(r => r.data);
+export const unequipCosmetic = (entityId, slot) =>
+  api.post(`/cosmetics/${entityId}/unequip`, { slot }).then(r => r.data);
+
+// ── Class specialization (v0.4.4) ────────────────────────────────────────────
+export const getClassCatalog = () => api.get('/classes/').then(r => r.data);
+export const setPersonClass = (entityId, classId) =>
+  api.post(`/classes/persons/${entityId}`, { class_id: classId }).then(r => r.data);
+
+// ── Daily quests (v0.4.5) ────────────────────────────────────────────────────
+export const getDailyQuests = (entityId) =>
+  api.get(`/quests/today/${entityId}`).then(r => r.data);
+export const getQuestHistory = (entityId, since) =>
+  api.get(`/quests/${entityId}`, { params: since ? { since } : {} }).then(r => r.data);
+
+// ── Household challenges (v0.4.6) ────────────────────────────────────────────
+export const getActiveChallenge = () =>
+  api.get('/challenges/active').then(r => r.data);
+export const getChallengeHistory = (limit = 20) =>
+  api.get('/challenges/', { params: { limit } }).then(r => r.data);
+export const createChallenge = (data) =>
+  api.post('/challenges/', data).then(r => r.data);
+export const cancelChallenge = (id) =>
+  api.delete(`/challenges/${id}`).then(r => r.data);
+
+// ── Seasonal boss chores (v0.5.0) ────────────────────────────────────────────
+export const getActiveBoss = () =>
+  api.get('/bosses/active').then(r => r.data);
+export const listBosses = () =>
+  api.get('/bosses/').then(r => r.data);
+export const createBoss = (data) =>
+  api.post('/bosses/', data).then(r => r.data);
+export const updateBoss = (id, data) =>
+  api.put(`/bosses/${id}`, data).then(r => r.data);
+export const cancelBoss = (id) =>
+  api.delete(`/bosses/${id}`).then(r => r.data);

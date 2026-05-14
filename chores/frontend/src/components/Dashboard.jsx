@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as api from '../api';
 import { useGameEffects } from './effects/GameEffects';
+import DailyQuests from './DailyQuests';
+import ChallengeBanner from './ChallengeBanner';
+import BossPanel from './BossPanel';
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -201,6 +204,15 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
 
   return (
     <div className="space-y-6 max-w-lg mx-auto">
+      {/* Seasonal boss event (v0.5.0) */}
+      <BossPanel />
+
+      {/* Weekly household challenge (v0.4.6) */}
+      <ChallengeBanner />
+
+      {/* Daily quests (v0.4.5) */}
+      <DailyQuests personId={activePerson} />
+
       {/* Stats card */}
       {stats && (
         <div className="bg-gray-800 rounded-xl p-5 space-y-4">

@@ -397,6 +397,139 @@ class TestPetDesign:
         assert by_id["person.bob"]["pet_design"] == "blue_black"
 
 
+# ── Evolution stages (v0.4.2) ────────────────────────────────────────────────
+
+class TestPetEvolution:
+    def test_compute_stage_boundaries(self):
+        import pets
+        assert pets.compute_stage(0) == "egg"
+        assert pets.compute_stage(200) == "egg"
+        assert pets.compute_stage(201) == "baby"
+        assert pets.compute_stage(800) == "baby"
+        assert pets.compute_stage(801) == "teen"
+        assert pets.compute_stage(2000) == "teen"
+        assert pets.compute_stage(2001) == "adult"
+        assert pets.compute_stage(5000) == "adult"
+        assert pets.compute_stage(5001) == "mythic"
+        assert pets.compute_stage(999_999) == "mythic"
+
+    def test_compute_stage_handles_none(self):
+        import pets
+        assert pets.compute_stage(None) == "egg"  # treated as 0
+
+    def test_get_pet_view_includes_stage(self, tmp_db):
+        import pets
+        _seed_person(tmp_db, "person.alice", "Alice")
+        tmp_db.execute(
+            "UPDATE persons SET xp_total = 850 WHERE entity_id = ?", ("person.alice",)
+        )
+        tmp_db.commit()
+        view = pets.get_pet_view(tmp_db, "person.alice")
+        assert view["stage"] == "teen"
+
+    def test_stage_default_egg_when_no_xp(self, tmp_db):
+        import pets
+        _seed_person(tmp_db, "person.alice", "Alice")
+        view = pets.get_pet_view(tmp_db, "person.alice")
+        assert view["stage"] == "egg"
+
+    def test_completion_triggers_stage_up_celebration(self, client, tmp_db):
+        """Completing a chore that crosses the stage threshold should enqueue a celebration."""
+        _seed_person(tmp_db, "person.alice", "Alice")
+        # Seed Alice at 195 XP (egg). A chore awarding ≥6 XP will cross 200 → baby.
+        tmp_db.execute(
+            "UPDATE persons SET xp_total = 195, level = 2 WHERE entity_id = ?",
+            ("person.alice",),
+        )
+        tmp_db.execute(
+            """INSERT INTO chores (id, name, category, xp_reward, difficulty, active)
+               VALUES (1, 'Big Task', 'dishes', 50, 'medium', 1)"""
+        )
+        from datetime import date as _date
+        cursor = tmp_db.execute(
+            """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status)
+               VALUES (1, ?, 'person.alice', 'pending')""",
+            (_date.today().isoformat(),),
+        )
+        tmp_db.commit()
+        iid = cursor.lastrowid
+
+        resp = client.post(
+            f"/api/assignments/{iid}/complete",
+            json={"completed_by": "person.alice"},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["pet_evolved"] is True
+        assert body["pet_stage"] == "baby"
+
+        import json as _json
+        rows = tmp_db.execute(
+            "SELECT payload FROM pending_celebrations WHERE person_id = ?",
+            ("person.alice",),
+        ).fetchall()
+        payloads = [_json.loads(r["payload"]) for r in rows]
+        assert any(p.get("pet_evolved") and p.get("new_stage") == "baby" for p in payloads)
+
+    def test_completion_without_stage_change_omits_evolution_flag(self, client, tmp_db):
+        _seed_person(tmp_db, "person.alice", "Alice")
+        tmp_db.execute(
+            "UPDATE persons SET xp_total = 50 WHERE entity_id = ?", ("person.alice",)
+        )
+        tmp_db.execute(
+            """INSERT INTO chores (id, name, category, xp_reward, difficulty, active)
+               VALUES (1, 'Small Task', 'dishes', 5, 'easy', 1)"""
+        )
+        from datetime import date as _date
+        cursor = tmp_db.execute(
+            """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status)
+               VALUES (1, ?, 'person.alice', 'pending')""",
+            (_date.today().isoformat(),),
+        )
+        tmp_db.commit()
+        iid = cursor.lastrowid
+
+        resp = client.post(
+            f"/api/assignments/{iid}/complete",
+            json={"completed_by": "person.alice"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["pet_evolved"] is False
+
+    def test_migration_adds_stage_column(self, tmp_path, monkeypatch):
+        """A pre-0.4.2 database without pet_states.stage gets the column on init."""
+        db_path = str(tmp_path / "legacy_stage.db")
+        legacy = sqlite3.connect(db_path)
+        legacy.execute(
+            """CREATE TABLE pet_states (
+                 person_id TEXT PRIMARY KEY,
+                 happiness INTEGER DEFAULT 80,
+                 pet_emoji TEXT DEFAULT '🐶',
+                 pet_design TEXT DEFAULT 'orange_black',
+                 last_tick_at TIMESTAMP,
+                 last_bump_at TIMESTAMP,
+                 created_at TIMESTAMP)"""
+        )
+        legacy.execute("INSERT INTO pet_states (person_id) VALUES ('person.old')")
+        legacy.commit()
+        legacy.close()
+
+        monkeypatch.setenv("DATA_DIR", str(tmp_path))
+        monkeypatch.setenv("CHORES_SKIP_SEED_OTHER", "1")
+        import database
+        database._conn = None
+        database.DB_PATH = db_path
+        database.initialize()
+        conn = database.get_connection()
+        cols = {r["name"]: r for r in conn.execute("PRAGMA table_info(pet_states)")}
+        assert "stage" in cols
+        row = conn.execute(
+            "SELECT stage FROM pet_states WHERE person_id = ?", ("person.old",)
+        ).fetchone()
+        assert row["stage"] == "egg"
+        database.close_connection()
+
+
 # ── Scheduler midnight decay ─────────────────────────────────────────────────
 
 class TestSchedulerPetDecay:
