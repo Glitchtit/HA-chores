@@ -10,6 +10,39 @@ import houseBgNight          from '../assets/pets/house/background-night.png';
 import houseBgNightRain      from '../assets/pets/house/background-night-rain.png';
 import houseBgNightFilthy    from '../assets/pets/house/background-night-filthy.png';
 import houseBgNightRainFilthy from '../assets/pets/house/background-night-rain-filthy.png';
+// Seasonal house backgrounds (v0.6.0) — 4 seasons × 8 day/night×rain×filthy variants
+import spring_day                   from '../assets/pets/house/seasons/spring/day.png';
+import spring_dayRain                from '../assets/pets/house/seasons/spring/day-rain.png';
+import spring_dayFilthy              from '../assets/pets/house/seasons/spring/day-filthy.png';
+import spring_dayRainFilthy          from '../assets/pets/house/seasons/spring/day-rain-filthy.png';
+import spring_night                  from '../assets/pets/house/seasons/spring/night.png';
+import spring_nightRain              from '../assets/pets/house/seasons/spring/night-rain.png';
+import spring_nightFilthy            from '../assets/pets/house/seasons/spring/night-filthy.png';
+import spring_nightRainFilthy        from '../assets/pets/house/seasons/spring/night-rain-filthy.png';
+import summer_day                    from '../assets/pets/house/seasons/summer/day.png';
+import summer_dayRain                 from '../assets/pets/house/seasons/summer/day-rain.png';
+import summer_dayFilthy               from '../assets/pets/house/seasons/summer/day-filthy.png';
+import summer_dayRainFilthy           from '../assets/pets/house/seasons/summer/day-rain-filthy.png';
+import summer_night                   from '../assets/pets/house/seasons/summer/night.png';
+import summer_nightRain               from '../assets/pets/house/seasons/summer/night-rain.png';
+import summer_nightFilthy             from '../assets/pets/house/seasons/summer/night-filthy.png';
+import summer_nightRainFilthy         from '../assets/pets/house/seasons/summer/night-rain-filthy.png';
+import autumn_day                     from '../assets/pets/house/seasons/autumn/day.png';
+import autumn_dayRain                  from '../assets/pets/house/seasons/autumn/day-rain.png';
+import autumn_dayFilthy                from '../assets/pets/house/seasons/autumn/day-filthy.png';
+import autumn_dayRainFilthy            from '../assets/pets/house/seasons/autumn/day-rain-filthy.png';
+import autumn_night                    from '../assets/pets/house/seasons/autumn/night.png';
+import autumn_nightRain                from '../assets/pets/house/seasons/autumn/night-rain.png';
+import autumn_nightFilthy              from '../assets/pets/house/seasons/autumn/night-filthy.png';
+import autumn_nightRainFilthy          from '../assets/pets/house/seasons/autumn/night-rain-filthy.png';
+import winter_day                      from '../assets/pets/house/seasons/winter/day.png';
+import winter_dayRain                   from '../assets/pets/house/seasons/winter/day-rain.png';
+import winter_dayFilthy                 from '../assets/pets/house/seasons/winter/day-filthy.png';
+import winter_dayRainFilthy             from '../assets/pets/house/seasons/winter/day-rain-filthy.png';
+import winter_night                     from '../assets/pets/house/seasons/winter/night.png';
+import winter_nightRain                 from '../assets/pets/house/seasons/winter/night-rain.png';
+import winter_nightFilthy               from '../assets/pets/house/seasons/winter/night-filthy.png';
+import winter_nightRainFilthy           from '../assets/pets/house/seasons/winter/night-rain-filthy.png';
 import orangeIdle     from '../assets/pets/orange_black/idle.png';
 import orangeHappy    from '../assets/pets/orange_black/happy.png';
 import orangeSad      from '../assets/pets/orange_black/sad.png';
@@ -84,6 +117,86 @@ const MESS_IMG = {
 };
 
 const DESIGNS = ['orange_black', 'blue_black'];
+
+/* ── Seasonal house backgrounds (v0.6.0) ───────────────────────────────────
+ * Northern-hemisphere calendar: Mar–May=spring, Jun–Aug=summer,
+ * Sep–Nov=autumn, Dec–Feb=winter. Returns one of 'spring'|'summer'|'autumn'|
+ * 'winter' for the given Date (defaults to now). */
+function getCurrentSeason(now = new Date()) {
+  const m = now.getMonth(); // 0-indexed
+  if (m >= 2 && m <= 4)  return 'spring';
+  if (m >= 5 && m <= 7)  return 'summer';
+  if (m >= 8 && m <= 10) return 'autumn';
+  return 'winter';
+}
+
+// state key uses the same {day|night}{-rain}{-filthy} naming as the asset files
+const SEASONAL_BG = {
+  spring: {
+    'day':                spring_day,
+    'day-rain':           spring_dayRain,
+    'day-filthy':         spring_dayFilthy,
+    'day-rain-filthy':    spring_dayRainFilthy,
+    'night':              spring_night,
+    'night-rain':         spring_nightRain,
+    'night-filthy':       spring_nightFilthy,
+    'night-rain-filthy':  spring_nightRainFilthy,
+  },
+  summer: {
+    'day':                summer_day,
+    'day-rain':           summer_dayRain,
+    'day-filthy':         summer_dayFilthy,
+    'day-rain-filthy':    summer_dayRainFilthy,
+    'night':              summer_night,
+    'night-rain':         summer_nightRain,
+    'night-filthy':       summer_nightFilthy,
+    'night-rain-filthy':  summer_nightRainFilthy,
+  },
+  autumn: {
+    'day':                autumn_day,
+    'day-rain':           autumn_dayRain,
+    'day-filthy':         autumn_dayFilthy,
+    'day-rain-filthy':    autumn_dayRainFilthy,
+    'night':              autumn_night,
+    'night-rain':         autumn_nightRain,
+    'night-filthy':       autumn_nightFilthy,
+    'night-rain-filthy':  autumn_nightRainFilthy,
+  },
+  winter: {
+    'day':                winter_day,
+    'day-rain':           winter_dayRain,
+    'day-filthy':         winter_dayFilthy,
+    'day-rain-filthy':    winter_dayRainFilthy,
+    'night':              winter_night,
+    'night-rain':         winter_nightRain,
+    'night-filthy':       winter_nightFilthy,
+    'night-rain-filthy':  winter_nightRainFilthy,
+  },
+};
+
+// Non-seasonal fallback (used when seasonal asset isn't available — currently never)
+const DEFAULT_BG = {
+  'day':                houseBgDay,
+  'day-rain':           houseBgDayRain,
+  'day-filthy':         houseBgDayFilthy,
+  'day-rain-filthy':    houseBgDayRainFilthy,
+  'night':              houseBgNight,
+  'night-rain':         houseBgNightRain,
+  'night-filthy':       houseBgNightFilthy,
+  'night-rain-filthy':  houseBgNightRainFilthy,
+};
+
+function bgStateKey(isDay, isRaining, isFilthy) {
+  const parts = [isDay ? 'day' : 'night'];
+  if (isRaining) parts.push('rain');
+  if (isFilthy)  parts.push('filthy');
+  return parts.join('-');
+}
+
+function getHouseBackground(isDay, isRaining, isFilthy, season = getCurrentSeason()) {
+  const key = bgStateKey(isDay, isRaining, isFilthy);
+  return SEASONAL_BG[season]?.[key] || DEFAULT_BG[key] || houseBgDay;
+}
 
 const SPRITES = {
   orange_black: { idle: orangeIdle, happy: orangeHappy, sad: orangeSad, petted: orangePetted },
@@ -663,12 +776,11 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
           ref={sceneRef}
           className={`relative aspect-[4/3] rounded-md overflow-hidden bg-gray-900 ${editMode ? 'ring-2 ring-amber-400/40' : ''}`}
           style={{
-            backgroundImage: (() => {
-              const filthy = (household?.shared?.cleanliness ?? 100) < 30;
-              const rain   = isRaining;
-              if (isDay)  return `url(${rain ? (filthy ? houseBgDayRainFilthy  : houseBgDayRain)  : (filthy ? houseBgDayFilthy  : houseBgDay)})`;
-              return             `url(${rain ? (filthy ? houseBgNightRainFilthy : houseBgNightRain) : (filthy ? houseBgNightFilthy : houseBgNight)})`;
-            })(),
+            backgroundImage: `url(${getHouseBackground(
+              isDay,
+              isRaining,
+              (household?.shared?.cleanliness ?? 100) < 30,
+            )})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
