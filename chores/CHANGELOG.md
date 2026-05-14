@@ -1,3 +1,6 @@
+## 0.5.4
+- Blue egg sprites regenerated from scratch instead of being nearest-neighbor upscaled. The previous fix kept the canvas size matching but coarsened the per-pixel density, making the blue eggs look chunkier than the orange ones. The new generation has the same pixel density as the orange variants.
+
 ## 0.5.3
 - Sprite fixes — blue mythic "happy" regenerated (the previous version had extra limbs because the model re-posed the quadrupedal idle into a bipedal cheer)
 - Blue egg sprites (idle / happy / petted) rescaled to match the orange egg's subject size so both designs render at the same on-screen scale; nearest-neighbor upscale preserves pixel-art chunkiness
