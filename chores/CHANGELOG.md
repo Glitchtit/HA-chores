@@ -1,3 +1,9 @@
+## 0.5.2
+- Add **happy** and **petted** sprites for every pet evolution stage — 20 new pixel-art assets (5 stages × 2 designs × 2 states) so the pet visibly reacts at every life stage, not just as an adult
+- Each stage's "happy" sprite shows raised arms / open-mouth grin / brighter aura; the "petted" sprite shows closed eyes in bliss / soft smile / floating heart symbols. Egg stage uses a softer glow + sparkles (happy) or hearts around the orb (petted)
+- Restructured stage assets into `stages/{stage}/{state}.png` so each stage owns its own animation set; the SpriteFrame component now looks up `STAGE_SPRITES[design][stage][state]` with graceful fallback to the adult-form base sprite when a stage doesn't define a state (currently only `sad`)
+- All new sprites preloaded on Pet tab mount
+
 ## 0.5.1
 - Real graphics for pet evolution and cosmetics — replaces emoji-only placeholders with pixel-art assets
 - 10 new evolution sprites: orange + blue axolotl × 5 stages (egg → baby → teen → adult → mythic) wired into `SpriteFrame` so each idle pet renders its stage-specific form

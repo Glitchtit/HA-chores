@@ -18,17 +18,37 @@ import blueIdle       from '../assets/pets/blue_black/idle.png';
 import blueHappy      from '../assets/pets/blue_black/happy.png';
 import blueSad        from '../assets/pets/blue_black/sad.png';
 import bluePetted     from '../assets/pets/blue_black/petted.png';
-// Evolution stage sprites (v0.5.1)
-import stageOrangeEgg    from '../assets/pets/orange_black/stages/egg.png';
-import stageOrangeBaby   from '../assets/pets/orange_black/stages/baby.png';
-import stageOrangeTeen   from '../assets/pets/orange_black/stages/teen.png';
-import stageOrangeAdult  from '../assets/pets/orange_black/stages/adult.png';
-import stageOrangeMythic from '../assets/pets/orange_black/stages/mythic.png';
-import stageBlueEgg      from '../assets/pets/blue_black/stages/egg.png';
-import stageBlueBaby     from '../assets/pets/blue_black/stages/baby.png';
-import stageBlueTeen     from '../assets/pets/blue_black/stages/teen.png';
-import stageBlueAdult    from '../assets/pets/blue_black/stages/adult.png';
-import stageBlueMythic   from '../assets/pets/blue_black/stages/mythic.png';
+// Evolution stage sprites (idle/happy/petted per stage, v0.5.2)
+import stageOrangeEggIdle      from '../assets/pets/orange_black/stages/egg/idle.png';
+import stageOrangeEggHappy     from '../assets/pets/orange_black/stages/egg/happy.png';
+import stageOrangeEggPetted    from '../assets/pets/orange_black/stages/egg/petted.png';
+import stageOrangeBabyIdle     from '../assets/pets/orange_black/stages/baby/idle.png';
+import stageOrangeBabyHappy    from '../assets/pets/orange_black/stages/baby/happy.png';
+import stageOrangeBabyPetted   from '../assets/pets/orange_black/stages/baby/petted.png';
+import stageOrangeTeenIdle     from '../assets/pets/orange_black/stages/teen/idle.png';
+import stageOrangeTeenHappy    from '../assets/pets/orange_black/stages/teen/happy.png';
+import stageOrangeTeenPetted   from '../assets/pets/orange_black/stages/teen/petted.png';
+import stageOrangeAdultIdle    from '../assets/pets/orange_black/stages/adult/idle.png';
+import stageOrangeAdultHappy   from '../assets/pets/orange_black/stages/adult/happy.png';
+import stageOrangeAdultPetted  from '../assets/pets/orange_black/stages/adult/petted.png';
+import stageOrangeMythicIdle   from '../assets/pets/orange_black/stages/mythic/idle.png';
+import stageOrangeMythicHappy  from '../assets/pets/orange_black/stages/mythic/happy.png';
+import stageOrangeMythicPetted from '../assets/pets/orange_black/stages/mythic/petted.png';
+import stageBlueEggIdle        from '../assets/pets/blue_black/stages/egg/idle.png';
+import stageBlueEggHappy       from '../assets/pets/blue_black/stages/egg/happy.png';
+import stageBlueEggPetted      from '../assets/pets/blue_black/stages/egg/petted.png';
+import stageBlueBabyIdle       from '../assets/pets/blue_black/stages/baby/idle.png';
+import stageBlueBabyHappy      from '../assets/pets/blue_black/stages/baby/happy.png';
+import stageBlueBabyPetted     from '../assets/pets/blue_black/stages/baby/petted.png';
+import stageBlueTeenIdle       from '../assets/pets/blue_black/stages/teen/idle.png';
+import stageBlueTeenHappy      from '../assets/pets/blue_black/stages/teen/happy.png';
+import stageBlueTeenPetted     from '../assets/pets/blue_black/stages/teen/petted.png';
+import stageBlueAdultIdle      from '../assets/pets/blue_black/stages/adult/idle.png';
+import stageBlueAdultHappy     from '../assets/pets/blue_black/stages/adult/happy.png';
+import stageBlueAdultPetted    from '../assets/pets/blue_black/stages/adult/petted.png';
+import stageBlueMythicIdle     from '../assets/pets/blue_black/stages/mythic/idle.png';
+import stageBlueMythicHappy    from '../assets/pets/blue_black/stages/mythic/happy.png';
+import stageBlueMythicPetted   from '../assets/pets/blue_black/stages/mythic/petted.png';
 // Cosmetic overlays (v0.5.1)
 import hatParty   from '../assets/pets/cosmetics/hats/hat_party.png';
 import hatCrown   from '../assets/pets/cosmetics/hats/hat_crown.png';
@@ -70,22 +90,23 @@ const SPRITES = {
   blue_black:   { idle: blueIdle,   happy: blueHappy,   sad: blueSad,   petted: bluePetted   },
 };
 
-// Stage-specific idle sprites override the base idle. Other animation states
-// (happy/sad/petted) are transient celebrations and reuse the adult-form sprite.
+// Stage-specific sprites keyed [design][stage][state]. Missing states fall back
+// to the base SPRITES map (which only has the adult form for happy/sad/petted).
+// `sad` is intentionally not generated per-stage — it falls back gracefully.
 const STAGE_SPRITES = {
   orange_black: {
-    egg: stageOrangeEgg,
-    baby: stageOrangeBaby,
-    teen: stageOrangeTeen,
-    adult: stageOrangeAdult,
-    mythic: stageOrangeMythic,
+    egg:    { idle: stageOrangeEggIdle,    happy: stageOrangeEggHappy,    petted: stageOrangeEggPetted    },
+    baby:   { idle: stageOrangeBabyIdle,   happy: stageOrangeBabyHappy,   petted: stageOrangeBabyPetted   },
+    teen:   { idle: stageOrangeTeenIdle,   happy: stageOrangeTeenHappy,   petted: stageOrangeTeenPetted   },
+    adult:  { idle: stageOrangeAdultIdle,  happy: stageOrangeAdultHappy,  petted: stageOrangeAdultPetted  },
+    mythic: { idle: stageOrangeMythicIdle, happy: stageOrangeMythicHappy, petted: stageOrangeMythicPetted },
   },
   blue_black: {
-    egg: stageBlueEgg,
-    baby: stageBlueBaby,
-    teen: stageBlueTeen,
-    adult: stageBlueAdult,
-    mythic: stageBlueMythic,
+    egg:    { idle: stageBlueEggIdle,    happy: stageBlueEggHappy,    petted: stageBlueEggPetted    },
+    baby:   { idle: stageBlueBabyIdle,   happy: stageBlueBabyHappy,   petted: stageBlueBabyPetted   },
+    teen:   { idle: stageBlueTeenIdle,   happy: stageBlueTeenHappy,   petted: stageBlueTeenPetted   },
+    adult:  { idle: stageBlueAdultIdle,  happy: stageBlueAdultHappy,  petted: stageBlueAdultPetted  },
+    mythic: { idle: stageBlueMythicIdle, happy: stageBlueMythicHappy, petted: stageBlueMythicPetted },
   },
 };
 
@@ -174,13 +195,12 @@ function Bar({ value, label, color }) {
 }
 
 function SpriteFrame({ design, state, stage, className = '', style = {} }) {
-  // Use the stage-specific sprite when idle so evolution is visible. The other
-  // animation states (happy/sad/petted) reuse the existing single sprite — they
-  // only show briefly during interactions.
-  const useStage = state === 'idle' && stage && STAGE_SPRITES[design]?.[stage];
-  const src = useStage
-    ? STAGE_SPRITES[design][stage]
-    : (SPRITES[design]?.[state] || SPRITES.orange_black.idle);
+  // Pick the stage+state sprite when available, otherwise fall back to the
+  // base SPRITES map (which only has the adult-form happy/sad/petted).
+  const stageSrc = stage && STAGE_SPRITES[design]?.[stage]?.[state];
+  const src = stageSrc
+    || SPRITES[design]?.[state]
+    || SPRITES.orange_black.idle;
   const anim = STATE_ANIM[state] || STATE_ANIM.idle;
   return (
     <img
@@ -194,7 +214,10 @@ function SpriteFrame({ design, state, stage, className = '', style = {} }) {
 }
 
 function StaticPreview({ design, stage, size = 48 }) {
-  const src = (stage && STAGE_SPRITES[design]?.[stage]) || SPRITES[design]?.idle || SPRITES.orange_black.idle;
+  const src =
+    (stage && STAGE_SPRITES[design]?.[stage]?.idle)
+    || SPRITES[design]?.idle
+    || SPRITES.orange_black.idle;
   return (
     <img
       src={src}
@@ -433,9 +456,12 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
 
   /* ── Preload all pet sprites on mount so swaps are instant ─────────────── */
   useEffect(() => {
+    const stageUrls = Object.values(STAGE_SPRITES)
+      .flatMap(designStages => Object.values(designStages))
+      .flatMap(stateMap => Object.values(stateMap));
     const urls = [
       ...Object.values(SPRITES).flatMap(s => Object.values(s)),
-      ...Object.values(STAGE_SPRITES).flatMap(s => Object.values(s)),
+      ...stageUrls,
       ...Object.values(COSMETIC_IMG),
     ];
     urls.forEach(src => { const img = new Image(); img.src = src; });
