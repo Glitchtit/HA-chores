@@ -9,6 +9,7 @@ import Settings from './components/Settings';
 import HouseholdOverview from './components/HouseholdOverview';
 import Pet from './components/Pet';
 import { GameEffectsProvider, useGameEffects } from './components/effects/GameEffects';
+import WhatsNewModal from './components/WhatsNewModal';
 
 const PERSONAL_TABS = [
   { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
@@ -218,6 +219,7 @@ export default function App() {
   return (
     <GameEffectsProvider>
       <MonthEndChecker activePerson={activePerson} />
+      <WhatsNewModal />
       <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col lg:flex-row">
         <Toasts toasts={toasts} onDismiss={dismissToast} />
 
