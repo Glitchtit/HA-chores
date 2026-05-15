@@ -11,6 +11,7 @@ CLI:
 """
 from __future__ import annotations
 import math
+import random
 import sys
 from pathlib import Path
 from PIL import Image, ImageChops
@@ -72,7 +73,98 @@ def overlay(im: Image.Image, t: float, spec: tuple | None) -> Image.Image:
     if spec is None:
         return im
     name, *args = spec
-    raise NotImplementedError(f"overlay '{name}' not implemented yet (Task 3)")
+    if name == "rotate":
+        return im.rotate(args[0] * t, resample=Image.BICUBIC)
+    if name == "wiggle":
+        return im.rotate(args[0] * math.sin(t * 2 * math.pi), resample=Image.BICUBIC)
+    if name == "drift_wrap":
+        px = int(im.height * args[0] * t)
+        return ImageChops.offset(im, 0, px)
+    if name == "drift_fade":
+        amount, fade_amount = args
+        px = int(im.height * amount * t)
+        moved = ImageChops.offset(im, 0, px)
+        return _alpha_scale(moved, 1.0 - fade_amount * t)
+    if name == "pulse":
+        return _scale(im, 1 + args[0] * math.sin(t * 2 * math.pi))
+    if name == "jitter":
+        # Deterministic per-frame jitter using a seeded RNG so loops are reproducible
+        rng = random.Random(int(t * 1_000_000))
+        ax, ay = args
+        dx = int(im.width * ax * (rng.random() * 2 - 1))
+        dy = int(im.height * ay * (rng.random() * 2 - 1))
+        return ImageChops.offset(im, dx, dy)
+    if name == "hue_cycle":
+        return _hue_cycle(im, t, args[0])
+    if name == "drift_wiggle":
+        amount, wiggle_deg = args
+        px = int(im.height * amount * t)
+        moved = ImageChops.offset(im, 0, px)
+        return moved.rotate(wiggle_deg * math.sin(t * 2 * math.pi), resample=Image.BICUBIC)
+    if name == "drift_wiggle_pulse":
+        amount, wiggle_deg, pulse_amp = args
+        px = int(im.height * amount * t)
+        moved = ImageChops.offset(im, 0, px)
+        rotated = moved.rotate(wiggle_deg * math.sin(t * 2 * math.pi), resample=Image.BICUBIC)
+        return _scale(rotated, 1 + pulse_amp * math.sin(t * 2 * math.pi))
+    if name == "wiggle_rise":
+        wiggle_deg, rise_amount = args
+        px = int(im.height * rise_amount * t)  # negative rise_amount = upward
+        moved = ImageChops.offset(im, 0, px)
+        return moved.rotate(wiggle_deg * math.sin(t * 2 * math.pi), resample=Image.BICUBIC)
+    raise ValueError(f"unknown overlay: {name}")
+
+
+def _scale(im: Image.Image, factor: float) -> Image.Image:
+    """Scale around center, preserve canvas size."""
+    if factor == 1.0:
+        return im
+    w, h = im.size
+    nw, nh = max(1, int(w * factor)), max(1, int(h * factor))
+    scaled = im.resize((nw, nh), Image.LANCZOS)
+    canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    canvas.paste(scaled, ((w - nw) // 2, (h - nh) // 2), scaled)
+    return canvas
+
+
+def _alpha_scale(im: Image.Image, factor: float) -> Image.Image:
+    """Multiply alpha channel by *factor* (clamped to [0, 1])."""
+    factor = max(0.0, min(1.0, factor))
+    if factor == 1.0:
+        return im
+    r, g, b, a = im.split()
+    a = a.point(lambda v: int(v * factor))
+    return Image.merge("RGBA", (r, g, b, a))
+
+
+def _hue_cycle(im: Image.Image, t: float, deg: float) -> Image.Image:
+    """Shift HSV hue by ``deg * t``. Preserves alpha."""
+    import numpy as np
+    arr = np.asarray(im).astype("float32") / 255
+    rgb, a = arr[..., :3], arr[..., 3]
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    mx, mn = rgb.max(-1), rgb.min(-1)
+    v = mx
+    diff = mx - mn
+    s = np.where(mx == 0, 0, diff / np.where(mx == 0, 1, mx))
+    d = np.where(diff == 0, 1, diff)
+    h = np.zeros_like(v)
+    h = np.where(mx == r, ((g - b) / d) % 6, h)
+    h = np.where(mx == g, (b - r) / d + 2, h)
+    h = np.where(mx == b, (r - g) / d + 4, h)
+    h = (h / 6 + (deg * t) / 360.0) % 1
+    i = (h * 6).astype("int")
+    f = h * 6 - i
+    p = v * (1 - s)
+    q = v * (1 - f * s)
+    tt = v * (1 - (1 - f) * s)
+    out = np.stack([
+        np.choose(i % 6, [v, q, p, p, tt, v]),
+        np.choose(i % 6, [tt, v, v, q, p, p]),
+        np.choose(i % 6, [p, p, tt, v, v, q]),
+    ], axis=-1)
+    out = np.concatenate([out, a[..., None]], axis=-1)
+    return Image.fromarray((out * 255).clip(0, 255).astype("uint8"), "RGBA")
 
 
 def build(name: str, recipe: dict) -> Path:
