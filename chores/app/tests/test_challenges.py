@@ -130,22 +130,39 @@ class TestBumpAndComplete:
         assert result is not None
         assert result["status"] == "completed"
 
-        # Both persons get the reward powerup
+        # Both persons get the 2× / 72h reward powerup
         rewards = tmp_db.execute(
             "SELECT person_id, multiplier, expires_at FROM person_powerups WHERE powerup_type = 'challenge_reward'"
         ).fetchall()
         assert len(rewards) == 2
         people = {r["person_id"] for r in rewards}
         assert people == {"person.alice", "person.bob"}
+        for r in rewards:
+            assert r["multiplier"] == 2.0
+            expires = datetime.fromisoformat(r["expires_at"])
+            delta_hours = (expires - datetime.now()).total_seconds() / 3600
+            assert 71 < delta_hours <= 72  # ~72h from now
 
-        # Each person gets a celebration row referencing the challenge
+        # Both persons get +30 tokens
+        token_rows = tmp_db.execute(
+            "SELECT entity_id, tokens FROM persons WHERE entity_id IN ('person.alice', 'person.bob')"
+        ).fetchall()
+        assert {r["entity_id"]: r["tokens"] for r in token_rows} == {
+            "person.alice": 30, "person.bob": 30,
+        }
+
+        # Each person gets a celebration row referencing the challenge + tokens bonus
         import json as _json
         celebrations = tmp_db.execute(
             "SELECT person_id, payload FROM pending_celebrations"
         ).fetchall()
         for r in celebrations:
             p = _json.loads(r["payload"])
-            assert p.get("challenge_completed", {}).get("name") == "Test Challenge"
+            cc = p.get("challenge_completed", {})
+            assert cc.get("name") == "Test Challenge"
+            assert cc.get("tokens") == 30
+            assert cc.get("multiplier") == 2.0
+            assert cc.get("hours") == 72
 
     def test_completion_is_one_shot(self, tmp_db):
         import challenges

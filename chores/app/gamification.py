@@ -800,10 +800,13 @@ def check_and_award_badges(person_entity_id: str) -> list[dict]:
 TOKENS_PER_XP_DIVISOR = 10  # v0.4.3: 1 token per 10 XP earned
 
 
-def add_xp(person_entity_id: str, xp: int) -> tuple[int, int, bool]:
+def add_xp(person_entity_id: str, xp: int, *, mint_tokens: bool = True) -> tuple[int, int, bool]:
     """Add XP to a person, updating their level and minting cosmetic-shop tokens.
 
     Tokens accrue at 1 per 10 XP earned (rounded down). XP itself remains monotonic.
+    Pass ``mint_tokens=False`` for grants that pair XP with a separate, explicit
+    token bonus (e.g. daily quest bundle) where the standard mint would distort
+    the advertised reward.
     Returns (new_total, new_level, leveled_up).
     """
     conn = get_connection()
@@ -817,7 +820,7 @@ def add_xp(person_entity_id: str, xp: int) -> tuple[int, int, bool]:
     new_total = row["xp_total"] + xp
     new_level = level_from_xp(new_total)
     leveled_up = new_level > row["level"]
-    tokens_earned = max(0, xp // TOKENS_PER_XP_DIVISOR) if xp > 0 else 0
+    tokens_earned = max(0, xp // TOKENS_PER_XP_DIVISOR) if (xp > 0 and mint_tokens) else 0
 
     conn.execute(
         "UPDATE persons SET xp_total = ?, level = ?, tokens = COALESCE(tokens, 0) + ? WHERE entity_id = ?",

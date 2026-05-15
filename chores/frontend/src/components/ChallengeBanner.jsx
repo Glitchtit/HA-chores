@@ -69,7 +69,7 @@ export default function ChallengeBanner() {
       </div>
       {done && (
         <div className="mt-2 text-xs text-emerald-200">
-          Every household member gets {challenge.reward_multiplier}× XP for {challenge.reward_hours}h
+          Every household member gets {challenge.reward_multiplier}× XP for {challenge.reward_hours}h + 30 tokens
         </div>
       )}
     </div>

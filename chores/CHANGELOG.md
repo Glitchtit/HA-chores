@@ -1,3 +1,9 @@
+## 0.7.1
+- **Daily quest bundle now pays out flat XP + tokens instead of a 2× next-chore powerup.** Completing all three quests in a day grants **+30 XP and +10 pet-shop tokens**. The XP grant skips the normal XP→token mint so the "+10 tokens" stays literal (use `gamification.add_xp(..., mint_tokens=False)` if you need this elsewhere).
+- **Weekly challenge reward upgraded.** On household completion every member now gets the **2× XP power-up for 3 days** (up from 1.5× / 24 h) **plus +30 pet-shop tokens**. Existing power-up row columns are reused; new challenges default to `reward_multiplier=2.0` / `reward_hours=72`.
+- API: completion celebration payload renamed `daily_bundle_powerup` → `daily_bundle_xp` / `daily_bundle_tokens`. Challenge celebration payload gains a `tokens` field. `ChallengeBanner` completion footer now mentions the token bonus.
+- Tests updated to assert the new payouts; `test_completing_all_three_awards_powerup` renamed to `test_completing_all_three_awards_xp_and_tokens`.
+
 ## 0.7.0
 - **Equipped background cosmetic overrides the house backdrop per viewer.** When you have a `background` slot cosmetic equipped (Meadow / Beach / Outer Space / Forest / Aurora), the house scene swaps the seasonal cabin for that backdrop. Each household member sees their own override; no equipped background = the normal cabin
 - **Nameplates are now placeable, drag-and-drop in the house view.** Each user can place ONE nameplate visible to every household member. Activate edit mode ("Change placement" toggle) → use the new "📍 Place my nameplate" / "🗑️ Remove" buttons → drag the nameplate to position it. The placing user's pet_name (or display name) shows centered on the nameplate sprite
