@@ -369,14 +369,16 @@ function Bar({ value, label, color }) {
   );
 }
 
-function SpriteFrame({ design, state, stage, className = '', style = {} }) {
+function SpriteFrame({ design, state, stage, animated = true, className = '', style = {} }) {
   // Pick the stage+state sprite when available, otherwise fall back to the
   // base SPRITES map (which only has the adult-form happy/sad/petted).
   const stageSrc = stage && STAGE_SPRITES[design]?.[stage]?.[state];
   const src = stageSrc
     || SPRITES[design]?.[state]
     || SPRITES.orange_black.idle;
-  const anim = STATE_ANIM[state] || STATE_ANIM.idle;
+  // When composed under PetWithCosmetics the animation runs on a shared
+  // wrapper so cosmetics move with the body — pass animated={false} there.
+  const anim = animated ? (STATE_ANIM[state] || STATE_ANIM.idle) : '';
   return (
     <img
       key={`${design}-${state}-${stage || ''}`}
@@ -406,61 +408,71 @@ function StaticPreview({ design, stage, size = 48 }) {
 }
 
 /* Wraps a SpriteFrame with equipped-cosmetic overlays (hat on top, particle
- * orbiting around). Falls back to nothing when no cosmetics are equipped. */
+ * orbiting around). Falls back to nothing when no cosmetics are equipped.
+ *
+ * Layout: outer wrapper carries the optional flip; inner wrapper carries the
+ * shared state animation so the body, hat, and particle transform together
+ * during the happy/sad/petted/idle motions. Keeping flip and animation on
+ * separate elements avoids the CSS-animation-vs-inline-transform conflict. */
 function PetWithCosmetics({ design, state, stage, equipped, flip, className = '' }) {
   const hat = equipped?.hat;
   const particle = equipped?.particle;
   const hatImg = hat && COSMETIC_IMG[hat.id];
   const particleImg = particle && COSMETIC_IMG[particle.id];
+  const anim = STATE_ANIM[state] || STATE_ANIM.idle;
 
   return (
-    <div className={`relative inline-block ${className}`}>
-      <SpriteFrame
-        design={design}
-        state={state}
-        stage={stage}
-        className="w-full"
-        style={flip ? { transform: 'scaleX(-1)' } : undefined}
-      />
-      {/* Particle overlay — soft float animation, doesn't flip with the pet */}
-      {particle && (
-        particleImg ? (
-          <img
-            src={particleImg}
-            alt=""
-            className="pixelated absolute inset-0 w-full h-full pointer-events-none animate-[pet-breathe_2.4s_ease-in-out_infinite] opacity-90"
-            style={{ objectFit: 'contain' }}
-          />
-        ) : (
-          <span className="absolute inset-0 flex items-start justify-end text-base pointer-events-none">
-            {particle.icon || '✨'}
-          </span>
-        )
-      )}
-      {/* Hat overlay — positioned at top-center of the sprite, follows the flip */}
-      {hat && (
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            // Anchor: top center of the sprite, sized ~45% of the sprite width
-            left: '50%',
-            top: '-12%',
-            width: '55%',
-            transform: `translateX(-50%) ${flip ? 'scaleX(-1)' : ''}`,
-          }}
-        >
-          {hatImg ? (
+    <div
+      className={`relative inline-block ${className}`}
+      style={flip ? { transform: 'scaleX(-1)' } : undefined}
+    >
+      <div className={`relative ${anim}`}>
+        <SpriteFrame
+          design={design}
+          state={state}
+          stage={stage}
+          animated={false}
+          className="w-full block"
+        />
+        {/* Particle overlay — moves with the pet via the shared wrapper animation */}
+        {particle && (
+          particleImg ? (
             <img
-              src={hatImg}
+              src={particleImg}
               alt=""
-              className="pixelated w-full"
+              className="pixelated absolute inset-0 w-full h-full pointer-events-none opacity-90"
               style={{ objectFit: 'contain' }}
             />
           ) : (
-            <span className="text-lg leading-none">{hat.icon || '👑'}</span>
-          )}
-        </div>
-      )}
+            <span className="absolute inset-0 flex items-start justify-end text-base pointer-events-none">
+              {particle.icon || '✨'}
+            </span>
+          )
+        )}
+        {/* Hat overlay — anchored to top-center of the sprite, rides the animation */}
+        {hat && (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: '50%',
+              top: '-12%',
+              width: '55%',
+              transform: 'translateX(-50%)',
+            }}
+          >
+            {hatImg ? (
+              <img
+                src={hatImg}
+                alt=""
+                className="pixelated w-full"
+                style={{ objectFit: 'contain' }}
+              />
+            ) : (
+              <span className="text-lg leading-none">{hat.icon || '👑'}</span>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
