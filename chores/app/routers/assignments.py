@@ -239,7 +239,7 @@ def apply_completion(
         )
     except Exception as e:
         logger.warning("Daily quest bump failed for %s: %s", completed_by, e)
-        quest_result = {"bumped": [], "bundle_awarded": False, "bundle_powerup": None}
+        quest_result = {"bumped": [], "bundle_awarded": False, "bundle_xp": 0, "bundle_tokens": 0}
 
     # Household challenge progress (v0.4.6)
     try:
@@ -273,7 +273,8 @@ def apply_completion(
         and not (class_id or "")
     )
 
-    bundle_powerup = quest_result.get("bundle_powerup") if quest_result else None
+    bundle_xp = int(quest_result.get("bundle_xp") or 0) if quest_result else 0
+    bundle_tokens = int(quest_result.get("bundle_tokens") or 0) if quest_result else 0
     bundle_awarded = bool(quest_result and quest_result.get("bundle_awarded"))
 
     if leveled_up or new_badges or earned_powerup or stage_changed or class_prompt or bundle_awarded:
@@ -288,7 +289,8 @@ def apply_completion(
             "new_stage": new_stage if stage_changed else None,
             "class_pick_prompt": class_prompt,
             "daily_bundle": bundle_awarded,
-            "daily_bundle_powerup": bundle_powerup,
+            "daily_bundle_xp": bundle_xp,
+            "daily_bundle_tokens": bundle_tokens,
             "source": "shopping-hook" if bg is None else "assignment",
             "completed_at": now,
         }

@@ -241,8 +241,8 @@ CREATE TABLE IF NOT EXISTS household_challenges (
     period_end        TEXT NOT NULL,
     status            TEXT DEFAULT 'active'
                           CHECK (status IN ('active', 'completed', 'expired')),
-    reward_multiplier REAL DEFAULT 1.5,
-    reward_hours      INTEGER DEFAULT 24,
+    reward_multiplier REAL DEFAULT 2.0,
+    reward_hours      INTEGER DEFAULT 72,
     created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

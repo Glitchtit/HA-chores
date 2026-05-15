@@ -135,7 +135,7 @@ class TestBumping:
         assert cleaning_done["completed_at"] is None
         assert result["bundle_awarded"] is False
 
-    def test_completing_all_three_awards_powerup(self, tmp_db):
+    def test_completing_all_three_awards_xp_and_tokens(self, tmp_db):
         import quests
         _seed_person(tmp_db, "person.alice")
         _seed_chore(tmp_db, chore_id=1, category="trash")
@@ -162,14 +162,22 @@ class TestBumping:
         chore_row = {"category": "trash", "assignment_mode": "manual"}
         result = quests.bump_on_completion(tmp_db, "person.alice", chore_row)
         assert result["bundle_awarded"] is True
-        assert result["bundle_powerup"] is not None
-        # Power-up landed in person_powerups
-        pu = tmp_db.execute(
-            "SELECT * FROM person_powerups WHERE person_id = ? AND powerup_type = 'daily_quest_bundle'",
-            ("person.alice",),
+        assert result["bundle_xp"] == 30
+        assert result["bundle_tokens"] == 10
+
+        # XP credited to person, tokens credited cleanly (no XP→token mint on the bundle XP)
+        row = tmp_db.execute(
+            "SELECT xp_total, tokens FROM persons WHERE entity_id = ?", ("person.alice",)
         ).fetchone()
-        assert pu is not None
-        assert pu["multiplier"] == 2.0
+        assert row["xp_total"] == 30
+        assert row["tokens"] == 10
+
+        # No more powerup is created for the bundle
+        pu = tmp_db.execute(
+            "SELECT COUNT(*) AS c FROM person_powerups WHERE person_id = ? AND powerup_type = 'daily_quest_bundle'",
+            ("person.alice",),
+        ).fetchone()["c"]
+        assert pu == 0
 
     def test_bundle_is_idempotent(self, tmp_db):
         import quests
@@ -197,17 +205,17 @@ class TestBumping:
         second = quests.bump_on_completion(tmp_db, "person.alice", chore_row)
         assert first["bundle_awarded"] is True
         assert second["bundle_awarded"] is False
-        # Only one bundle row, only one power-up
+        # Only one bundle row, and rewards are not doubled
         bundle_count = tmp_db.execute(
             "SELECT COUNT(*) AS c FROM daily_quest_bundles WHERE person_id = ?",
             ("person.alice",),
         ).fetchone()["c"]
-        powerup_count = tmp_db.execute(
-            "SELECT COUNT(*) AS c FROM person_powerups WHERE person_id = ? AND powerup_type = 'daily_quest_bundle'",
-            ("person.alice",),
-        ).fetchone()["c"]
         assert bundle_count == 1
-        assert powerup_count == 1
+        row = tmp_db.execute(
+            "SELECT xp_total, tokens FROM persons WHERE entity_id = ?", ("person.alice",)
+        ).fetchone()
+        assert row["xp_total"] == 30
+        assert row["tokens"] == 10
 
     def test_streak_today_only_on_first_completion(self, tmp_db):
         import quests

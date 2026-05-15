@@ -1,14 +1,14 @@
-"""Chores – Daily quest rotations (v0.4.5).
+"""Chores – Daily quest rotations.
 
 Every morning each person gets three rotating bonus objectives. Completing
-all three within the same day awards a 2× XP power-up for the next chore.
+all three within the same day awards a flat XP + pet-shop token bonus
+(see ``BUNDLE_XP`` / ``BUNDLE_TOKENS``).
 """
 
 from __future__ import annotations
-import json
 import logging
 import random
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 logger = logging.getLogger(__name__)
 
@@ -27,16 +27,9 @@ QUEST_TEMPLATES = [
     ("streak_today",      "Keep your streak alive",     "🔥", 1, "",         5),
 ]
 
-# Reward configuration for completing all three quests in a single day
-BUNDLE_REWARD = {
-    "powerup_type": "daily_quest_bundle",
-    "name": "Daily Hero",
-    "icon": "🌟",
-    "description": "2× XP on your next chore — daily bundle reward",
-    "applies_to": "any",
-    "multiplier": 2.0,
-    "uses": 1,
-}
+# Reward for completing all three quests in a single day: flat XP + tokens.
+BUNDLE_XP = 30
+BUNDLE_TOKENS = 10
 
 
 def generate_for_today(conn, person_id: str, today: date | None = None, rng: random.Random | None = None) -> list[dict]:
@@ -142,15 +135,11 @@ def _quest_matches(quest: dict, chore_row, claimed: bool, before_noon: bool, cho
     return 0
 
 
-def _midnight_iso(today: date) -> str:
-    midnight = datetime.combine(today + timedelta(days=1), datetime.min.time())
-    return midnight.isoformat()
-
-
 def bump_on_completion(conn, person_id: str, chore_row, completed_at: datetime | None = None) -> dict:
     """Increment any matching quests for the just-completed chore.
 
-    Returns a summary dict {bumped: [...], bundle_awarded: bool, bundle_powerup: row|None}.
+    Returns a summary dict
+    ``{bumped: [...], bundle_awarded: bool, bundle_xp: int, bundle_tokens: int}``.
     *chore_row* may be a dict/Row with `category` and `assignment_mode` keys
     (mirrors what apply_completion already has on hand).
     """
@@ -207,7 +196,8 @@ def bump_on_completion(conn, person_id: str, chore_row, completed_at: datetime |
     ).fetchone()
 
     bundle_awarded = False
-    bundle_powerup_row = None
+    bundle_xp = 0
+    bundle_tokens = 0
     if counts and counts["total"] >= 3 and (counts["done"] or 0) >= 3:
         existing_bundle = conn.execute(
             "SELECT 1 FROM daily_quest_bundles WHERE person_id = ? AND quest_date = ?",
@@ -219,34 +209,22 @@ def bump_on_completion(conn, person_id: str, chore_row, completed_at: datetime |
                    VALUES (?, ?, ?)""",
                 (person_id, today_str, completed_at.isoformat()),
             )
-            cursor = conn.execute(
-                """INSERT INTO person_powerups
-                     (person_id, powerup_type, name, icon, description, applies_to,
-                      multiplier, uses_remaining, expires_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    person_id,
-                    BUNDLE_REWARD["powerup_type"],
-                    BUNDLE_REWARD["name"],
-                    BUNDLE_REWARD["icon"],
-                    BUNDLE_REWARD["description"],
-                    BUNDLE_REWARD["applies_to"],
-                    BUNDLE_REWARD["multiplier"],
-                    BUNDLE_REWARD["uses"],
-                    _midnight_iso(today),
-                ),
-            )
             conn.commit()
+            # Skip the XP→token mint so the advertised "+10 tokens" stays literal.
+            from gamification import add_xp, award_tokens
+            add_xp(person_id, BUNDLE_XP, mint_tokens=False)
+            award_tokens(person_id, BUNDLE_TOKENS, reason="daily quest bundle")
             bundle_awarded = True
-            bundle_powerup_row = conn.execute(
-                "SELECT * FROM person_powerups WHERE id = ?", (cursor.lastrowid,)
-            ).fetchone()
-            logger.info("Daily quest bundle awarded to %s on %s", person_id, today_str)
+            bundle_xp = BUNDLE_XP
+            bundle_tokens = BUNDLE_TOKENS
+            logger.info("Daily quest bundle awarded to %s on %s (+%d XP, +%d tokens)",
+                        person_id, today_str, BUNDLE_XP, BUNDLE_TOKENS)
 
     return {
         "bumped": bumped,
         "bundle_awarded": bundle_awarded,
-        "bundle_powerup": dict(bundle_powerup_row) if bundle_powerup_row else None,
+        "bundle_xp": bundle_xp,
+        "bundle_tokens": bundle_tokens,
     }
 
 

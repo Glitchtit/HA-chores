@@ -1,7 +1,8 @@
-"""Chores – Team household challenges (v0.4.6).
+"""Chores – Team household challenges.
 
 A challenge is a household-wide weekly co-op goal. On completion every person
-gets a 24h 1.5× XP power-up (via the existing `person_powerups` table).
+gets a 72h 2× XP power-up (via the existing ``person_powerups`` table) plus a
+flat pet-shop token bonus (see ``CHALLENGE_TOKENS``).
 """
 
 from __future__ import annotations
@@ -64,8 +65,11 @@ CHALLENGE_REWARD_POWERUP = {
     "powerup_type": "challenge_reward",
     "name": "Team Bonus",
     "icon": "🎉",
-    "description": "Household co-op victory — 1.5× XP for 24 hours",
+    "description": "Household co-op victory — 2× XP for 3 days",
 }
+
+# Flat pet-shop token bonus granted to every household member on completion.
+CHALLENGE_TOKENS = 30
 
 
 def get_active(conn) -> dict | None:
@@ -134,13 +138,15 @@ def recompute_progress(conn, challenge: dict) -> int:
 
 
 def _award_household_powerup(conn, challenge: dict) -> int:
-    """Insert a 24h 1.5× XP power-up for every person. Returns count inserted."""
+    """Grant the household powerup + token bonus for *challenge*. Returns persons rewarded."""
     persons = conn.execute("SELECT entity_id FROM persons").fetchall()
     if not persons:
         return 0
-    expires_at = (datetime.now() + timedelta(hours=int(challenge["reward_hours"] or 24))).isoformat()
-    mult = float(challenge["reward_multiplier"] or 1.5)
+    hours = int(challenge["reward_hours"] or 72)
+    expires_at = (datetime.now() + timedelta(hours=hours)).isoformat()
+    mult = float(challenge["reward_multiplier"] or 2.0)
     inserted = 0
+    from gamification import award_tokens
     for p in persons:
         conn.execute(
             """INSERT INTO person_powerups
@@ -158,13 +164,15 @@ def _award_household_powerup(conn, challenge: dict) -> int:
                 expires_at,
             ),
         )
+        award_tokens(p["entity_id"], CHALLENGE_TOKENS, reason=f"challenge:{challenge['name']}")
         # Celebration popup per person
         payload = {
             "challenge_completed": {
                 "id": challenge["id"],
                 "name": challenge["name"],
                 "multiplier": mult,
-                "hours": int(challenge["reward_hours"] or 24),
+                "hours": hours,
+                "tokens": CHALLENGE_TOKENS,
             },
             "source": "challenge",
             "completed_at": datetime.now().isoformat(),

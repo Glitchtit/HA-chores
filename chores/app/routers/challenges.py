@@ -20,8 +20,8 @@ class ChallengeCreate(BaseModel):
     target_category: str = ""
     period_start: Optional[str] = None  # YYYY-MM-DD; default = today
     period_end: Optional[str] = None    # default = +6 days
-    reward_multiplier: float = 1.5
-    reward_hours: int = 24
+    reward_multiplier: float = 2.0
+    reward_hours: int = 72
 
 
 @router.get("/active")
