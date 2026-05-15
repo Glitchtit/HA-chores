@@ -1,3 +1,9 @@
+## 0.7.4
+- **Adult and mythic pets now blink.** The four `idle` sprites for adult+mythic stages of `orange_black` and `blue_black` play a 2.3 s looping animation: ~1.9 s of open-eye, then a 4-frame blink (half-closed → closed → closed → half-closed), then back to open. Earlier stages (egg/baby/teen) and other states (happy/sad/petted) stay static.
+- New script: `frontend/scripts/animate_pets.py` (idempotent — re-run to rebuild idle.webp from sources).
+- Eyes-closed variants generated via `nanobanana:edit_image` for character coherence (same pet, only the eyes change); committed under `pets/<design>/stages/<stage>/sources/idle_02.png`.
+- Per-pixel body sway dropped from the WebP (originally planned but removed during the pilot) — the existing CSS `pet-breathe` animation already handles wrapper-level motion. Dropping the sway lets WebP's encoder dedupe identical open-eye frames into a single long-duration frame, cutting the per-sprite file size 5× (~350 KB → 60-90 KB).
+
 ## 0.7.3
 - **Particle cosmetics are now animated.** Each of the 12 particle effects (sparkle, stars, hearts, bubbles, fire, lightning, snow, leaves, blossoms, music, paws, rainbow) now plays a 16-frame, 1.28 s looping animation. Frame sources come from nanobanana (3–6 style-matched AI variants per particle, committed to `frontend/src/assets/pets/cosmetics/particles/sources/`); a Pillow assembly script weaves them into animated WebPs with `crossfade`/`reveal`/`flicker` modes and per-particle motion overlays (rotate, wiggle, drift, pulse, hue-cycle, jitter).
 - New script: `frontend/scripts/animate_particles.py` (idempotent — re-run to rebuild WebPs from sources).
