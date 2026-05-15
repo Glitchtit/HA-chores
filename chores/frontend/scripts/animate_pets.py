@@ -13,10 +13,9 @@ CLI:
     python scripts/animate_pets.py orange_black/adult    # one sprite
 """
 from __future__ import annotations
-import math
 import sys
 from pathlib import Path
-from PIL import Image, ImageChops
+from PIL import Image
 
 PETS_ROOT = Path(__file__).resolve().parent.parent / "src" / "assets" / "pets"
 FRAMES = 24
@@ -72,21 +71,11 @@ def pick_blink_frame(open_im: Image.Image, closed_im: Image.Image, n: int) -> Im
     return open_im
 
 
-def body_sway(im: Image.Image, t: float) -> Image.Image:
-    """Subtle idle motion: ±1° rotate + ±1 px vertical drift, sin-driven."""
-    angle = 1.0 * math.sin(t * 2 * math.pi)
-    y_off = int(round(1.0 * math.sin(t * 2 * math.pi)))
-    rotated = im.rotate(angle, resample=Image.BICUBIC)
-    return ImageChops.offset(rotated, 0, y_off)
-
-
 def build(key: str) -> Path:
     open_im, closed_im = load_sources(key)
     frames: list[Image.Image] = []
     for n in range(FRAMES):
-        t = n / FRAMES
-        base = pick_blink_frame(open_im, closed_im, n)
-        frames.append(body_sway(base, t))
+        frames.append(pick_blink_frame(open_im, closed_im, n))
     out = stage_dir(key) / "idle.webp"
     frames[0].save(
         out,
