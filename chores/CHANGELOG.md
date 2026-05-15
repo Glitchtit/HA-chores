@@ -1,3 +1,10 @@
+## 0.7.3
+- **Particle cosmetics are now animated.** Each of the 12 particle effects (sparkle, stars, hearts, bubbles, fire, lightning, snow, leaves, blossoms, music, paws, rainbow) now plays a 16-frame, 1.28 s looping animation. Frame sources come from nanobanana (3–6 style-matched AI variants per particle, committed to `frontend/src/assets/pets/cosmetics/particles/sources/`); a Pillow assembly script weaves them into animated WebPs with `crossfade`/`reveal`/`flicker` modes and per-particle motion overlays (rotate, wiggle, drift, pulse, hue-cycle, jitter).
+- New script: `frontend/scripts/animate_particles.py` (idempotent — re-run to rebuild WebPs from sources).
+- Bundle particle assets shrink from ~10 MB (1024×1024 PNGs) to ~4 MB (256×256 animated WebPs, 16 frames each). The 12 original static PNGs stay as canonical art + frame_01 sources.
+- The PostToolUse `transparentize.py` hook didn't fire for nanobanana calls invoked from subagents; the script was run manually with `--force` to strip the solid-white backgrounds from the AI outputs. The hook still works for nanobanana calls invoked directly from the main session.
+- Dev-server visual verification of the in-app appearance was not performed in this session — recommend a quick browser check before merging.
+
 ## 0.7.2
 - **Fix: equipped hat and particle now follow the pet's bounce/droop/petted animations.** Previously the state animation was applied to the body sprite only, so cosmetics stayed pinned to the static wrapper while the pet danced. Animation is now applied to a shared wrapper around all three layers; `flip` moved to an outer wrapper so it no longer collides with the keyframe transforms (fixing a pre-existing bug where flipped pets stopped animating).
 - Drops the particle's independent `pet-breathe` — particles now move in sync with the pet rather than on their own timeline.
