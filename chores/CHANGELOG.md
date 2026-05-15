@@ -1,3 +1,7 @@
+## 0.7.5
+- **Pet shop previews now animate.** The 12 particle thumbnails in the cosmetics shop play their full animated loops (blink/drift/cycle) — same WebPs as the equipped-pet overlay. Previously the shop kept its own duplicate import map that still pointed at the static .png variants from before 0.7.3.
+- Known follow-up (not in this release): `PetShop.jsx` and `Pet.jsx` maintain parallel `COSMETIC_IMG` maps for 40+ cosmetic assets. Extracting a shared `cosmeticImports.js` module would prevent gaps like this one in the future.
+
 ## 0.7.4
 - **Adult and mythic pets now blink.** The four `idle` sprites for adult+mythic stages of `orange_black` and `blue_black` play a 2.3 s looping animation: ~1.9 s of open-eye, then a 4-frame blink (half-closed → closed → closed → half-closed), then back to open. Earlier stages (egg/baby/teen) and other states (happy/sad/petted) stay static.
 - New script: `frontend/scripts/animate_pets.py` (idempotent — re-run to rebuild idle.webp from sources).
