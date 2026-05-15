@@ -1,3 +1,7 @@
+## 0.7.2
+- **Fix: equipped hat and particle now follow the pet's bounce/droop/petted animations.** Previously the state animation was applied to the body sprite only, so cosmetics stayed pinned to the static wrapper while the pet danced. Animation is now applied to a shared wrapper around all three layers; `flip` moved to an outer wrapper so it no longer collides with the keyframe transforms (fixing a pre-existing bug where flipped pets stopped animating).
+- Drops the particle's independent `pet-breathe` — particles now move in sync with the pet rather than on their own timeline.
+
 ## 0.7.1
 - **Daily quest bundle now pays out flat XP + tokens instead of a 2× next-chore powerup.** Completing all three quests in a day grants **+30 XP and +10 pet-shop tokens**. The XP grant skips the normal XP→token mint so the "+10 tokens" stays literal (use `gamification.add_xp(..., mint_tokens=False)` if you need this elsewhere).
 - **Weekly challenge reward upgraded.** On household completion every member now gets the **2× XP power-up for 3 days** (up from 1.5× / 24 h) **plus +30 pet-shop tokens**. Existing power-up row columns are reused; new challenges default to `reward_multiplier=2.0` / `reward_hours=72`.
