@@ -61,10 +61,10 @@ import stageOrangeBabyPetted   from '../assets/pets/orange_black/stages/baby/pet
 import stageOrangeTeenIdle     from '../assets/pets/orange_black/stages/teen/idle.png';
 import stageOrangeTeenHappy    from '../assets/pets/orange_black/stages/teen/happy.png';
 import stageOrangeTeenPetted   from '../assets/pets/orange_black/stages/teen/petted.png';
-import stageOrangeAdultIdle    from '../assets/pets/orange_black/stages/adult/idle.png';
+import stageOrangeAdultIdle    from '../assets/pets/orange_black/stages/adult/idle.webp';
 import stageOrangeAdultHappy   from '../assets/pets/orange_black/stages/adult/happy.png';
 import stageOrangeAdultPetted  from '../assets/pets/orange_black/stages/adult/petted.png';
-import stageOrangeMythicIdle   from '../assets/pets/orange_black/stages/mythic/idle.png';
+import stageOrangeMythicIdle   from '../assets/pets/orange_black/stages/mythic/idle.webp';
 import stageOrangeMythicHappy  from '../assets/pets/orange_black/stages/mythic/happy.png';
 import stageOrangeMythicPetted from '../assets/pets/orange_black/stages/mythic/petted.png';
 import stageBlueEggIdle        from '../assets/pets/blue_black/stages/egg/idle.png';
@@ -76,10 +76,10 @@ import stageBlueBabyPetted     from '../assets/pets/blue_black/stages/baby/pette
 import stageBlueTeenIdle       from '../assets/pets/blue_black/stages/teen/idle.png';
 import stageBlueTeenHappy      from '../assets/pets/blue_black/stages/teen/happy.png';
 import stageBlueTeenPetted     from '../assets/pets/blue_black/stages/teen/petted.png';
-import stageBlueAdultIdle      from '../assets/pets/blue_black/stages/adult/idle.png';
+import stageBlueAdultIdle      from '../assets/pets/blue_black/stages/adult/idle.webp';
 import stageBlueAdultHappy     from '../assets/pets/blue_black/stages/adult/happy.png';
 import stageBlueAdultPetted    from '../assets/pets/blue_black/stages/adult/petted.png';
-import stageBlueMythicIdle     from '../assets/pets/blue_black/stages/mythic/idle.png';
+import stageBlueMythicIdle     from '../assets/pets/blue_black/stages/mythic/idle.webp';
 import stageBlueMythicHappy    from '../assets/pets/blue_black/stages/mythic/happy.png';
 import stageBlueMythicPetted   from '../assets/pets/blue_black/stages/mythic/petted.png';
 // Cosmetic overlays (v0.5.1, v0.6.1 expansion)
