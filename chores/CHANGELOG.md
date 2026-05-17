@@ -1,3 +1,7 @@
+## 0.7.6
+- **Duplicate-attribution guard.** Before crediting a chore completion, MyChores now checks `/api/completions/recent` for the active person. If they completed any chore in the last hour, a confirm prompt asks "You completed X N min ago. Mark another chore done?" — catches the common case where someone is being credited twice for the same logical task. A lookup failure never blocks completion.
+- New endpoint `GET /api/completions/recent?person=<entity_id>&chore_ids=<csv>` — returns the person's `status='completed'` instances within the last hour (window is hardcoded; see `RECENT_WINDOW_HOURS` in `routers/completions.py`). Used by HA-stock's shopping-attribution modal (filtered to shopping+scan chore IDs) and by this add-on's own MyChores view (no filter).
+
 ## 0.7.5
 - **Pet shop previews now animate.** The 12 particle thumbnails in the cosmetics shop play their full animated loops (blink/drift/cycle) — same WebPs as the equipped-pet overlay. Previously the shop kept its own duplicate import map that still pointed at the static .png variants from before 0.7.3.
 - Known follow-up (not in this release): `PetShop.jsx` and `Pet.jsx` maintain parallel `COSMETIC_IMG` maps for 40+ cosmetic assets. Extracting a shared `cosmeticImports.js` module would prevent gaps like this one in the future.

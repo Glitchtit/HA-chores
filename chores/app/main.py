@@ -341,7 +341,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Register routers ────────────────────────────────────────────────────────
-from routers import health, chores, persons, assignments, gamification, config, calendar, powerups, pets as pets_router, shopping_hook, cosmetics, classes as classes_router, quests as quests_router, challenges as challenges_router, bosses as bosses_router
+from routers import health, chores, persons, assignments, gamification, config, calendar, powerups, pets as pets_router, shopping_hook, cosmetics, classes as classes_router, quests as quests_router, challenges as challenges_router, bosses as bosses_router, completions
 
 app.include_router(health.router)
 app.include_router(chores.router)
@@ -358,6 +358,7 @@ app.include_router(classes_router.router)
 app.include_router(quests_router.router)
 app.include_router(challenges_router.router)
 app.include_router(bosses_router.router)
+app.include_router(completions.router)
 
 
 # ── Entry point ──────────────────────────────────────────────────────────────

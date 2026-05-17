@@ -415,3 +415,80 @@ class TestPendingCelebrationsAPI:
         ).fetchone()
         assert mine["seen_at"] is not None
         assert theirs["seen_at"] is None
+
+
+class TestRecentCompletions:
+    """GET /api/completions/recent — duplicate-attribution guard lookup."""
+
+    def _seed_completion(self, tmp_db, person, chore_name, minutes_ago):
+        from datetime import datetime, timedelta
+        tmp_db.execute(
+            "INSERT INTO chores (name, xp_reward, difficulty, assignment_mode) VALUES (?, 5, 'easy', 'manual')",
+            (chore_name,),
+        )
+        chore_id = tmp_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        completed_at = (datetime.now() - timedelta(minutes=minutes_ago)).isoformat()
+        tmp_db.execute(
+            "INSERT INTO chore_instances (chore_id, due_date, status, completed_by, completed_at, xp_awarded) "
+            "VALUES (?, '2025-01-01', 'completed', ?, ?, 5)",
+            (chore_id, person, completed_at),
+        )
+        tmp_db.commit()
+        return chore_id
+
+    def test_empty_when_no_completions(self, client, tmp_db):
+        resp = client.get("/api/completions/recent", params={"person": "person.alice"})
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_returns_recent_completion(self, client, tmp_db):
+        chore_id = self._seed_completion(tmp_db, "person.alice", "Shopping", 20)
+        resp = client.get("/api/completions/recent", params={"person": "person.alice"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["chore_id"] == chore_id
+        assert data[0]["chore_name"] == "Shopping"
+        assert data[0]["minutes_ago"] is not None
+        assert 18 <= data[0]["minutes_ago"] <= 22
+
+    def test_excludes_old_completions(self, client, tmp_db):
+        self._seed_completion(tmp_db, "person.alice", "Old Chore", 90)
+        resp = client.get("/api/completions/recent", params={"person": "person.alice"})
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_scoped_to_person(self, client, tmp_db):
+        self._seed_completion(tmp_db, "person.bob", "Shopping", 10)
+        resp = client.get("/api/completions/recent", params={"person": "person.alice"})
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_chore_ids_filter(self, client, tmp_db):
+        shop_id = self._seed_completion(tmp_db, "person.alice", "Shopping", 10)
+        self._seed_completion(tmp_db, "person.alice", "Dishes", 15)
+        resp = client.get(
+            "/api/completions/recent",
+            params={"person": "person.alice", "chore_ids": str(shop_id)},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["chore_id"] == shop_id
+
+    def test_excludes_non_completed_statuses(self, client, tmp_db):
+        from datetime import datetime
+        tmp_db.execute(
+            "INSERT INTO chores (name, xp_reward, difficulty, assignment_mode) VALUES ('Pending Chore', 5, 'easy', 'manual')"
+        )
+        chore_id = tmp_db.execute("SELECT last_insert_rowid()").fetchone()[0]
+        # Status 'pending' but completed_at set — should NOT appear
+        tmp_db.execute(
+            "INSERT INTO chore_instances (chore_id, due_date, status, completed_by, completed_at) "
+            "VALUES (?, '2025-01-01', 'pending', 'person.alice', ?)",
+            (chore_id, datetime.now().isoformat()),
+        )
+        tmp_db.commit()
+        resp = client.get("/api/completions/recent", params={"person": "person.alice"})
+        assert resp.status_code == 200
+        assert resp.json() == []
