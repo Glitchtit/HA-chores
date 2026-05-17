@@ -90,6 +90,15 @@ export const getConfigValue = (key) =>
 export const setConfigValue = (key, value) =>
   api.put(`/config/${encodeURIComponent(key)}`, { key, value }).then(r => r.data);
 
+// ── Recent completions (duplicate-attribution guard) ────────────────────────
+// Returns chore completions by `entityId` within the last hour, optionally
+// filtered to `choreIds` (array of ints). Used to warn before double-crediting.
+export const getRecentCompletions = (entityId, choreIds = null) => {
+  const params = { person: entityId };
+  if (choreIds && choreIds.length) params.chore_ids = choreIds.join(',');
+  return api.get('/completions/recent', { params }).then(r => r.data);
+};
+
 // ── Pending celebrations (cross-app completions) ────────────────────────────
 export const getPendingCelebrations = () =>
   api.get('/persons/me/pending-celebrations').then(r => r.data);

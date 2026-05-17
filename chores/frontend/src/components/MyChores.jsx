@@ -33,6 +33,21 @@ export default function MyChores({ activePerson, persons, addToast }) {
 
   const handleComplete = async (id) => {
     try {
+      // Duplicate-attribution guard: warn if this person already completed
+      // any chore in the last hour. A lookup failure must never block
+      // completion — fall through silently.
+      if (activePerson) {
+        const recent = await api.getRecentCompletions(activePerson).catch(() => []);
+        if (Array.isArray(recent) && recent.length > 0) {
+          const last = recent[0];
+          const mins = last.minutes_ago ?? '?';
+          const ok = window.confirm(
+            `You completed "${last.chore_name}" ${mins} min ago.\n` +
+            `Mark another chore done?`
+          );
+          if (!ok) return;
+        }
+      }
       const statsBeforePromise = activePerson ? api.getPersonStats(activePerson).catch(() => null) : Promise.resolve(null);
       const [result, statsBefore] = await Promise.all([
         api.completeInstance(id, activePerson),
