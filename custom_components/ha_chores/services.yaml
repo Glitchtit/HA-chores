@@ -1,0 +1,229 @@
+create_chore:
+  name: Create chore
+  description: >-
+    Create a new recurring or one-off chore definition. Use this to add a chore
+    to the household catalog (it does not put it on anyone's plate yet — use
+    "Schedule chore" for that). Example: "create a chore called water the plants
+    worth 10 XP" or "add a daily dishes chore in the cleaning category".
+  fields:
+    name:
+      name: Name
+      description: The chore's display name, e.g. "Water the plants".
+      required: true
+      example: Water the plants
+      selector:
+        text:
+    description:
+      name: Description
+      description: Optional longer description of what the chore involves.
+      required: false
+      example: Water all indoor plants and check soil moisture.
+      selector:
+        text:
+          multiline: true
+    icon:
+      name: Icon
+      description: An emoji icon for the chore. Defaults to 🧹.
+      required: false
+      example: "🪴"
+      selector:
+        text:
+    xp_reward:
+      name: XP reward
+      description: How much XP completing the chore awards. Defaults to 10.
+      required: false
+      default: 10
+      example: 15
+      selector:
+        number:
+          min: 1
+          max: 1000
+          mode: box
+    difficulty:
+      name: Difficulty
+      description: Difficulty label (affects power-up multipliers). Defaults to medium.
+      required: false
+      default: medium
+      selector:
+        select:
+          options:
+            - easy
+            - medium
+            - hard
+    category:
+      name: Category
+      description: Chore category. Defaults to other.
+      required: false
+      default: other
+      selector:
+        select:
+          options:
+            - dishes
+            - laundry
+            - cleaning
+            - trash
+            - cooking
+            - other
+    recurrence:
+      name: Recurrence
+      description: >-
+        Optional recurrence rule (e.g. "daily", "weekly", "FREQ=WEEKLY"). Leave
+        blank for a one-off chore.
+      required: false
+      example: daily
+      selector:
+        text:
+    estimated_minutes:
+      name: Estimated minutes
+      description: Optional rough time the chore takes, in minutes.
+      required: false
+      example: 5
+      selector:
+        number:
+          min: 1
+          max: 600
+          mode: box
+    assignment_mode:
+      name: Assignment mode
+      description: >-
+        How instances get assigned. "manual" (default) means a person must be
+        assigned explicitly; "claim" lets anyone claim it; "rotation" cycles a
+        list of people.
+      required: false
+      default: manual
+      selector:
+        select:
+          options:
+            - manual
+            - claim
+            - rotation
+
+schedule_chore:
+  name: Schedule chore
+  description: >-
+    Put an existing chore on someone's plate for a specific date. Resolves the
+    chore by name and the person by name, then creates a chore instance assigned
+    to them. Example: "assign dishes to Thomas for tomorrow" or "schedule vacuum
+    for Mira on 2026-05-30".
+  fields:
+    chore:
+      name: Chore
+      description: The name of the chore to schedule, e.g. "Dishes".
+      required: true
+      example: Dishes
+      selector:
+        text:
+    assigned_to:
+      name: Assigned to
+      description: >-
+        The person to assign it to, by name (e.g. "Thomas") or by entity_id
+        (e.g. "person.thomas").
+      required: true
+      example: Thomas
+      selector:
+        text:
+    due_date:
+      name: Due date
+      description: The date the chore is due, in YYYY-MM-DD format.
+      required: true
+      example: "2026-05-30"
+      selector:
+        date:
+    created_by:
+      name: Created by
+      description: >-
+        Optional — the person doing the assigning (by name or entity_id). Used
+        to suppress the "assigned" notification when assigning to yourself.
+      required: false
+      example: Mira
+      selector:
+        text:
+
+assign_chore:
+  name: Assign chore
+  description: >-
+    Reassign an existing chore instance to a different person. Use this when a
+    chore is already scheduled (you have its instance id) and you want to hand
+    it to someone else. Example: "reassign chore instance 42 to Mira".
+  fields:
+    instance_id:
+      name: Instance ID
+      description: The numeric id of the existing chore instance to reassign.
+      required: true
+      example: 42
+      selector:
+        number:
+          mode: box
+    person:
+      name: Person
+      description: >-
+        The person to assign it to, by name (e.g. "Mira") or entity_id
+        (e.g. "person.mira").
+      required: true
+      example: Mira
+      selector:
+        text:
+    assigned_by:
+      name: Assigned by
+      description: >-
+        Optional — the person doing the reassigning (by name or entity_id).
+        Suppresses the notification when assigner equals assignee.
+      required: false
+      example: Thomas
+      selector:
+        text:
+
+complete_chore:
+  name: Complete chore
+  description: >-
+    Mark a chore done for a person. Resolves the chore and person by name, finds
+    their open (pending/claimed/overdue) instance, and completes it — awarding
+    XP, updating streaks, and checking badges. Example: "mark vacuuming done for
+    Mira" or "Thomas finished the dishes".
+  fields:
+    chore:
+      name: Chore
+      description: The name of the chore that was completed, e.g. "Vacuuming".
+      required: true
+      example: Vacuuming
+      selector:
+        text:
+    completed_by:
+      name: Completed by
+      description: >-
+        The person who completed it, by name (e.g. "Mira") or entity_id
+        (e.g. "person.mira").
+      required: true
+      example: Mira
+      selector:
+        text:
+    notes:
+      name: Notes
+      description: Optional free-text note recorded with the completion.
+      required: false
+      example: Did the stairs too.
+      selector:
+        text:
+
+list_chores:
+  name: List chores
+  description: >-
+    Return the household's chore catalog (names, XP, category, difficulty). Use
+    this to answer "what chores exist?" or to find a chore name before
+    scheduling. Returns a response — call with return_response.
+  fields:
+    active_only:
+      name: Active only
+      description: Only return active chores. Defaults to true.
+      required: false
+      default: true
+      selector:
+        boolean:
+
+leaderboard:
+  name: Leaderboard
+  description: >-
+    Return the current-month chore leaderboard — each person's monthly XP, rank,
+    level, streak, and badge count. Use this to answer "who's winning this
+    month?". Returns a response — call with return_response.
+  fields: {}
