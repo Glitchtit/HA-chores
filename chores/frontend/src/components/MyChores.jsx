@@ -22,9 +22,15 @@ export default function MyChores({ activePerson, persons, addToast }) {
         person: activePerson,
       });
       // Only show chores actually assigned/claimed/completed by this person
-      setInstances(data.filter(ci =>
+      const mine = data.filter(ci =>
         ci.assigned_to === activePerson || ci.completed_by === activePerson
-      ));
+      );
+      // Completed view: newest completion first (completed_at is ISO, so a
+      // lexicographic compare orders chronologically).
+      if (filter === 'completed') {
+        mine.sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
+      }
+      setInstances(mine);
     } catch { /* ignore */ }
     setLoading(false);
   }, [activePerson, filter]);
@@ -143,7 +149,7 @@ export default function MyChores({ activePerson, persons, addToast }) {
                     {statusBadge(ci.status)}
                     <span className="text-xs text-gray-500">
                       📅 {ci.status === 'completed' && ci.completed_at
-                        ? ci.completed_at.slice(0, 10)
+                        ? ci.completed_at.slice(0, 16).replace('T', ' ')
                         : ci.due_date}
                     </span>
                     {ci.assigned_to && (
