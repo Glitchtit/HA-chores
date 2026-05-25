@@ -1,3 +1,6 @@
+## 0.7.7
+- **My Chores → Completed now sorts newest-first** and shows the completion time, not just the date. Each completed row reads `YYYY-MM-DD HH:MM` (from `completed_at`) instead of `YYYY-MM-DD`, and the list is ordered by `completed_at` descending so the most recent completion is at the top.
+
 ## 0.7.6
 - **Duplicate-attribution guard.** Before crediting a chore completion, MyChores now checks `/api/completions/recent` for the active person. If they completed any chore in the last hour, a confirm prompt asks "You completed X N min ago. Mark another chore done?" — catches the common case where someone is being credited twice for the same logical task. A lookup failure never blocks completion.
 - New endpoint `GET /api/completions/recent?person=<entity_id>&chore_ids=<csv>` — returns the person's `status='completed'` instances within the last hour (window is hardcoded; see `RECENT_WINDOW_HOURS` in `routers/completions.py`). Used by HA-stock's shopping-attribution modal (filtered to shopping+scan chore IDs) and by this add-on's own MyChores view (no filter).
