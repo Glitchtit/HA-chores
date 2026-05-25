@@ -1,3 +1,6 @@
+## 0.7.8
+- **Agent services for the HA integration.** The `ha_chores` integration now registers six services so a voice/conversation agent can manage chores by name: `ha_chores.create_chore`, `ha_chores.schedule_chore`, `ha_chores.assign_chore`, `ha_chores.complete_chore` (writes), plus `ha_chores.list_chores` and `ha_chores.leaderboard` (return responses). `schedule_chore`/`complete_chore` resolve chore and person names to the backend `chore_id` / person `entity_id`; `complete_chore` finds the person's open (pending/claimed/overdue) instance automatically. All write services refresh the coordinator afterward.
+
 ## 0.7.7
 - **My Chores → Completed now sorts newest-first** and shows the completion time, not just the date. Each completed row reads `YYYY-MM-DD HH:MM` (from `completed_at`) instead of `YYYY-MM-DD`, and the list is ordered by `completed_at` descending so the most recent completion is at the top.
 
