@@ -14,15 +14,16 @@ logger = logging.getLogger(__name__)
 
 # Templates: (quest_type, label, icon, target, target_extra, weight)
 # - "category" target_extra targets a specific chore category
-# - "claim_before_noon" / "first_two_today" / "claim_three_today" are time-based
+# - "claim_three_today" counts any completions today
 # - "streak_today" simply requires completing any chore today (streak-saver)
+# Every template must be winnable by the player's own actions on any day: no
+# intra-day deadlines and no "be first" races — those can soft/hard-lock the
+# all-three bundle, so they were removed in 0.7.9.
 QUEST_TEMPLATES = [
     ("category",          "Knock out a dishes chore",   "🍽️", 1, "dishes",   8),
     ("category",          "Knock out a laundry chore",  "🧺", 1, "laundry",  8),
     ("category",          "Knock out a cooking chore",  "🍳", 1, "cooking",  8),
     ("category",          "Knock out a cleaning chore", "🧹", 1, "cleaning", 8),
-    ("claim_before_noon", "Claim a chore before noon",  "⏰", 1, "",         5),
-    ("first_two_today",   "Be first to finish 2 today", "🥇", 2, "",         4),
     ("claim_three_today", "Finish 3 chores today",      "💪", 3, "",         6),
     ("streak_today",      "Keep your streak alive",     "🔥", 1, "",         5),
 ]
@@ -122,6 +123,9 @@ def _quest_matches(quest: dict, chore_row, claimed: bool, before_noon: bool, cho
     extra = quest.get("target_extra") or ""
     if qtype == "category":
         return 1 if (chore_row and chore_row.get("category") == extra) else 0
+    # claim_before_noon / first_two_today are no longer generated (removed in
+    # 0.7.9), but their matchers stay so any quest rolled before the upgrade can
+    # still complete for the rest of that day instead of stranding the bundle.
     if qtype == "claim_before_noon":
         return 1 if (claimed and before_noon) else 0
     if qtype == "first_two_today":

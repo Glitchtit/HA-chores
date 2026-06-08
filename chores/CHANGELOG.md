@@ -1,3 +1,6 @@
+## 0.7.9
+- **Daily quests can no longer soft/hard-lock the bundle.** Removed the two quest templates that could become impossible to complete through no fault of the player: ⏰ "Claim a chore before noon" (a hard intra-day deadline — unwinnable once it's past 12:00) and 🥇 "Be first to finish 2 today" (a race framing). The rotation now draws only from quests a player can always finish by doing chores: the four category quests, 💪 "Finish 3 chores today", and 🔥 "Keep your streak alive". Quests already rolled before this upgrade still complete normally for the rest of that day; the two removed types simply stop appearing the next morning.
+
 ## 0.7.8
 - **Agent services for the HA integration.** The `ha_chores` integration now registers six services so a voice/conversation agent can manage chores by name: `ha_chores.create_chore`, `ha_chores.schedule_chore`, `ha_chores.assign_chore`, `ha_chores.complete_chore` (writes), plus `ha_chores.list_chores` and `ha_chores.leaderboard` (return responses). `schedule_chore`/`complete_chore` resolve chore and person names to the backend `chore_id` / person `entity_id`; `complete_chore` finds the person's open (pending/claimed/overdue) instance automatically. All write services refresh the coordinator afterward.
 
