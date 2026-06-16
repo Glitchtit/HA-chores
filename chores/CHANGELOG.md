@@ -1,3 +1,6 @@
+## 0.7.11
+- **Gentler completed-goal shine.** The gold shimmer sweeping across a completed weekly goal now runs at half speed with a 3-second pause between passes, so it reads as a calm periodic glint rather than a constant sweep.
+
 ## 0.7.10
 - **The weekly goal no longer vanishes the moment it's won.** A completed household challenge now stays pinned at the top of the dashboard for the rest of the week with a shiny gold shimmer and a 🎉 Completed! badge, and it spells out the reward everyone earned — `30 🪙` plus the 2× XP power-up. Previously the banner disappeared the instant the goal flipped to completed (the API only ever returned *active* challenges), so the household never got to see the win. The scheduler's weekly roll still replaces it with a fresh challenge once the period ends.
 - **Daily quests now show what they pay out.** Each quest is worth `+5 🪙` on completion (shown on every quest row), and completing all three still grants the bundle bonus of `+30 XP +10 🪙` — now advertised in the header before you finish so the reward is clear up front.

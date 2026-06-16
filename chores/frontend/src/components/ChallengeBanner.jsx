@@ -46,7 +46,7 @@ export default function ChallengeBanner() {
     }`}>
       {/* Shiny light-sweep over the completed banner */}
       {done && (
-        <div className="animate-shimmer absolute inset-0 pointer-events-none" aria-hidden="true" />
+        <div className="animate-shimmer-slow absolute inset-0 pointer-events-none" aria-hidden="true" />
       )}
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
