@@ -1,3 +1,6 @@
+## 0.7.12
+- **Completed-goal shine is now a slow continuous glint.** Dropped the between-pass pause (it didn't read as intended) and slowed the gold shimmer to a quarter of its previous sweep speed — a single uninterrupted 14.4s pass across the banner.
+
 ## 0.7.11
 - **Gentler completed-goal shine.** The gold shimmer sweeping across a completed weekly goal now runs at half speed with a 3-second pause between passes, so it reads as a calm periodic glint rather than a constant sweep.
 
