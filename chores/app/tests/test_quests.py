@@ -217,6 +217,43 @@ class TestBumping:
         assert row["xp_total"] == 30
         assert row["tokens"] == 10
 
+    def test_completing_a_quest_awards_coins_once(self, tmp_db):
+        import quests
+        _seed_person(tmp_db, "person.alice")
+        _seed_chore(tmp_db, chore_id=1, category="dishes")
+        today = date.today().isoformat()
+        # A single (incomplete) category quest — bundle won't fire (only 1 quest).
+        tmp_db.execute(
+            """INSERT INTO daily_quests
+                 (person_id, quest_date, quest_type, target, target_extra, progress)
+               VALUES (?, ?, 'category', 1, 'dishes', 0)""",
+            ("person.alice", today),
+        )
+        tmp_db.execute(
+            """INSERT INTO chore_instances
+                 (chore_id, due_date, completed_by, status, completed_at)
+               VALUES (1, ?, 'person.alice', 'completed', ?)""",
+            (today, datetime.now().isoformat()),
+        )
+        tmp_db.commit()
+
+        chore_row = {"category": "dishes", "assignment_mode": "manual"}
+        result = quests.bump_on_completion(tmp_db, "person.alice", chore_row)
+        assert result["quest_coins_awarded"] == quests.QUEST_COIN_REWARD
+        assert result["bundle_awarded"] is False
+        row = tmp_db.execute(
+            "SELECT tokens FROM persons WHERE entity_id = ?", ("person.alice",)
+        ).fetchone()
+        assert row["tokens"] == quests.QUEST_COIN_REWARD
+
+        # A second completion must not re-award the already-finished quest.
+        second = quests.bump_on_completion(tmp_db, "person.alice", chore_row)
+        assert second["quest_coins_awarded"] == 0
+        row = tmp_db.execute(
+            "SELECT tokens FROM persons WHERE entity_id = ?", ("person.alice",)
+        ).fetchone()
+        assert row["tokens"] == quests.QUEST_COIN_REWARD
+
     def test_streak_today_only_on_first_completion(self, tmp_db):
         import quests
         _seed_person(tmp_db, "person.alice")
@@ -253,13 +290,19 @@ class TestRouter:
         import quests
         from routers.quests import get_today
         _seed_person(tmp_db, "person.alice")
+        import quests
         data = get_today("person.alice")
         assert len(data["quests"]) == 3
         for q in data["quests"]:
             assert q["progress"] == 0
             assert "label" in q
             assert "icon" in q
+            assert q["coin_reward"] == quests.QUEST_COIN_REWARD
         assert data["bundle_awarded_at"] is None
+        # Reward metadata surfaced so the UI can show what quests are worth.
+        assert data["coin_reward"] == quests.QUEST_COIN_REWARD
+        assert data["bundle_xp"] == quests.BUNDLE_XP
+        assert data["bundle_tokens"] == quests.BUNDLE_TOKENS
 
     def test_get_today_unknown_person_404(self, tmp_db):
         from fastapi import HTTPException

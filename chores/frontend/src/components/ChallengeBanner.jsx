@@ -36,16 +36,22 @@ export default function ChallengeBanner() {
     : 0;
   const done = challenge.status === 'completed';
 
+  const tokens = challenge.reward_tokens ?? 30;
+
   return (
-    <div className={`rounded-xl p-4 border ${
+    <div className={`relative overflow-hidden rounded-xl p-4 border ${
       done
-        ? 'bg-emerald-900/30 border-emerald-700/50'
+        ? 'bg-gradient-to-br from-amber-900/40 to-yellow-800/20 animate-golden-sparkle'
         : 'bg-gradient-to-br from-blue-900/40 to-orange-900/30 border-orange-500/30'
     }`}>
-      <div className="flex items-start justify-between gap-3">
+      {/* Shiny light-sweep over the completed banner */}
+      {done && (
+        <div className="animate-shimmer absolute inset-0 pointer-events-none" aria-hidden="true" />
+      )}
+      <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs uppercase tracking-widest text-orange-300/80">
-            {done ? '🎉 Challenge complete' : '🏆 Weekly challenge'}
+          <div className={`text-xs uppercase tracking-widest ${done ? 'text-amber-300' : 'text-orange-300/80'}`}>
+            {done ? '🎉 Completed!' : '🏆 Weekly challenge'}
           </div>
           <h3 className="text-base font-semibold text-gray-100 mt-0.5 truncate">
             {challenge.name}
@@ -55,21 +61,23 @@ export default function ChallengeBanner() {
           )}
         </div>
         <div className="text-right shrink-0">
-          <div className="text-sm font-semibold text-gray-100">
+          <div className={`text-sm font-semibold ${done ? 'text-amber-200' : 'text-gray-100'}`}>
             {challenge.progress}/{challenge.goal_value}
           </div>
-          <div className="text-[10px] text-gray-400">{daysLeft(challenge.period_end)}</div>
+          <div className="text-[10px] text-gray-400">
+            {done ? 'Done this week' : daysLeft(challenge.period_end)}
+          </div>
         </div>
       </div>
-      <div className="mt-2 bg-gray-700 h-2 rounded-full overflow-hidden">
+      <div className="relative mt-2 bg-gray-700 h-2 rounded-full overflow-hidden">
         <div
-          className={`${done ? 'bg-emerald-500' : 'bg-gradient-to-r from-blue-500 to-orange-400'} h-full transition-all duration-500`}
+          className={`${done ? 'bg-gradient-to-r from-amber-400 to-yellow-300' : 'bg-gradient-to-r from-blue-500 to-orange-400'} h-full transition-all duration-500`}
           style={{ width: `${pct}%` }}
         />
       </div>
       {done && (
-        <div className="mt-2 text-xs text-emerald-200">
-          Every household member gets {challenge.reward_multiplier}× XP for {challenge.reward_hours}h + 30 tokens
+        <div className="relative mt-2 text-xs text-amber-200">
+          Everyone earned <span className="font-semibold">{tokens} 🪙</span> + {challenge.reward_multiplier}× XP for {challenge.reward_hours}h
         </div>
       )}
     </div>

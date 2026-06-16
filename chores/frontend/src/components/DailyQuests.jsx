@@ -4,11 +4,17 @@ import * as api from '../api';
 function QuestRow({ quest }) {
   const pct = quest.target > 0 ? Math.min(100, (quest.progress / quest.target) * 100) : 0;
   const done = !!quest.completed_at;
+  const coins = quest.coin_reward ?? 0;
   return (
     <div className={`rounded-lg p-2 border ${done ? 'bg-emerald-900/20 border-emerald-700/50' : 'bg-gray-800 border-gray-700'}`}>
       <div className="flex items-center gap-2 text-sm text-gray-100">
         <span className="text-base">{quest.icon || '🎯'}</span>
         <span className="flex-1 truncate">{quest.label || quest.quest_type}</span>
+        {coins > 0 && (
+          <span className={`text-xs font-medium ${done ? 'text-amber-300' : 'text-gray-500'}`}>
+            +{coins} 🪙
+          </span>
+        )}
         <span className={`text-xs ${done ? 'text-emerald-300' : 'text-gray-400'}`}>
           {quest.progress}/{quest.target}
         </span>
@@ -49,17 +55,25 @@ export default function DailyQuests({ personId }) {
   if (!data) return null;
 
   const allDone = data.quests.length > 0 && data.quests.every((q) => q.completed_at);
+  const bundleXp = data.bundle_xp ?? 0;
+  const bundleTokens = data.bundle_tokens ?? 0;
 
   return (
     <div className="bg-gray-900/60 rounded-xl p-3 border border-gray-800 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs uppercase tracking-widest text-gray-400">
           Daily Quests
         </h3>
-        {allDone && (
-          <span className="text-[11px] text-emerald-300">
-            🌟 Bundle reward earned
+        {allDone ? (
+          <span className="text-[11px] text-amber-300 font-medium">
+            🌟 All done · +{bundleXp} XP +{bundleTokens} 🪙
           </span>
+        ) : (
+          (bundleXp > 0 || bundleTokens > 0) && (
+            <span className="text-[11px] text-gray-500">
+              All 3 → +{bundleXp} XP +{bundleTokens} 🪙
+            </span>
+          )
         )}
       </div>
       <div className="space-y-1.5">

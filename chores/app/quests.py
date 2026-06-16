@@ -28,7 +28,11 @@ QUEST_TEMPLATES = [
     ("streak_today",      "Keep your streak alive",     "🔥", 1, "",         5),
 ]
 
+# Reward for each individual quest completed: flat pet-shop tokens (coins).
+QUEST_COIN_REWARD = 5
+
 # Reward for completing all three quests in a single day: flat XP + tokens.
+# This bundle bonus is granted *on top of* the per-quest coins above.
 BUNDLE_XP = 30
 BUNDLE_TOKENS = 10
 
@@ -104,6 +108,8 @@ def list_for_today(conn, person_id: str, today: date | None = None) -> dict:
         if "label" not in r:
             label, icon = _label_for(r["quest_type"], r.get("target_extra") or "")
             r = {**r, "label": label, "icon": icon}
+        # Per-quest coin payout, so the UI can show what each quest is worth.
+        r = {**r, "coin_reward": QUEST_COIN_REWARD}
         enriched.append(r)
     bundle = conn.execute(
         "SELECT all_complete_at FROM daily_quest_bundles WHERE person_id = ? AND quest_date = ?",
@@ -114,6 +120,9 @@ def list_for_today(conn, person_id: str, today: date | None = None) -> dict:
         "quest_date": today_str,
         "quests": enriched,
         "bundle_awarded_at": bundle["all_complete_at"] if bundle else None,
+        "coin_reward": QUEST_COIN_REWARD,
+        "bundle_xp": BUNDLE_XP,
+        "bundle_tokens": BUNDLE_TOKENS,
     }
 
 
@@ -142,8 +151,8 @@ def _quest_matches(quest: dict, chore_row, claimed: bool, before_noon: bool, cho
 def bump_on_completion(conn, person_id: str, chore_row, completed_at: datetime | None = None) -> dict:
     """Increment any matching quests for the just-completed chore.
 
-    Returns a summary dict
-    ``{bumped: [...], bundle_awarded: bool, bundle_xp: int, bundle_tokens: int}``.
+    Returns a summary dict ``{bumped: [...], quest_coins_awarded: int,
+    bundle_awarded: bool, bundle_xp: int, bundle_tokens: int}``.
     *chore_row* may be a dict/Row with `category` and `assignment_mode` keys
     (mirrors what apply_completion already has on hand).
     """
@@ -172,6 +181,7 @@ def bump_on_completion(conn, person_id: str, chore_row, completed_at: datetime |
     ).fetchall()
 
     bumped = []
+    quest_coins_awarded = 0
     for row in rows:
         if row["completed_at"]:
             continue
@@ -186,8 +196,17 @@ def bump_on_completion(conn, person_id: str, chore_row, completed_at: datetime |
             (new_progress, completed_ts, row["id"]),
         )
         bumped.append({"id": row["id"], "completed": completed_flag, "progress": new_progress})
+        if completed_flag:
+            # Per-quest coin payout. Each quest only flips to completed once (the
+            # loop skips rows with a non-null completed_at), so this fires exactly
+            # once per quest.
+            quest_coins_awarded += QUEST_COIN_REWARD
 
     conn.commit()
+
+    if quest_coins_awarded:
+        from gamification import award_tokens
+        award_tokens(person_id, quest_coins_awarded, reason="daily quest")
 
     # All-complete bundle reward
     counts = conn.execute(
@@ -226,6 +245,7 @@ def bump_on_completion(conn, person_id: str, chore_row, completed_at: datetime |
 
     return {
         "bumped": bumped,
+        "quest_coins_awarded": quest_coins_awarded,
         "bundle_awarded": bundle_awarded,
         "bundle_xp": bundle_xp,
         "bundle_tokens": bundle_tokens,

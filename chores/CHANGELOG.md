@@ -1,3 +1,7 @@
+## 0.7.10
+- **The weekly goal no longer vanishes the moment it's won.** A completed household challenge now stays pinned at the top of the dashboard for the rest of the week with a shiny gold shimmer and a 🎉 Completed! badge, and it spells out the reward everyone earned — `30 🪙` plus the 2× XP power-up. Previously the banner disappeared the instant the goal flipped to completed (the API only ever returned *active* challenges), so the household never got to see the win. The scheduler's weekly roll still replaces it with a fresh challenge once the period ends.
+- **Daily quests now show what they pay out.** Each quest is worth `+5 🪙` on completion (shown on every quest row), and completing all three still grants the bundle bonus of `+30 XP +10 🪙` — now advertised in the header before you finish so the reward is clear up front.
+
 ## 0.7.9
 - **Daily quests can no longer soft/hard-lock the bundle.** Removed the two quest templates that could become impossible to complete through no fault of the player: ⏰ "Claim a chore before noon" (a hard intra-day deadline — unwinnable once it's past 12:00) and 🥇 "Be first to finish 2 today" (a race framing). The rotation now draws only from quests a player can always finish by doing chores: the four category quests, 💪 "Finish 3 chores today", and 🔥 "Keep your streak alive". Quests already rolled before this upgrade still complete normally for the rest of that day; the two removed types simply stop appearing the next morning.
 

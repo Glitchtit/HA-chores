@@ -84,6 +84,26 @@ def get_active(conn) -> dict | None:
     return dict(row) if row else None
 
 
+def get_for_display(conn) -> dict | None:
+    """Return this week's challenge for the banner — active *or* just-completed.
+
+    Unlike :func:`get_active`, this keeps a completed challenge visible for the rest
+    of its period so the household can see the win (the scheduler's weekly ``tick``
+    expires it and rolls a fresh one once the period ends). Used by the read API
+    only; completion/bump logic must keep using :func:`get_active` so it never
+    re-awards a row that has already flipped to ``completed``.
+    """
+    today_str = date.today().isoformat()
+    row = conn.execute(
+        """SELECT * FROM household_challenges
+           WHERE status IN ('active', 'completed')
+             AND period_start <= ? AND period_end >= ?
+           ORDER BY id DESC LIMIT 1""",
+        (today_str, today_str),
+    ).fetchone()
+    return dict(row) if row else None
+
+
 def recompute_progress(conn, challenge: dict) -> int:
     """Recompute the *progress* aggregate for the given challenge from chore_instances.
 

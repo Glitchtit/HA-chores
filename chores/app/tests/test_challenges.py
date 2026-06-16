@@ -61,6 +61,34 @@ class TestLifecycle:
         tmp_db.commit()
         assert challenges.get_active(tmp_db) is None
 
+    def test_get_for_display_keeps_completed_this_period(self, tmp_db):
+        import challenges
+        cid = _seed_challenge(tmp_db)
+        tmp_db.execute(
+            "UPDATE household_challenges SET status = 'completed' WHERE id = ?",
+            (cid,),
+        )
+        tmp_db.commit()
+        # get_active hides it, but the banner endpoint keeps it visible.
+        assert challenges.get_active(tmp_db) is None
+        shown = challenges.get_for_display(tmp_db)
+        assert shown is not None
+        assert shown["status"] == "completed"
+
+    def test_active_endpoint_returns_completed_with_reward_tokens(self, tmp_db):
+        import challenges
+        from routers.challenges import get_active_challenge
+        cid = _seed_challenge(tmp_db)
+        tmp_db.execute(
+            "UPDATE household_challenges SET status = 'completed' WHERE id = ?",
+            (cid,),
+        )
+        tmp_db.commit()
+        data = get_active_challenge()
+        assert data is not None
+        assert data["status"] == "completed"
+        assert data["reward_tokens"] == challenges.CHALLENGE_TOKENS
+
     def test_recompute_progress_counts_completions(self, tmp_db):
         import challenges
         _seed_person(tmp_db, "person.alice")
