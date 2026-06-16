@@ -36,14 +36,16 @@ class TestLevels:
     def test_level_1_at_zero_xp(self):
         assert level_from_xp(0) == 1
 
-    def test_level_2_at_50_xp(self):
-        assert level_from_xp(50) == 2
+    def test_level_2_at_100_xp(self):
+        # Linear curve since v0.2.32: 100 XP per level. 99 XP is still level 1.
+        assert level_from_xp(99) == 1
+        assert level_from_xp(100) == 2
 
     def test_level_3_at_200_xp(self):
         assert level_from_xp(200) == 3
 
-    def test_level_5_at_800_xp(self):
-        assert level_from_xp(800) == 5
+    def test_level_9_at_800_xp(self):
+        assert level_from_xp(800) == 9
 
     def test_xp_for_level_roundtrip(self):
         for lvl in range(1, 20):
@@ -230,13 +232,15 @@ class TestAddXP:
     def test_add_xp_updates_level(self, tmp_db):
         from gamification import add_xp
 
+        # Linear curve since v0.2.32: 100 XP per level. Start at 95 so a +10 add
+        # crosses the 100-XP boundary into level 2.
         tmp_db.execute(
-            "INSERT INTO persons (entity_id, name, xp_total, level) VALUES ('person.test', 'Test', 45, 1)"
+            "INSERT INTO persons (entity_id, name, xp_total, level) VALUES ('person.test', 'Test', 95, 1)"
         )
         tmp_db.commit()
 
         new_total, new_level, leveled_up = add_xp("person.test", 10)
-        assert new_total == 55
+        assert new_total == 105
         assert new_level == 2
         assert leveled_up is True
 
