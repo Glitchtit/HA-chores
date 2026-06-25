@@ -73,9 +73,9 @@ export default function Achievements({ activePerson, persons }) {
                     className={`rounded-lg p-4 text-center animate-badge-pop ${b.badge.hidden ? 'bg-purple-900/40 ring-1 ring-purple-500/40' : 'bg-gray-800'}`}>
                     <div className="text-4xl mb-2">{b.badge.icon}</div>
                     <div className="font-medium text-sm">{b.badge.name}</div>
-                    {b.badge.hidden && (
+                    {b.badge.hidden ? (
                       <div className="text-xs text-purple-400 font-semibold mt-0.5 uppercase tracking-wide">Hidden</div>
-                    )}
+                    ) : null}
                     <div className="text-xs text-gray-500 mt-1">{b.badge.description}</div>
                     {b.earned_at && (
                       <div className="text-xs text-amber-400 mt-1">

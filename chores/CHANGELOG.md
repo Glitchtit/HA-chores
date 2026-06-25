@@ -1,3 +1,6 @@
+## 0.7.15
+- **Removed a stray `0` on earned achievement cards.** Non-hidden earned badges were printing a literal `0` under their name. It was the badge's `hidden` flag (an integer `0`) leaking through a `{hidden && …}` JSX check — React renders `0` as text rather than nothing. Switched to a ternary so non-hidden badges show nothing there and hidden ones still show the "HIDDEN" label.
+
 ## 0.7.14
 - **The dashboard now uses the whole screen on a desktop monitor.** On a wide display (≥1280px) the dashboard reflows into a hero + three columns: a big profile hero across the top (avatar, level, XP bar and stats), then column 1 with Today's Chores and the "You could" / "Feeling extra?" actions, column 2 with the weekly challenge and daily quests, and column 3 with your active power-ups. Phones and narrow windows are untouched — they keep the exact single-column layout and ordering as before.
 - **The weekly challenge now shows on the Household overview too.** The shared goal banner (e.g. XP Avalanche) appears at the top of the household view, so the whole house can see the co-op goal and its progress, not just individual dashboards.
