@@ -227,6 +227,46 @@ class TestBadges:
         assert len(badges1) > 0
         assert len(badges2) == 0  # Already awarded
 
+    def test_earned_momentary_badges_are_permanent(self, tmp_db):
+        """Achievements never un-earn. A legitimately earned speed_run /
+        all_types badge must survive a validate pass even when its momentary
+        condition no longer holds — otherwise it gets re-awarded and the
+        celebration pops again (the reported re-pop bug)."""
+        from gamification import validate_and_revoke_badges
+
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.test', 'Test')")
+        # Earn both revocable-style badges; no recent/qualifying completions exist,
+        # so the live condition is currently False.
+        tmp_db.execute("INSERT INTO person_badges (person_id, badge_id) VALUES ('person.test', 'speed_runner')")
+        tmp_db.execute("INSERT INTO person_badges (person_id, badge_id) VALUES ('person.test', 'all_types')")
+        tmp_db.commit()
+
+        revoked = validate_and_revoke_badges("person.test")
+        assert revoked == 0
+        remaining = {
+            r["badge_id"]
+            for r in tmp_db.execute(
+                "SELECT badge_id FROM person_badges WHERE person_id = 'person.test'"
+            ).fetchall()
+        }
+        assert "speed_runner" in remaining
+        assert "all_types" in remaining
+
+    def test_earned_perfect_week_survives_startup_validation(self, tmp_db):
+        """A legitimately earned perfect_week badge must not be stripped on the
+        next startup just because the rolling 7-day window isn't currently met."""
+        from gamification import revoke_incorrectly_awarded_badges
+
+        tmp_db.execute("INSERT INTO persons (entity_id, name) VALUES ('person.test', 'Test')")
+        tmp_db.execute("INSERT INTO person_badges (person_id, badge_id) VALUES ('person.test', 'perfect_week')")
+        tmp_db.commit()
+
+        revoke_incorrectly_awarded_badges()
+        still = tmp_db.execute(
+            "SELECT 1 FROM person_badges WHERE person_id = 'person.test' AND badge_id = 'perfect_week'"
+        ).fetchone()
+        assert still is not None
+
 
 class TestAddXP:
     def test_add_xp_updates_level(self, tmp_db):

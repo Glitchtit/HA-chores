@@ -395,10 +395,15 @@ def expire_old_powerups() -> int:
 
 # ── Badge checking ───────────────────────────────────────────────────────────
 
-# Condition types whose truth value can revert after being awarded
-# (e.g. a new chore is added so all_types no longer holds;
-#  speed_run window has long closed but was incorrectly awarded due to TZ bug).
-REVOCABLE_CONDITIONS: frozenset[str] = frozenset({"all_types", "speed_run"})
+# Achievements are permanent trophies: once a badge is legitimately earned it is
+# never taken away. Earlier this set contained {"all_types", "speed_run"} so those
+# badges were re-evaluated and revoked whenever their *momentary* condition lapsed
+# (the speed_run window is a rolling 10 minutes; all_types breaks the moment a new
+# chore type is added). The next time the condition was met they were re-awarded —
+# and the "achievement unlocked" celebration popped again for a badge the user
+# already had. Keeping this empty stops that re-pop. The one-time historical
+# cleanup of genuinely mis-awarded badges lives in revoke_incorrectly_awarded_badges.
+REVOCABLE_CONDITIONS: frozenset[str] = frozenset()
 
 
 def _eval_badge_condition(badge, person_entity_id: str, conn, *, person=None, for_revoke: bool = False) -> bool:
@@ -628,6 +633,11 @@ def validate_and_revoke_badges(person_entity_id: str | None = None) -> int:
     Pass *person_entity_id* to check a single person, or None to check everyone.
     Returns the total number of badges revoked.
     """
+    # Achievements are permanent — nothing is revocable anymore. Guard here so the
+    # empty set never builds an invalid ``IN ()`` clause.
+    if not REVOCABLE_CONDITIONS:
+        return 0
+
     conn = get_connection()
     if person_entity_id:
         pids = [person_entity_id]
@@ -663,8 +673,11 @@ def revoke_incorrectly_awarded_badges() -> int:
     Specifically:
     - calendar_date badges awarded on the wrong date (today != the badge's date
       and the badge was earned today, meaning the bug awarded it)
-    - perfect_week badges awarded before the condition was actually implemented
-      (re-evaluate now with the real check)
+
+    Only genuinely mis-awarded badges are removed. Correctly-earned badges are
+    permanent — we never re-evaluate a momentary condition (e.g. perfect_week's
+    rolling 7-day window) here, since that would strip and then re-celebrate a
+    badge the user legitimately earned.
     """
     conn = get_connection()
     revoked = 0
@@ -692,30 +705,6 @@ def revoke_incorrectly_awarded_badges() -> int:
             )
             revoked += 1
             logger.info("Revoked incorrectly awarded calendar_date badge '%s' from %s", row["badge_id"], row["person_id"])
-
-    # Revoke perfect_week badges that don't pass the real check
-    pids = [r["entity_id"] for r in conn.execute("SELECT entity_id FROM persons").fetchall()]
-    for p_id in pids:
-        has_badge = conn.execute(
-            "SELECT 1 FROM person_badges pb JOIN badges b ON b.id = pb.badge_id WHERE pb.person_id = ? AND b.condition_type = 'perfect_week'",
-            (p_id,),
-        ).fetchone()
-        if not has_badge:
-            continue
-        # Re-check using the real condition
-        cnt = conn.execute(
-            """SELECT COUNT(DISTINCT date(completed_at)) FROM chore_instances
-               WHERE completed_by = ? AND status = 'completed'
-               AND date(completed_at) >= date('now', '-6 days')""",
-            (p_id,),
-        ).fetchone()[0]
-        if cnt < 7:
-            conn.execute(
-                "DELETE FROM person_badges WHERE person_id = ? AND badge_id IN (SELECT id FROM badges WHERE condition_type = 'perfect_week')",
-                (p_id,),
-            )
-            revoked += 1
-            logger.info("Revoked incorrectly awarded perfect_week badge from %s", p_id)
 
     if revoked:
         conn.commit()

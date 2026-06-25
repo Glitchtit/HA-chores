@@ -1,3 +1,6 @@
+## 0.7.16
+- **Achievements no longer re-pop after you've earned them.** Earned badges are now permanent trophies. Three badges had momentary conditions that lapsed and then silently un-earned, so the "achievement unlocked" celebration fired again the next time you met the condition: 🎮 "Any% Completion" (3 chores in 10 minutes — a rolling window that always lapsed), 🧹 "Master Cleaner" (revoked whenever a new chore type was added), and 🎯 "Consistency King" (re-checked against a rolling 7-day window on every restart). Once a badge is legitimately earned it now stays earned and never re-celebrates. The one-time cleanup of genuinely mis-dated historical awards is unchanged.
+
 ## 0.7.15
 - **Removed a stray `0` on earned achievement cards.** Non-hidden earned badges were printing a literal `0` under their name. It was the badge's `hidden` flag (an integer `0`) leaking through a `{hidden && …}` JSX check — React renders `0` as text rather than nothing. Switched to a ternary so non-hidden badges show nothing there and hidden ones still show the "HIDDEN" label.
 
