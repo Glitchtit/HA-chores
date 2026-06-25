@@ -1,3 +1,6 @@
+## 0.7.13
+- **A won weekly goal now keeps counting the excess.** Once the household crosses the goal (e.g. XP Avalanche's 300 XP), the banner no longer freezes at the value that tripped the win — it keeps climbing as more chores land, showing `351/300` with a `+51 over goal 🔥` tag instead of a static "Done this week". Previously the read API stopped recomputing progress the moment a challenge flipped to completed, so it stuck at whatever number happened to cross the line. The reward and 🎉 Completed! styling are unchanged; only the running total now reflects the overflow.
+
 ## 0.7.12
 - **Completed-goal shine is now a slow continuous glint.** Dropped the between-pass pause (it didn't read as intended) and slowed the gold shimmer to a quarter of its previous sweep speed — a single uninterrupted 14.4s pass across the banner.
 

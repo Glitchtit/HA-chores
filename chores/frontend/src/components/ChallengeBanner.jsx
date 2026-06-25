@@ -35,6 +35,7 @@ export default function ChallengeBanner() {
     ? Math.min(100, (challenge.progress / challenge.goal_value) * 100)
     : 0;
   const done = challenge.status === 'completed';
+  const excess = done ? Math.max(0, challenge.progress - challenge.goal_value) : 0;
 
   const tokens = challenge.reward_tokens ?? 30;
 
@@ -65,7 +66,9 @@ export default function ChallengeBanner() {
             {challenge.progress}/{challenge.goal_value}
           </div>
           <div className="text-[10px] text-gray-400">
-            {done ? 'Done this week' : daysLeft(challenge.period_end)}
+            {done
+              ? (excess > 0 ? `+${excess} over goal 🔥` : 'Done this week')
+              : daysLeft(challenge.period_end)}
           </div>
         </div>
       </div>

@@ -89,6 +89,34 @@ class TestLifecycle:
         assert data["status"] == "completed"
         assert data["reward_tokens"] == challenges.CHALLENGE_TOKENS
 
+    def test_active_endpoint_shows_excess_after_completion(self, tmp_db):
+        """A won challenge keeps counting overflow XP instead of freezing at the
+        value that tripped the win (XP Avalanche 'show excess' behaviour)."""
+        import challenges
+        from routers.challenges import get_active_challenge
+        _seed_person(tmp_db, "person.alice")
+        _seed_chore(tmp_db, chore_id=1, category="dishes")
+        cid = _seed_challenge(tmp_db, goal_type="xp_total", goal_value=300)
+        # 35 completed chores × 10 XP = 350 XP this period — the household sailed
+        # past the 300 goal. The row flipped to completed when it first crossed.
+        today = date.today().isoformat()
+        for _ in range(35):
+            tmp_db.execute(
+                """INSERT INTO chore_instances
+                     (chore_id, due_date, completed_by, status, completed_at, xp_awarded)
+                   VALUES (1, ?, 'person.alice', 'completed', ?, 10)""",
+                (today, datetime.now().isoformat()),
+            )
+        tmp_db.execute(
+            "UPDATE household_challenges SET status = 'completed', progress = 301 WHERE id = ?",
+            (cid,),
+        )
+        tmp_db.commit()
+        data = get_active_challenge()
+        assert data["status"] == "completed"      # still a celebrated win
+        assert data["progress"] == 350            # recomputed past the frozen 301
+        assert data["progress"] > data["goal_value"]
+
     def test_recompute_progress_counts_completions(self, tmp_db):
         import challenges
         _seed_person(tmp_db, "person.alice")

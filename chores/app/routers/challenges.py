@@ -35,10 +35,11 @@ def get_active_challenge():
     c = challenges.get_for_display(conn)
     if not c:
         return None
-    # Refresh progress on read to avoid drift, but only while still active — a
-    # completed challenge keeps its final progress.
-    if c["status"] == "active":
-        c["progress"] = challenges.recompute_progress(conn, c)
+    # Refresh progress on read to avoid drift. We keep recomputing even after the
+    # challenge flips to 'completed' so the banner shows the household's *excess*
+    # XP climbing past the goal (e.g. 351/300) rather than freezing at the value
+    # that tripped completion. Status stays 'completed' — only progress grows.
+    c["progress"] = challenges.recompute_progress(conn, c)
     # Surface the flat token bonus so the frontend doesn't hardcode it.
     c["reward_tokens"] = challenges.CHALLENGE_TOKENS
     return c
