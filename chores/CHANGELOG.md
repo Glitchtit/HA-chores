@@ -1,3 +1,7 @@
+## 0.7.14
+- **The dashboard now uses the whole screen on a desktop monitor.** On a wide display (≥1280px) the dashboard reflows into a hero + three columns: a big profile hero across the top (avatar, level, XP bar and stats), then column 1 with Today's Chores and the "You could" / "Feeling extra?" actions, column 2 with the weekly challenge and daily quests, and column 3 with your active power-ups. Phones and narrow windows are untouched — they keep the exact single-column layout and ordering as before.
+- **The weekly challenge now shows on the Household overview too.** The shared goal banner (e.g. XP Avalanche) appears at the top of the household view, so the whole house can see the co-op goal and its progress, not just individual dashboards.
+
 ## 0.7.13
 - **A won weekly goal now keeps counting the excess.** Once the household crosses the goal (e.g. XP Avalanche's 300 XP), the banner no longer freezes at the value that tripped the win — it keeps climbing as more chores land, showing `351/300` with a `+51 over goal 🔥` tag instead of a static "Done this week". Previously the read API stopped recomputing progress the moment a challenge flipped to completed, so it stuck at whatever number happened to cross the line. The reward and 🎉 Completed! styling are unchanged; only the running total now reflects the overflow.
 

@@ -203,26 +203,29 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
   const xpProgress = xpIntoLevel;
 
   return (
-    <div className="space-y-6 max-w-lg mx-auto">
-      {/* Seasonal boss event (v0.5.0) */}
-      <BossPanel />
+    <div className="max-w-lg xl:max-w-7xl mx-auto flex flex-col gap-6 xl:grid xl:grid-cols-3 xl:gap-6 xl:items-start">
+      {/* Seasonal boss event (v0.5.0) — full-width banner. empty:hidden keeps it
+          from leaving a phantom gap on the days BossPanel renders null. */}
+      <div className="order-1 xl:order-none xl:col-span-3 empty:hidden">
+        <BossPanel />
+      </div>
 
-      {/* Weekly household challenge (v0.4.6) */}
-      <ChallengeBanner />
-
-      {/* Daily quests (v0.4.5) */}
-      <DailyQuests personId={activePerson} />
-
-      {/* Stats card */}
+      {/* Hero: user profile — full-width and enlarged on a wide monitor (xl),
+          identical to the old card on phone/tablet. */}
       {stats && (
-        <div className="bg-gray-800 rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold">{stats.name}</h2>
-              <p className="text-gray-400 text-sm">Rank #{stats.rank}</p>
+        <div className="order-4 xl:order-none xl:col-span-3 bg-gray-800 xl:bg-gradient-to-br xl:from-gray-800 xl:to-gray-900/40 rounded-xl p-5 xl:p-8 space-y-4 xl:space-y-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0">
+              <span className="hidden xl:flex w-16 h-16 rounded-full bg-amber-500/20 text-amber-400 items-center justify-center font-bold text-3xl shrink-0">
+                {stats.name.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-2xl xl:text-4xl font-bold truncate">{stats.name}</h2>
+                <p className="text-gray-400 text-sm xl:text-base">Rank #{stats.rank}</p>
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-amber-400">Lv {stats.level}</div>
+            <div className="text-right shrink-0">
+              <div className="text-3xl xl:text-5xl font-bold text-amber-400">Lv {stats.level}</div>
               <div className="text-sm text-gray-400">{stats.xp_total} XP</div>
             </div>
           </div>
@@ -233,7 +236,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
               <span>Level {stats.level}</span>
               <span>{xpIntoLevel}/100 XP · Level {stats.level + 1}</span>
             </div>
-            <div ref={xpBarRef} className="h-3 bg-gray-700 rounded-full overflow-hidden">
+            <div ref={xpBarRef} className="h-3 xl:h-4 bg-gray-700 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-brand-orange to-xp-gold rounded-full animate-xp-fill"
                 style={{ width: `${Math.min(Math.max(xpProgress, 0), 100)}%` }}
@@ -276,38 +279,14 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
         </div>
       )}
 
-      {/* Active Power-ups panel */}
-      {activePowerups.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            ⚡ Power-ups
-            <span className="text-sm text-gray-500">({activePowerups.length})</span>
-          </h3>
-          <div className="space-y-2">
-            {activePowerups.map(p => (
-              <div key={p.id} className="animate-golden-sparkle rounded-lg p-3 flex items-center gap-3">
-                <span className="text-2xl flex-shrink-0">{p.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-white text-sm">{p.name}</div>
-                  <div className="text-xs text-gray-400">{p.description}</div>
-                  <div className="text-xs text-purple-300 mt-0.5">
-                    {p.uses_remaining} use{p.uses_remaining !== 1 ? 's' : ''} remaining
-                    {p.expires_at && <span className="ml-2 text-gray-500">· {timeUntilExpiry(p.expires_at)}</span>}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleDiscardPowerup(p.id)}
-                  className="text-gray-600 hover:text-red-400 transition-colors text-lg flex-shrink-0"
-                  title="Discard"
-                >🗑️</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* ── Column 1 (xl): Today's chores + optional chores ──────────────────
+          `contents` on phone hoists these into the flex parent so order-* below
+          reproduces the current vertical order; `xl:block` makes it a real
+          column with independent height on a wide monitor. */}
+      <div className="contents xl:block xl:space-y-6">
 
       {/* Today's chores */}
-      <div>
+      <div className="order-6 xl:order-none">
         <h3 ref={todayChoresRef} className="text-lg font-semibold mb-3 flex items-center gap-2">
           📅 Today's Chores
           <span className="text-sm text-gray-500">({todayChores.length})</span>
@@ -393,7 +372,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
         return (
           <>
             {easyMedChores.length > 0 && (
-              <div>
+              <div className="order-7 xl:order-none">
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   💡 You could
                   <span className="text-sm font-normal text-gray-500">({easyMedChores.length})</span>
@@ -430,7 +409,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
             )}
 
             {hardChores.length > 0 && (
-              <div>
+              <div className="order-8 xl:order-none">
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   💪 Feeling extra?
                   <span className="text-sm font-normal text-gray-500">({hardChores.length})</span>
@@ -478,6 +457,53 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
           </>
         );
       })()}
+
+      </div>{/* ── end Column 1 ── */}
+
+      {/* ── Column 2 (xl): weekly challenge + daily quests ──────────────────── */}
+      <div className="contents xl:block xl:space-y-6">
+        {/* Weekly household challenge (v0.4.6). empty:hidden avoids a phantom
+            gap on weeks with no active challenge (ChallengeBanner → null). */}
+        <div className="order-2 xl:order-none empty:hidden">
+          <ChallengeBanner />
+        </div>
+        {/* Daily quests (v0.4.5) */}
+        <div className="order-3 xl:order-none empty:hidden">
+          <DailyQuests personId={activePerson} />
+        </div>
+      </div>
+
+      {/* ── Column 3 (xl): active power-ups ─────────────────────────────────── */}
+      <div className="contents xl:block xl:space-y-6">
+        {activePowerups.length > 0 && (
+          <div className="order-5 xl:order-none">
+            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              ⚡ Power-ups
+              <span className="text-sm text-gray-500">({activePowerups.length})</span>
+            </h3>
+            <div className="space-y-2">
+              {activePowerups.map(p => (
+                <div key={p.id} className="animate-golden-sparkle rounded-lg p-3 flex items-center gap-3">
+                  <span className="text-2xl flex-shrink-0">{p.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-white text-sm">{p.name}</div>
+                    <div className="text-xs text-gray-400">{p.description}</div>
+                    <div className="text-xs text-purple-300 mt-0.5">
+                      {p.uses_remaining} use{p.uses_remaining !== 1 ? 's' : ''} remaining
+                      {p.expires_at && <span className="ml-2 text-gray-500">· {timeUntilExpiry(p.expires_at)}</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleDiscardPowerup(p.id)}
+                    className="text-gray-600 hover:text-red-400 transition-colors text-lg flex-shrink-0"
+                    title="Discard"
+                  >🗑️</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

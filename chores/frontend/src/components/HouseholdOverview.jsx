@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as api from '../api';
 import PersonPickerModal from './PersonPickerModal';
+import ChallengeBanner from './ChallengeBanner';
 
 const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖💖', hard: '❤️‍🔥❤️‍🔥❤️‍🔥' };
 
@@ -59,6 +60,9 @@ export default function HouseholdOverview({ persons, addToast, onSelectPerson })
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
+      {/* Weekly household challenge — shared goal for the whole house */}
+      <ChallengeBanner />
+
       {/* Summary strip */}
       {total > 0 && (
         <div className="bg-gray-800 rounded-xl px-5 py-3 flex items-center gap-4">
