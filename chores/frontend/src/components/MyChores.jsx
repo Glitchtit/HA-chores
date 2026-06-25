@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as api from '../api';
 import { useGameEffects } from './effects/GameEffects';
+import { formatDateTime } from '../utils/date';
 
 export default function MyChores({ activePerson, persons, addToast }) {
   const [instances, setInstances] = useState([]);
@@ -148,9 +149,9 @@ export default function MyChores({ activePerson, persons, addToast }) {
                   <div className="flex flex-wrap gap-2 mt-1">
                     {statusBadge(ci.status)}
                     <span className="text-xs text-gray-500">
-                      📅 {ci.status === 'completed' && ci.completed_at
-                        ? ci.completed_at.slice(0, 16).replace('T', ' ')
-                        : ci.due_date}
+                      📅 {formatDateTime(ci.status === 'completed' && ci.completed_at
+                        ? ci.completed_at
+                        : ci.due_date)}
                     </span>
                     {ci.assigned_to && (
                       <span className="text-xs text-gray-400">

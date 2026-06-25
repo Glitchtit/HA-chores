@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../api';
+import { formatDate } from '../utils/date';
 
 export default function Achievements({ activePerson, persons }) {
   const [badges, setBadges] = useState([]);
@@ -79,7 +80,7 @@ export default function Achievements({ activePerson, persons }) {
                     <div className="text-xs text-gray-500 mt-1">{b.badge.description}</div>
                     {b.earned_at && (
                       <div className="text-xs text-amber-400 mt-1">
-                        {new Date(b.earned_at).toLocaleDateString()}
+                        {formatDate(b.earned_at)}
                       </div>
                     )}
                   </div>

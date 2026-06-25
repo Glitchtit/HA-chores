@@ -1,3 +1,6 @@
+## 0.7.17
+- **Dates now display as DD/MM/YYYY everywhere.** Earned-achievement dates and the My Chores due/completed dates used the US `M/D/YYYY` order (e.g. `4/12/2026`); they now read `12/04/2026`, with completed timestamps as `DD/MM/YYYY HH:MM`. Formatting is centralised in a small `utils/date.js` helper that reads the day/month/year straight from the stored value, so dates no longer risk shifting by a day across a timezone boundary.
+
 ## 0.7.16
 - **Achievements no longer re-pop after you've earned them.** Earned badges are now permanent trophies. Three badges had momentary conditions that lapsed and then silently un-earned, so the "achievement unlocked" celebration fired again the next time you met the condition: 🎮 "Any% Completion" (3 chores in 10 minutes — a rolling window that always lapsed), 🧹 "Master Cleaner" (revoked whenever a new chore type was added), and 🎯 "Consistency King" (re-checked against a rolling 7-day window on every restart). Once a badge is legitimately earned it now stays earned and never re-celebrates. The one-time cleanup of genuinely mis-dated historical awards is unchanged.
 
