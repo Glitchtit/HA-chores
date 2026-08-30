@@ -1,3 +1,6 @@
+## 0.7.18
+- **Nameplates now show up in Change placement mode.** The placed-nameplate layer was only rendered in the normal house view — the edit-mode branch drew just the pet/mess ghost sprites — so your nameplate was invisible in exactly the mode meant for dragging it, leaving it stuck at the default centre spot. The nameplate layer now renders in both modes, and in edit mode your own plate gets the orange drag ring as intended. The edit-mode hint also mentions 🏷️ nameplates now.
+
 ## 0.7.17
 - **Dates now display as DD/MM/YYYY everywhere.** Earned-achievement dates and the My Chores due/completed dates used the US `M/D/YYYY` order (e.g. `4/12/2026`); they now read `12/04/2026`, with completed timestamps as `DD/MM/YYYY HH:MM`. Formatting is centralised in a small `utils/date.js` helper that reads the day/month/year straight from the stored value, so dates no longer risk shifting by a day across a timezone boundary.
 

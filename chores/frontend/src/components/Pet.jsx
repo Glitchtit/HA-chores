@@ -977,7 +977,7 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
               ))}
               <div className="absolute inset-x-0 bottom-2 z-30 flex justify-center pointer-events-none">
                 <span className="pointer-events-auto text-[10px] sm:text-xs bg-gray-900/80 text-gray-300 px-3 py-1.5 rounded-lg">
-                  Drag 🐾 pet or 🗑️ mess sprites to reposition
+                  Drag 🐾 pet, 🗑️ mess or 🏷️ nameplate sprites to reposition
                 </span>
               </div>
             </>
@@ -1055,50 +1055,52 @@ export default function Pet({ activePerson, persons = [], isHouseholdMode, setAc
                 </div>
               )}
 
-              {/* Placed nameplates (v0.7.0) — visible to all; owner can drag in edit mode */}
-              {placedNameplates.map((np) => {
-                const isMine = np.person_id === activePerson;
-                const draggable = editMode && isMine;
-                const img = COSMETIC_IMG[np.cosmetic_id];
-                return (
-                  <div
-                    key={np.person_id}
-                    className={`absolute select-none ${draggable ? 'cursor-grab active:cursor-grabbing ring-2 ring-orange-400/60 rounded' : ''}`}
-                    style={{
-                      left: `${np.x}%`,
-                      top: `${np.y}%`,
-                      transform: 'translate(-50%, -50%)',
-                      zIndex: 25,
-                    }}
-                    onMouseDown={draggable ? (e) => startDragNameplate(e, np) : undefined}
-                    onTouchStart={draggable ? (e) => {
-                      const t = e.touches[0];
-                      if (t) startDragNameplate({ ...e, clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault() }, np);
-                    } : undefined}
-                    title={`${np.display_name}'s nameplate`}
-                  >
-                    <div className="relative">
-                      {img ? (
-                        <img src={img} alt="" className="pixelated w-[clamp(48px,18vw,128px)]"
-                             style={{ objectFit: 'contain' }} />
-                      ) : (
-                        <div className="bg-gray-700 text-gray-100 px-3 py-1 rounded text-xs">
-                          {np.cosmetic_icon || '🏷️'}
-                        </div>
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <span className="text-[9px] sm:text-[10px] font-bold text-gray-900 drop-shadow-sm px-1 truncate max-w-[80%]">
-                          {np.display_name}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
             </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-gray-500 text-sm">Loading…</div>
           )}
+
+          {/* Placed nameplates (v0.7.0) — visible to all; owner can drag in edit
+              mode, so this layer renders in both edit and normal mode. */}
+          {placedNameplates.map((np) => {
+            const isMine = np.person_id === activePerson;
+            const draggable = editMode && isMine;
+            const img = COSMETIC_IMG[np.cosmetic_id];
+            return (
+              <div
+                key={np.person_id}
+                className={`absolute select-none ${draggable ? 'cursor-grab active:cursor-grabbing ring-2 ring-orange-400/60 rounded' : ''}`}
+                style={{
+                  left: `${np.x}%`,
+                  top: `${np.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                  zIndex: 25,
+                }}
+                onMouseDown={draggable ? (e) => startDragNameplate(e, np) : undefined}
+                onTouchStart={draggable ? (e) => {
+                  const t = e.touches[0];
+                  if (t) startDragNameplate({ ...e, clientX: t.clientX, clientY: t.clientY, preventDefault: () => e.preventDefault() }, np);
+                } : undefined}
+                title={`${np.display_name}'s nameplate`}
+              >
+                <div className="relative">
+                  {img ? (
+                    <img src={img} alt="" className="pixelated w-[clamp(48px,18vw,128px)]"
+                         style={{ objectFit: 'contain' }} />
+                  ) : (
+                    <div className="bg-gray-700 text-gray-100 px-3 py-1 rounded text-xs">
+                      {np.cosmetic_icon || '🏷️'}
+                    </div>
+                  )}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <span className="text-[9px] sm:text-[10px] font-bold text-gray-900 drop-shadow-sm px-1 truncate max-w-[80%]">
+                      {np.display_name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
