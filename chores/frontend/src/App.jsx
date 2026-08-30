@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import ChoreList from './components/ChoreList';
 import MyChores from './components/MyChores';
 import Leaderboard from './components/Leaderboard';
+import Stats from './components/Stats';
 import Achievements from './components/Achievements';
 import Settings from './components/Settings';
 import HouseholdOverview from './components/HouseholdOverview';
@@ -17,6 +18,7 @@ const PERSONAL_TABS = [
   { id: 'my',        icon: '✅', label: 'My Chores' },
   { id: 'pet',       icon: '🐾', label: 'Pet' },
   { id: 'leader',    icon: '🏆', label: 'Leaderboard' },
+  { id: 'stats',     icon: '📊', label: 'Stats' },
   { id: 'badges',    icon: '🎖️', label: 'Achievements' },
   { id: 'settings',  icon: '⚙️', label: 'Settings' },
 ];
@@ -26,6 +28,7 @@ const HOUSEHOLD_TABS = [
   { id: 'chores',    icon: '📋', label: 'Chores' },
   { id: 'pet',       icon: '🐾', label: 'Pet' },
   { id: 'leader',    icon: '🏆', label: 'Leaderboard' },
+  { id: 'stats',     icon: '📊', label: 'Stats' },
   { id: 'badges',    icon: '🎖️', label: 'Achievements' },
   { id: 'settings',  icon: '⚙️', label: 'Settings' },
 ];
@@ -201,6 +204,8 @@ export default function App() {
         return <Pet activePerson={activePerson} persons={persons} isHouseholdMode={isHouseholdMode && !activePerson} setActivePerson={setActivePerson} />;
       case 'leader':
         return <Leaderboard persons={persons} />;
+      case 'stats':
+        return <Stats persons={persons} />;
       case 'badges':
         return <Achievements activePerson={activePerson} persons={persons} />;
       case 'settings':

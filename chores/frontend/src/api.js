@@ -59,6 +59,11 @@ export const getMonthEndCheck = (entityId) =>
 export const markMonthEndSeen = (entityId) =>
   api.post(`/gamification/month-end-seen/${entityId}`).then(r => r.data);
 
+// ── Stats ───────────────────────────────────────────────────────────────────
+export const getStatsMatrix = () => api.get('/stats/matrix').then(r => r.data);
+export const getStatsCalendar = (year, month) =>
+  api.get('/stats/calendar', { params: { year, month } }).then(r => r.data);
+
 // ── Calendar ────────────────────────────────────────────────────────────────
 export const getCalendarEvents = (start, end) =>
   api.get('/calendar/events', { params: { start, end } }).then(r => r.data);
