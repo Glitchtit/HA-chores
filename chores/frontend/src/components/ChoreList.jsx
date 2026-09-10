@@ -46,6 +46,9 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
   });
   const [assignChore, setAssignChore] = useState(null); // chore being assigned
   const [assignForm, setAssignForm] = useState({ person_id: '', due_date: '' });
+  // True once the user has manually edited XP, so a later difficulty change
+  // won't clobber their custom value (applies to both create and edit).
+  const [xpTouched, setXpTouched] = useState(false);
 
   const choreMap = useMemo(() => Object.fromEntries(chores.map(c => [c.id, c])), [chores]);
   const followupIds = useMemo(() => new Set(chores.map(c => c.followup_chore_id).filter(Boolean)), [chores]);
@@ -76,6 +79,7 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
     });
     setEditId(null);
     setShowForm(false);
+    setXpTouched(false);
   };
 
   const openEdit = (chore) => {
@@ -94,6 +98,8 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
     });
     setEditId(chore.id);
     setShowForm(true);
+    // Editing an existing chore always shows its stored XP; never auto-derive.
+    setXpTouched(true);
   };
 
   const handleSubmit = async (e) => {
@@ -306,8 +312,9 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
                       setForm(f => ({
                         ...f,
                         difficulty: diff,
-                        // Only auto-set XP when creating; in edit mode the user controls it
-                        ...(!editId && { xp_reward: DIFFICULTY_XP[diff] }),
+                        // Pre-fill XP from difficulty until the user overrides it.
+                        // Never clobber a value they typed (create or edit).
+                        ...(!xpTouched && { xp_reward: DIFFICULTY_XP[diff] }),
                       }));
                     }}
                     className="w-full bg-gray-700 rounded px-2 py-2"
@@ -332,39 +339,25 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
                     <option value="other">📦 Other</option>
                   </select>
                 </div>
-                {editId ? (
-                  <div>
-                    <label className="text-xs text-gray-400">XP Reward</label>
-                    <input
-                      type="number" min="1" value={form.xp_reward}
-                      onChange={e => setForm(f => ({ ...f, xp_reward: e.target.value }))}
-                      className="w-full bg-gray-700 rounded px-2 py-2"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <label className="text-xs text-gray-400">Est. min</label>
-                    <input
-                      type="number" min="1" value={form.estimated_minutes}
-                      onChange={e => setForm(f => ({ ...f, estimated_minutes: e.target.value }))}
-                      className="w-full bg-gray-700 rounded px-2 py-2"
-                      placeholder="15"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {editId && (
                 <div>
-                  <label className="text-xs text-gray-400">Est. min</label>
+                  <label className="text-xs text-gray-400">XP Reward</label>
                   <input
-                    type="number" min="1" value={form.estimated_minutes}
-                    onChange={e => setForm(f => ({ ...f, estimated_minutes: e.target.value }))}
+                    type="number" min="1" value={form.xp_reward}
+                    onChange={e => { setXpTouched(true); setForm(f => ({ ...f, xp_reward: e.target.value })); }}
                     className="w-full bg-gray-700 rounded px-2 py-2"
-                    placeholder="15"
                   />
                 </div>
-              )}
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-400">Est. min</label>
+                <input
+                  type="number" min="1" value={form.estimated_minutes}
+                  onChange={e => setForm(f => ({ ...f, estimated_minutes: e.target.value }))}
+                  className="w-full bg-gray-700 rounded px-2 py-2"
+                  placeholder="15"
+                />
+              </div>
 
               <div>
                 <label className="text-xs text-gray-400">Schedule</label>

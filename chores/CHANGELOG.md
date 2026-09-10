@@ -1,3 +1,6 @@
+## 0.8.1
+- **Set a custom XP reward when creating a chore.** The New Chore dialog had no XP field at all — XP was silently forced to the difficulty default (❤️ 5 / 💖💖 10 / ❤️‍🔥 20), so the only way to get a custom value was to create the chore and then edit it afterwards to set the XP. The XP Reward field now appears in the create dialog too, alongside Difficulty and Category. Picking a difficulty still pre-fills the XP as a convenience, but once you type your own value a later difficulty change no longer overwrites it (in both the create and edit dialogs).
+
 ## 0.8.0
 - **New 📊 Stats tab** (after Leaderboard, in both personal and household nav). A Steam-style achievements comparison for the household: the top row shows every member (avatar, name and their all-time completion total), and each row below is a chore in the system with how many times each person has done it — zeros dimmed, the row leader in gold with a 👑, retired chores kept (struck through) as long as they have history. Above the table sits a month calendar (◀ ▶ to browse months) where each day shows small cards of the chores completed that day — chore emoji plus the doer's name, colour-coded per member with a legend underneath. Today is ringed in orange. Backed by two new endpoints, `/api/stats/matrix` and `/api/stats/calendar`.
 
