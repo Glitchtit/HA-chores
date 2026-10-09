@@ -6,6 +6,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util.ssl import get_default_context
 
 from .const import DOMAIN
 from .coordinator import ChoresCoordinator
@@ -58,7 +59,7 @@ class ChoresPersonTodo(CoordinatorEntity, TodoListEntity):
         if item.status == TodoItemStatus.COMPLETED:
             import httpx
             try:
-                async with httpx.AsyncClient(timeout=10) as client:
+                async with httpx.AsyncClient(verify=get_default_context(), timeout=10) as client:
                     await client.post(
                         f"{self.coordinator.addon_url}/api/assignments/{item.uid}/complete",
                         json={"completed_by": self._person_id, "notes": "Completed via HA Todo"},
@@ -71,7 +72,7 @@ class ChoresPersonTodo(CoordinatorEntity, TodoListEntity):
         """Skip chores when deleted from todo list."""
         import httpx
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(verify=get_default_context(), timeout=10) as client:
                 for uid in uids:
                     await client.post(
                         f"{self.coordinator.addon_url}/api/assignments/{uid}/skip",

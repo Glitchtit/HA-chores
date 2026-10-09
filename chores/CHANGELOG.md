@@ -1,3 +1,7 @@
+## 0.8.2
+
+- Integration 0.5.2: no more "Detected blocking call to load_verify_locations" warnings at Home Assistant startup. HTTP clients now reuse Home Assistant's pre-built SSL context instead of loading the certificate bundle inside the event loop
+
 ## 0.8.1
 - **Set a custom XP reward when creating a chore.** The New Chore dialog had no XP field at all — XP was silently forced to the difficulty default (❤️ 5 / 💖💖 10 / ❤️‍🔥 20), so the only way to get a custom value was to create the chore and then edit it afterwards to set the XP. The XP Reward field now appears in the create dialog too, alongside Difficulty and Category. Picking a difficulty still pre-fills the XP as a convenience, but once you type your own value a later difficulty change no longer overwrites it (in both the create and edit dialogs).
 

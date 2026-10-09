@@ -35,6 +35,8 @@ def _install_stubs() -> None:
         "boolean": bool,
         "ensure_list": list,
     })
+    _stub_submodule("homeassistant.util", {})
+    _stub_submodule("homeassistant.util.ssl", {"get_default_context": lambda: None})
     _stub_submodule("homeassistant.helpers.update_coordinator", {
         "DataUpdateCoordinator": object,
         "UpdateFailed": type("UpdateFailed", (Exception,), {}),
