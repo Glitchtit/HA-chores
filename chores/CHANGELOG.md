@@ -1,3 +1,6 @@
+## 0.8.3
+- **Follow-up chores are now due the day after.** Completing a chore with a follow-up (e.g. "Start dishwasher" → "Empty dishwasher") used to queue the follow-up with today's deadline, so its reminder fired and it went overdue right after the parent chore was done. The follow-up is now due tomorrow: it shows up in Today's Chores, gets its reminder, and goes overdue on the next day instead. The toast now reads "queued for tomorrow".
+
 ## 0.8.2
 
 - Integration 0.5.2: no more "Detected blocking call to load_verify_locations" warnings at Home Assistant startup. HTTP clients now reuse Home Assistant's pre-built SSL context instead of loading the certificate bundle inside the event loop

@@ -295,10 +295,8 @@ class TestShoppingHook:
             "suppress_followup": True,
         })
         assert resp.status_code == 200
-        from datetime import date
         followups = tmp_db.execute(
-            "SELECT * FROM chore_instances WHERE chore_id = ? AND due_date = ?",
-            (scan_id, date.today().isoformat()),
+            "SELECT * FROM chore_instances WHERE chore_id = ?", (scan_id,)
         ).fetchall()
         assert followups == []
 
@@ -310,13 +308,13 @@ class TestShoppingHook:
             "suppress_followup": False,
         })
         assert resp.status_code == 200
-        from datetime import date
         followups = tmp_db.execute(
-            "SELECT * FROM chore_instances WHERE chore_id = ? AND due_date = ?",
-            (scan_id, date.today().isoformat()),
+            "SELECT * FROM chore_instances WHERE chore_id = ?", (scan_id,)
         ).fetchall()
         assert len(followups) == 1
         assert followups[0]["status"] == "pending"
+        from datetime import date, timedelta
+        assert followups[0]["due_date"] == (date.today() + timedelta(days=1)).isoformat()
 
     def test_hook_unknown_chore_returns_404(self, client, tmp_db):
         tmp_db.execute(
