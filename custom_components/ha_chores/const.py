@@ -8,7 +8,3 @@ DEFAULT_ADDON_URL = "http://0a9ed235-ha-chores:8099"
 
 ADDON_SLUG = "ha_chores"
 SUPERVISOR_ADDON_API = f"http://supervisor/addons/{ADDON_SLUG}/info"
-
-PANEL_TITLE = "Chores"
-PANEL_ICON = "mdi:broom"
-PANEL_URL = "ha-chores"
