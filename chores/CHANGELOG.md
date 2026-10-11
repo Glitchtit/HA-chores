@@ -1,3 +1,7 @@
+## 0.8.3
+
+- Integration 0.5.3: no more "Could not register panel" warning at Home Assistant startup. The integration no longer tries to add a sidebar panel of its own; the add-on's own "Chores" sidebar entry is the UI
+
 ## 0.8.2
 
 - Integration 0.5.2: no more "Detected blocking call to load_verify_locations" warnings at Home Assistant startup. HTTP clients now reuse Home Assistant's pre-built SSL context instead of loading the certificate bundle inside the event loop
