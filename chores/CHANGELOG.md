@@ -1,3 +1,8 @@
+## 0.8.5
+
+- Integration 0.5.6: the Chores to-do lists in Home Assistant can be used: checking a chore off completes it and deleting it skips it (they were read-only). Failures now show an error instead of doing nothing
+- Integration 0.5.6: setup finds the add-on through the Supervisor again (it asked for the wrong add-on name)
+
 ## 0.8.4
 
 - New icon and logo in the add-on store, part of one matching set across all GlitchyRee apps
