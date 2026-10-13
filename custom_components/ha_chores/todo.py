@@ -74,7 +74,7 @@ class ChoresPersonTodo(CoordinatorEntity, TodoListEntity):
                 json={"completed_by": self._person_id, "notes": "Completed via HA Todo"},
             )
             resp.raise_for_status()
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()
 
     async def async_delete_todo_items(self, uids: list[str]) -> None:
         """Skip chores when deleted from todo list."""
@@ -82,4 +82,4 @@ class ChoresPersonTodo(CoordinatorEntity, TodoListEntity):
             for uid in uids:
                 resp = await client.post(f"{self.coordinator.addon_url}/api/assignments/{uid}/skip")
                 resp.raise_for_status()
-        await self.coordinator.async_request_refresh()
+        await self.coordinator.async_refresh()

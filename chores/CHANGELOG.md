@@ -1,3 +1,7 @@
+## 0.8.6
+
+- Integration 0.5.7: a chore checked off in a Home Assistant to-do list disappears right away instead of up to 10 seconds later
+
 ## 0.8.5
 
 - Integration 0.5.6: the Chores to-do lists in Home Assistant can be used: checking a chore off completes it and deleting it skips it (they were read-only). Failures now show an error instead of doing nothing
