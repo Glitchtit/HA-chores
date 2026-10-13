@@ -1,3 +1,8 @@
+## 0.8.4
+
+- New icon and logo in the add-on store, part of one matching set across all GlitchyRee apps
+- Integration 0.5.4: its own icon and logo on the Integrations page (Home Assistant 2026.3 or newer)
+
 ## 0.8.3
 
 - Integration 0.5.3: no more "Could not register panel" warning at Home Assistant startup. The integration no longer tries to add a sidebar panel of its own; the add-on's own "Chores" sidebar entry is the UI
