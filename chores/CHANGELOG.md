@@ -1,3 +1,7 @@
+## 0.8.7
+
+- Stats calendar: click a day to see every chore done that day (time, chore and who did it). Before, a busy day only showed three and "+12"
+
 ## 0.8.6
 
 - Integration 0.5.7: a chore checked off in a Home Assistant to-do list disappears right away instead of up to 10 seconds later

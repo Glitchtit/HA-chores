@@ -22,14 +22,71 @@ function firstName(name) {
   return (name || '').split(' ')[0];
 }
 
-function CalendarDay({ dayNum, dateKey, entries, personIndex, isToday }) {
+function DayDetailModal({ dateKey, entries, personIndex, onClose }) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const heading = new Date(y, m - 1, d).toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long',
+  });
+  const sorted = [...entries].sort((a, b) => (a.completed_at || '').localeCompare(b.completed_at || ''));
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-5 py-4 border-b border-gray-700 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">{heading}</h2>
+            <div className="text-xs text-gray-400">{entries.length} chore{entries.length === 1 ? '' : 's'} done</div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-200 px-2 text-lg">✕</button>
+        </div>
+        <div className="py-2 max-h-96 overflow-y-auto">
+          {sorted.map((e, i) => {
+            const p = personIndex[e.completed_by];
+            const color = p ? PERSON_COLORS[p.colorIdx % PERSON_COLORS.length] : null;
+            return (
+              <div key={`${e.chore_id}-${i}`} className="px-5 py-2 flex items-center gap-3">
+                <span className="text-xs text-gray-500 w-10 shrink-0 tabular-nums">
+                  {(e.completed_at || '').slice(11, 16)}
+                </span>
+                <span className="text-lg shrink-0">{e.chore_icon}</span>
+                <span className="flex-1 truncate">{e.chore_name}</span>
+                <span className={`rounded-lg px-2 py-0.5 text-xs shrink-0
+                                  ${color ? color.chip : 'bg-gray-700 text-gray-300'}`}>
+                  {p ? firstName(p.name) : '?'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CalendarDay({ dayNum, dateKey, entries, personIndex, isToday, onOpen }) {
   const MAX_CARDS = 3;
   const shown = entries.slice(0, MAX_CARDS);
   const extra = entries.length - shown.length;
+  const clickable = entries.length > 0;
 
   return (
-    <div className={`bg-gray-800 rounded-lg p-1 min-h-16 flex flex-col gap-0.5
-                     ${isToday ? 'ring-1 ring-brand-orange' : ''}`}>
+    <div
+      onClick={clickable ? () => onOpen(dateKey) : undefined}
+      className={`bg-gray-800 rounded-lg p-1 min-h-16 flex flex-col gap-0.5
+                  ${clickable ? 'cursor-pointer hover:bg-gray-700 transition-colors' : ''}
+                  ${isToday ? 'ring-1 ring-brand-orange' : ''}`}>
       <div className={`text-[10px] leading-none px-0.5 ${isToday ? 'text-brand-orange font-bold' : 'text-gray-500'}`}>
         {dayNum}
       </div>
@@ -61,6 +118,7 @@ function MonthCalendar({ persons, personIndex }) {
   const [month, setMonth] = useState(now.getMonth() + 1); // 1-based
   const [days, setDays] = useState({});
   const [loading, setLoading] = useState(true);
+  const [openDay, setOpenDay] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -116,6 +174,7 @@ function MonthCalendar({ persons, personIndex }) {
               entries={days[dateKey] || []}
               personIndex={personIndex}
               isToday={dateKey === todayKey}
+              onOpen={setOpenDay}
             />
           );
         })}
@@ -131,6 +190,15 @@ function MonthCalendar({ persons, personIndex }) {
             </span>
           ))}
         </div>
+      )}
+
+      {openDay && days[openDay] && (
+        <DayDetailModal
+          dateKey={openDay}
+          entries={days[openDay]}
+          personIndex={personIndex}
+          onClose={() => setOpenDay(null)}
+        />
       )}
     </div>
   );
