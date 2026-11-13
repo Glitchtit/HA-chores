@@ -15,6 +15,16 @@ from .const import DOMAIN
 # assign_chore is left out: it needs an instance id no voice user knows.
 ACTIONS = ("list_chores", "complete_chore", "schedule_chore", "create_chore", "leaderboard")
 
+# Some agents load tools on demand (tool search): this line is how they
+# learn the tools exist.
+PROMPT = (
+    "Household chores, with XP and streaks, are tracked in Chores:"
+    " ha_chores__complete_chore marks one done for a person,"
+    " ha_chores__schedule_chore puts one on someone's plate for a date,"
+    " ha_chores__create_chore adds a new chore, ha_chores__list_chores lists them"
+    " and ha_chores__leaderboard gives this month's ranking."
+)
+
 
 @callback
 def async_get_tools(
@@ -28,4 +38,4 @@ def async_get_tools(
         for action in ACTIONS
         if hass.services.has_service(DOMAIN, action)
     ]
-    return LLMTools(tools=tools) if tools else None
+    return LLMTools(tools=tools, prompt=PROMPT) if tools else None
