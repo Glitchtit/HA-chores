@@ -35,6 +35,7 @@ def _install_stubs() -> None:
         "boolean": bool,
         "ensure_list": list,
     })
+    _stub_submodule("homeassistant.helpers.service", {"async_get_all_descriptions": None})
     _stub_submodule("homeassistant.util", {})
     _stub_submodule("homeassistant.util.ssl", {"get_default_context": lambda: None})
     _stub_submodule("homeassistant.helpers.update_coordinator", {
