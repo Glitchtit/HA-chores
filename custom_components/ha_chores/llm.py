@@ -18,8 +18,9 @@ ACTIONS = ("list_chores", "complete_chore", "schedule_chore", "create_chore", "l
 # Some agents load tools on demand (tool search): this line is how they
 # learn the tools exist.
 PROMPT = (
-    "Household chores, with XP and streaks, are tracked in Chores:"
-    " ha_chores__complete_chore marks one done for a person,"
+    "Household chores, with XP and streaks, are tracked in Chores. Someone saying"
+    ' they did a household task ("I just vacuumed") is a Chores instruction: log'
+    " it with ha_chores__complete_chore. Also:"
     " ha_chores__schedule_chore puts one on someone's plate for a date,"
     " ha_chores__create_chore adds a new chore, ha_chores__list_chores lists them"
     " and ha_chores__leaderboard gives this month's ranking."

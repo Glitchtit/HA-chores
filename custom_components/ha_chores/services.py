@@ -8,8 +8,9 @@ from typing import Optional
 import httpx
 import voluptuous as vol
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
-from homeassistant.exceptions import ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.util import dt as dt_util
 from homeassistant.util.ssl import get_default_context
 
 from .const import DOMAIN
@@ -85,6 +86,16 @@ def resolve_chore_id(name: str, chores: list[dict]) -> Optional[int]:
     return None
 
 
+def unknown_chore_message(name: str, chores: list[dict]) -> str:
+    """Error text for a name that matched no chore.
+
+    Lists the real names so an assistant can retry with one of them
+    ("vacuumed" -> "Vacuum a bit").
+    """
+    names = ", ".join(str(c.get("name", "")).strip() for c in chores)
+    return f"No chore named '{name}'. Use one of these exact names: {names}"
+
+
 def resolve_person(name: str, persons: list[dict]) -> Optional[str]:
     """Return the person entity_id matching `name`.
 
@@ -138,8 +149,12 @@ def _coordinators(hass: HomeAssistant) -> list[ChoresCoordinator]:
 
 async def _post(coordinator: ChoresCoordinator, path: str, payload: dict) -> dict:
     async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
-        resp = await client.post(f"{coordinator.addon_url}{path}", json=payload)
-        resp.raise_for_status()
+        try:
+            resp = await client.post(f"{coordinator.addon_url}{path}", json=payload)
+            resp.raise_for_status()
+        except httpx.HTTPError as err:
+            # Only a HomeAssistantError reaches a voice assistant as text.
+            raise HomeAssistantError(f"Chores add-on request failed: {err}") from err
         try:
             return resp.json()
         except ValueError:
@@ -148,8 +163,11 @@ async def _post(coordinator: ChoresCoordinator, path: str, payload: dict) -> dic
 
 async def _get(coordinator: ChoresCoordinator, path: str, params: dict | None = None) -> dict | list:
     async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
-        resp = await client.get(f"{coordinator.addon_url}{path}", params=params or {})
-        resp.raise_for_status()
+        try:
+            resp = await client.get(f"{coordinator.addon_url}{path}", params=params or {})
+            resp.raise_for_status()
+        except httpx.HTTPError as err:
+            raise HomeAssistantError(f"Chores add-on request failed: {err}") from err
         return resp.json()
 
 
@@ -175,7 +193,7 @@ def async_register_services(hass: HomeAssistant) -> None:
             chore_id = resolve_chore_id(call.data["chore"], chores)
             if chore_id is None:
                 raise ServiceValidationError(
-                    f"No chore named '{call.data['chore']}' found."
+                    unknown_chore_message(call.data["chore"], chores)
                 )
             persons = await _get(coord, "/api/persons/")
             person = resolve_person(call.data["assigned_to"], persons)
@@ -230,7 +248,7 @@ def async_register_services(hass: HomeAssistant) -> None:
             chore_id = resolve_chore_id(call.data["chore"], chores)
             if chore_id is None:
                 raise ServiceValidationError(
-                    f"No chore named '{call.data['chore']}' found."
+                    unknown_chore_message(call.data["chore"], chores)
                 )
             instances = await _get(
                 coord,
@@ -239,10 +257,19 @@ def async_register_services(hass: HomeAssistant) -> None:
             )
             instance_id = find_open_instance(chore_id, person, instances)
             if instance_id is None:
-                raise ServiceValidationError(
-                    f"No open '{call.data['chore']}' instance found for "
-                    f"{person} to complete."
+                # Nothing was scheduled: log it as done today, the way the
+                # app's quick-done tile does (self-assigned, so no notification).
+                created = await _post(
+                    coord,
+                    "/api/assignments/",
+                    {
+                        "chore_id": chore_id,
+                        "due_date": dt_util.now().date().isoformat(),
+                        "assigned_to": person,
+                        "created_by": person,
+                    },
                 )
+                instance_id = created["id"]
             payload = {"completed_by": person, "notes": call.data.get("notes") or ""}
             result = await _post(
                 coord, f"/api/assignments/{instance_id}/complete", payload

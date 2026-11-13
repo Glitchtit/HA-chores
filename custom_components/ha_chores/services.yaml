@@ -176,23 +176,25 @@ assign_chore:
 complete_chore:
   name: Complete chore
   description: >-
-    Mark a chore done for a person. Resolves the chore and person by name, finds
-    their open (pending/claimed/overdue) instance, and completes it — awarding
-    XP, updating streaks, and checking badges. Example: "mark vacuuming done for
-    Mira" or "Thomas finished the dishes".
+    Log a household chore as done for a person, awarding XP and updating
+    streaks. Use this whenever someone says they did a task ("I just vacuumed",
+    "Thomas finished the dishes"). Completes the person's open instance if one
+    is scheduled, otherwise logs the chore as done today. The chore must be an
+    exact name from list_chores; a wrong name returns the list of names.
   fields:
     chore:
       name: Chore
-      description: The name of the chore that was completed, e.g. "Vacuuming".
+      description: The exact name of the chore that was done, e.g. "Vacuum a bit".
       required: true
-      example: Vacuuming
+      example: Vacuum a bit
       selector:
         text:
     completed_by:
       name: Completed by
       description: >-
-        The person who completed it, by name (e.g. "Mira") or entity_id
-        (e.g. "person.mira").
+        The person who did it, by name (e.g. "Mira") or entity_id
+        (e.g. "person.mira"). If the speaker says "I" and you cannot tell who
+        is speaking, ask.
       required: true
       example: Mira
       selector:

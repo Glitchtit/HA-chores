@@ -38,11 +38,13 @@ def _install_stubs() -> None:
     _stub_submodule("homeassistant.helpers.service", {"async_get_all_descriptions": None})
     _stub_submodule("homeassistant.util", {})
     _stub_submodule("homeassistant.util.ssl", {"get_default_context": lambda: None})
+    _stub_submodule("homeassistant.util.dt", {"now": __import__("datetime").datetime.now})
     _stub_submodule("homeassistant.helpers.update_coordinator", {
         "DataUpdateCoordinator": object,
         "UpdateFailed": type("UpdateFailed", (Exception,), {}),
     })
     _stub_submodule("homeassistant.exceptions", {
+        "HomeAssistantError": type("HomeAssistantError", (Exception,), {}),
         "ServiceValidationError": type("ServiceValidationError", (Exception,), {}),
     })
     _stub_submodule("homeassistant.config_entries", {
