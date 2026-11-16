@@ -1,3 +1,7 @@
+## 0.8.8
+
+- Rotation: turns go strictly in order with three or more people. Before, from the second week someone could get a chore twice in a row while someone else was skipped (e.g. 3x/week with three people, daily with four)
+
 ## 0.8.7
 
 - Stats calendar: click a day to see every chore done that day (time, chore and who did it). Before, a busy day only showed three and "+12"
