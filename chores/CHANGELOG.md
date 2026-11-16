@@ -1,3 +1,7 @@
+## 0.8.10
+
+- Chores ticked off, started or assigned between midnight and 2 a.m. (3 a.m. in summer) land on today instead of yesterday: the app took the UTC date instead of the local one
+
 ## 0.8.9
 
 - Follow-up chores are due the day after. Completing a chore with a follow-up (e.g. "Start dishwasher" then "Empty dishwasher") used to queue the follow-up with today's deadline, so its reminder fired at once and it went overdue that same night. It now appears in Today's Chores the next day, and the toast reads "queued for tomorrow"

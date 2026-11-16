@@ -40,3 +40,8 @@ export function formatDateTime(value) {
   if (!p) return '';
   return p.h != null ? `${p.d}/${p.mo}/${p.y} ${p.h}:${p.mi}` : `${p.d}/${p.mo}/${p.y}`;
 }
+
+/** Today's (or `d`'s) date as `YYYY-MM-DD` in local time; toISOString() would give the UTC date. */
+export function localISODate(d = new Date()) {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

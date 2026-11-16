@@ -4,10 +4,7 @@ import { useGameEffects } from './effects/GameEffects';
 import DailyQuests from './DailyQuests';
 import ChallengeBanner from './ChallengeBanner';
 import BossPanel from './BossPanel';
-
-function todayISO() {
-  return new Date().toISOString().slice(0, 10);
-}
+import { localISODate } from '../utils/date';
 
 const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖💖', hard: '❤️‍🔥❤️‍🔥❤️‍🔥' };
 
@@ -82,7 +79,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
         pendingQuickDone.chore.icon, pendingQuickDone.chore.name);
 
       try {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = localISODate();
         const instance = await api.createInstance({
           chore_id: pendingQuickDone.chore.id,
           due_date: today,
@@ -171,7 +168,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
   const handleAdd = async (chore) => {
     triggerSwoop(tileRefs.current[chore.id], todayChoresRef.current, chore.icon, chore.name);
     try {
-      await api.createInstance({ chore_id: chore.id, due_date: todayISO(), assigned_to: activePerson, created_by: activePerson });
+      await api.createInstance({ chore_id: chore.id, due_date: localISODate(), assigned_to: activePerson, created_by: activePerson });
       load();
     } catch {
       addToast('Failed to add chore', 'error');
