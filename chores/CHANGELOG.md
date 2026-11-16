@@ -1,3 +1,7 @@
+## 0.8.9
+
+- Follow-up chores are due the day after. Completing a chore with a follow-up (e.g. "Start dishwasher" then "Empty dishwasher") used to queue the follow-up with today's deadline, so its reminder fired at once and it went overdue that same night. It now appears in Today's Chores the next day, and the toast reads "queued for tomorrow"
+
 ## 0.8.8
 
 - Rotation: turns go strictly in order with three or more people. Before, from the second week someone could get a chore twice in a row while someone else was skipped (e.g. 3x/week with three people, daily with four)

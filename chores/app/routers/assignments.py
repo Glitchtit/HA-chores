@@ -3,7 +3,7 @@
 from __future__ import annotations
 import json
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim, CompleteResult, BadgeResult, PowerUp
 from database import get_connection
@@ -326,17 +326,19 @@ def apply_completion(
             "SELECT * FROM chores WHERE id = ? AND active = 1", (followup_chore_id,)
         ).fetchone()
         if followup_chore:
-            today_str = date.today().isoformat()
+            # Follow-ups are due the next day so their reminder and deadline
+            # don't land immediately after the parent chore is completed.
+            followup_due = (date.today() + timedelta(days=1)).isoformat()
             already_exists = conn.execute(
                 """SELECT id FROM chore_instances
                    WHERE chore_id = ? AND due_date = ? AND status IN ('pending', 'claimed')""",
-                (followup_chore_id, today_str),
+                (followup_chore_id, followup_due),
             ).fetchone()
             if not already_exists:
                 conn.execute(
                     """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status)
                        VALUES (?, ?, NULL, 'pending')""",
-                    (followup_chore_id, today_str),
+                    (followup_chore_id, followup_due),
                 )
                 conn.commit()
                 followup_name = followup_chore["name"]
