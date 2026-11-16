@@ -1,3 +1,7 @@
+## 0.8.8
+
+- Chores ticked off, started or assigned between midnight and 2 a.m. (3 a.m. in summer) land on today instead of yesterday: the app took the UTC date instead of the local one
+
 ## 0.8.7
 
 - Stats calendar: click a day to see every chore done that day (time, chore and who did it). Before, a busy day only showed three and "+12"

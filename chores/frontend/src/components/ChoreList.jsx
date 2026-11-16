@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import * as api from '../api';
+import { localISODate } from '../utils/date';
 
 const DIFFICULTY_COLORS = {
   easy: 'bg-emerald-600',
@@ -158,7 +159,7 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
     setAssignChore(chore);
     setAssignForm({
       person_id: persons[0]?.entity_id || '',
-      due_date: new Date().toISOString().slice(0, 10),
+      due_date: localISODate(),
     });
   };
 
