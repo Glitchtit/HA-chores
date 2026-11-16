@@ -1,6 +1,7 @@
 """Tests for the scheduler module."""
 
 import sys, os
+import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from datetime import date, timedelta
@@ -136,6 +137,44 @@ class TestGenerateInstances:
         ).fetchall()
         assignees = [r["assigned_to"] for r in rows]
         assert assignees == ["person.alice", "person.bob", "person.alice", "person.bob"]
+
+    @pytest.mark.parametrize("recurrence,people", [("daily", 4), ("weekly:mon,wed,fri", 3)])
+    def test_rotation_round_robin_over_weeks(self, tmp_db, monkeypatch, recurrence, people):
+        """Run the scheduler daily for four weeks; turns must go strictly round-robin."""
+        import json
+        import scheduler
+
+        class FakeDate(date):
+            current = date(2026, 11, 2)
+
+            @classmethod
+            def today(cls):
+                return cls.current
+
+        monkeypatch.setattr(scheduler, "date", FakeDate)
+        order = [f"person.p{i}" for i in range(people)]
+        tmp_db.execute(
+            """INSERT INTO chores (id, name, recurrence, active, assignment_mode, rotation_order)
+               VALUES (1, 'Rotation Chore', ?, 1, 'rotation', ?)""",
+            (recurrence, json.dumps(order)),
+        )
+        tmp_db.commit()
+
+        for day in range(28):
+            FakeDate.current = date(2026, 11, 2) + timedelta(days=day)
+            scheduler.generate_instances(days_ahead=7)
+            scheduler.mark_overdue()
+            tmp_db.execute(
+                "UPDATE chore_instances SET status = 'completed' WHERE due_date = ? AND status = 'pending'",
+                (FakeDate.current.isoformat(),),
+            )
+            tmp_db.commit()
+
+        rows = tmp_db.execute(
+            "SELECT assigned_to FROM chore_instances WHERE chore_id = 1 ORDER BY due_date"
+        ).fetchall()
+        assignees = [r["assigned_to"] for r in rows]
+        assert assignees == [order[i % people] for i in range(len(assignees))]
 
     def test_purges_overdue_on_subsequent_scheduler_runs(self, tmp_db):
         """No new pending instance is created while an overdue one exists."""
