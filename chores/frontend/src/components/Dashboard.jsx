@@ -123,7 +123,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
     try {
       const result = await api.completeInstance(instanceId, activePerson);
       if (result.followup_triggered && result.followup_name) {
-        addToast(`🔗 "${result.followup_name}" is queued for tomorrow`, 'info');
+        addToast(`🔗 "${result.followup_name}" is up for grabs, due tomorrow`, 'info');
       }
 
       // Compute XP bar progress before reload
@@ -318,6 +318,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
                       <div className="font-medium">{ci.chore_name}</div>
                       <div className="text-xs text-gray-500 flex gap-2 items-center">
                         {ci.status === 'overdue' && <span className="text-red-400">Overdue ·</span>}
+                        {ci.due_date > localISODate() && <span className="text-gray-400">Due tomorrow ·</span>}
                         <span>{DIFFICULTY_LABELS[ci.chore_difficulty] || ci.chore_difficulty}</span>
                         {activePowerup && (
                           <span className="text-yellow-400 font-black text-sm">

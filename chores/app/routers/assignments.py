@@ -61,7 +61,7 @@ async def list_instances(
 @router.get("/today", response_model=list[ChoreInstance])
 async def today_instances(person: str | None = None):
     """Get today's chore instances, including overdue ones from previous days."""
-    today = date.today().isoformat()
+    today = date.today()
     conn = get_connection()
     query = """
         SELECT ci.*, c.name as chore_name, c.icon as chore_icon, c.difficulty as chore_difficulty,
@@ -69,9 +69,13 @@ async def today_instances(person: str | None = None):
         FROM chore_instances ci
         JOIN chores c ON ci.chore_id = c.id
         WHERE ci.status IN ('pending', 'claimed', 'overdue')
-          AND ci.due_date <= ?
+          AND (ci.due_date <= ?
+               -- a follow-up is due the day after it spawns, but can be done right away
+               -- shortcut: matches any instance of a follow-up chore due tomorrow, so one with
+               -- its own schedule shows a day early; flag spawned instances if that ever exists
+               OR (ci.due_date = ? AND ci.chore_id IN (SELECT followup_chore_id FROM chores)))
     """
-    params: list = [today]
+    params: list = [today.isoformat(), (today + timedelta(days=1)).isoformat()]
     if person:
         query += " AND (ci.assigned_to = ? OR ci.assigned_to IS NULL)"
         params.append(person)

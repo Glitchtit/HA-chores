@@ -1,3 +1,7 @@
+## 0.8.11
+
+- Follow-up chores appear in Today's Chores right away, marked "Due tomorrow", so they can be done the same day. The deadline and the reminder stay on the next day
+
 ## 0.8.10
 
 - Chores ticked off, started or assigned between midnight and 2 a.m. (3 a.m. in summer) land on today instead of yesterday: the app took the UTC date instead of the local one

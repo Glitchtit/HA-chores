@@ -314,7 +314,18 @@ class TestShoppingHook:
         assert len(followups) == 1
         assert followups[0]["status"] == "pending"
         from datetime import date, timedelta
-        assert followups[0]["due_date"] == (date.today() + timedelta(days=1)).isoformat()
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        assert followups[0]["due_date"] == tomorrow
+
+        # Due tomorrow, but listed today so it can be done right away;
+        # an ordinary chore due tomorrow stays out of today's list.
+        tmp_db.execute(
+            "INSERT INTO chore_instances (chore_id, due_date, status) VALUES (?, ?, 'pending')",
+            (shop_id, tomorrow),
+        )
+        tmp_db.commit()
+        listed = [i["chore_id"] for i in client.get("/api/assignments/today").json()]
+        assert listed == [scan_id]
 
     def test_hook_unknown_chore_returns_404(self, client, tmp_db):
         tmp_db.execute(

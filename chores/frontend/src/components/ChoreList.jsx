@@ -428,7 +428,7 @@ export default function ChoreList({ persons, activePerson, addToast, onQuickDone
                 </select>
                 {form.followup_chore_id && (
                   <p className="text-xs text-gray-500 mt-1">
-                    When this chore is completed, the follow-up is queued as claimable for the next day.
+                    When this chore is completed, the follow-up appears right away as claimable, due the next day.
                   </p>
                 )}
               </div>

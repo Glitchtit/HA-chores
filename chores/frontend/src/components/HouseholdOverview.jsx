@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import * as api from '../api';
 import PersonPickerModal from './PersonPickerModal';
 import ChallengeBanner from './ChallengeBanner';
+import { localISODate } from '../utils/date';
 
 const DIFFICULTY_LABELS = { easy: '❤️', medium: '💖💖', hard: '❤️‍🔥❤️‍🔥❤️‍🔥' };
 
@@ -147,6 +148,7 @@ export default function HouseholdOverview({ persons, addToast, onSelectPerson })
                     </div>
                     <div className="text-xs text-gray-400 flex items-center gap-1.5 flex-wrap mt-0.5">
                       {ci.status === 'overdue' && <span className="text-red-400">Overdue ·</span>}
+                      {ci.due_date > localISODate() && <span>Due tomorrow ·</span>}
                       <span>{DIFFICULTY_LABELS[ci.chore_difficulty] || ci.chore_difficulty}</span>
                       <span>·</span>
                       {isCompleted ? (
