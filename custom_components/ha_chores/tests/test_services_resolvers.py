@@ -161,3 +161,60 @@ class TestFindOpenInstance:
             {"id": 30, "chore_id": 7, "status": "pending", "assigned_to": "person.mira", "due_date": "2026-05-25"},
         ]
         assert services.find_open_instance(8, "person.mira", instances) is None
+
+
+def test_unknown_chore_message_lists_real_names():
+    msg = services.unknown_chore_message(
+        "vacuumed", [{"name": "Vacuum a bit"}, {"name": "Clean toilet "}]
+    )
+    assert "'vacuumed'" in msg
+    assert msg.endswith("Vacuum a bit, Clean toilet")
+
+
+def test_complete_logs_a_chore_nothing_was_scheduled_for(monkeypatch):
+    """"I just vacuumed" with no open instance: create today's, then complete it."""
+    import asyncio
+    from types import SimpleNamespace
+
+    handlers = {}
+    hass = SimpleNamespace(
+        services=SimpleNamespace(
+            has_service=lambda domain, service: False,
+            async_register=lambda d, name, handler, **kw: handlers.__setitem__(name, handler),
+        )
+    )
+
+    async def refresh():
+        return None
+
+    answers = {
+        "/api/persons/": [{"entity_id": "person.thomas", "name": "Thomas"}],
+        "/api/chores/": [{"id": 46, "name": "Vacuum a bit"}],
+        "/api/assignments/": [],
+    }
+    posts = []
+
+    async def fake_get(coord, path, params=None):
+        return answers[path]
+
+    async def fake_post(coord, path, payload):
+        posts.append((path, payload))
+        return {"id": 77}
+
+    monkeypatch.setattr(
+        services, "_coordinators",
+        lambda hass: [SimpleNamespace(async_request_refresh=refresh)],
+    )
+    monkeypatch.setattr(services, "_get", fake_get)
+    monkeypatch.setattr(services, "_post", fake_post)
+
+    services.async_register_services(hass)
+    call = SimpleNamespace(data={"chore": "vacuum a bit", "completed_by": "Thomas"})
+    asyncio.run(handlers["complete_chore"](call))
+
+    (create_path, created), (complete_path, completed) = posts
+    assert create_path == "/api/assignments/"
+    assert created["chore_id"] == 46
+    assert created["assigned_to"] == created["created_by"] == "person.thomas"
+    assert complete_path == "/api/assignments/77/complete"
+    assert completed["completed_by"] == "person.thomas"

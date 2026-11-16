@@ -1,5 +1,32 @@
+## 0.8.9
+
+- Follow-up chores are due the day after. Completing a chore with a follow-up (e.g. "Start dishwasher" then "Empty dishwasher") used to queue the follow-up with today's deadline, so its reminder fired at once and it went overdue that same night. It now appears in Today's Chores the next day, and the toast reads "queued for tomorrow"
+
+## 0.8.8
+
+- Rotation: turns go strictly in order with three or more people. Before, from the second week someone could get a chore twice in a row while someone else was skipped (e.g. 3x/week with three people, daily with four)
+
+## 0.8.7
+
+- Stats calendar: click a day to see every chore done that day (time, chore and who did it). Before, a busy day only showed three and "+12"
+
+## 0.8.6
+
+- Integration 0.5.7: a chore checked off in a Home Assistant to-do list disappears right away instead of up to 10 seconds later
+
+## 0.8.5
+
+- Integration 0.5.6: the Chores to-do lists in Home Assistant can be used: checking a chore off completes it and deleting it skips it (they were read-only). Failures now show an error instead of doing nothing
+- Integration 0.5.6: setup finds the add-on through the Supervisor again (it asked for the wrong add-on name)
+
+## 0.8.4
+
+- New icon and logo in the add-on store, part of one matching set across all GlitchyRee apps
+- Integration 0.5.4: its own icon and logo on the Integrations page (Home Assistant 2026.3 or newer)
+
 ## 0.8.3
-- **Follow-up chores are now due the day after.** Completing a chore with a follow-up (e.g. "Start dishwasher" → "Empty dishwasher") used to queue the follow-up with today's deadline, so its reminder fired and it went overdue right after the parent chore was done. The follow-up is now due tomorrow: it shows up in Today's Chores, gets its reminder, and goes overdue on the next day instead. The toast now reads "queued for tomorrow".
+
+- Integration 0.5.3: no more "Could not register panel" warning at Home Assistant startup. The integration no longer tries to add a sidebar panel of its own; the add-on's own "Chores" sidebar entry is the UI
 
 ## 0.8.2
 
