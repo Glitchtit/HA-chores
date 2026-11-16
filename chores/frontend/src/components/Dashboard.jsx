@@ -123,7 +123,7 @@ export default function Dashboard({ activePerson, persons, addToast, pendingQuic
     try {
       const result = await api.completeInstance(instanceId, activePerson);
       if (result.followup_triggered && result.followup_name) {
-        addToast(`🔗 "${result.followup_name}" is now up for grabs!`, 'info');
+        addToast(`🔗 "${result.followup_name}" is queued for tomorrow`, 'info');
       }
 
       // Compute XP bar progress before reload

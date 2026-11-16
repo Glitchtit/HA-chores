@@ -79,11 +79,12 @@ def should_schedule_on(recurrence: str, target_date: date) -> bool:
     return False
 
 
-def get_next_assignee(chore_id: int, rotation_order: list[str]) -> str | None:
+def get_next_assignee(chore_id: int, rotation_order: list[str], before: str = "9999-12-31") -> str | None:
     """Determine the next person in rotation for a chore.
 
-    Looks at the last completed instance to find who was last, then
-    rotates to the next person.
+    Takes whoever has the chore's latest instance due before `before` (any
+    status, including pending ones generated ahead), then rotates to the
+    next person.
     """
     if not rotation_order:
         return None
@@ -91,9 +92,9 @@ def get_next_assignee(chore_id: int, rotation_order: list[str]) -> str | None:
     conn = get_connection()
     last = conn.execute(
         """SELECT assigned_to FROM chore_instances
-           WHERE chore_id = ? AND status IN ('completed', 'overdue', 'skipped')
+           WHERE chore_id = ? AND due_date < ?
            ORDER BY due_date DESC LIMIT 1""",
-        (chore_id,),
+        (chore_id, before),
     ).fetchone()
 
     if not last or not last["assigned_to"]:
@@ -118,10 +119,6 @@ def generate_instances(days_ahead: int = 7) -> int:
 
     today = date.today()
     created = 0
-
-    # Track the last assigned person per chore within this scheduler run so
-    # rotation advances day-by-day when multiple instances are created in one pass.
-    in_run_last_assigned: dict[int, str] = {}
 
     for chore in chores:
         rotation_order = None
@@ -168,20 +165,7 @@ def generate_instances(days_ahead: int = 7) -> int:
             # Determine assignee
             assigned_to = None
             if chore["assignment_mode"] == "rotation" and rotation_order:
-                chore_id = chore["id"]
-                if chore_id in in_run_last_assigned:
-                    # Advance rotation from the previous assignment made in this run
-                    last = in_run_last_assigned[chore_id]
-                    try:
-                        idx = rotation_order.index(last)
-                        assigned_to = rotation_order[(idx + 1) % len(rotation_order)]
-                    except ValueError:
-                        assigned_to = get_next_assignee(chore_id, rotation_order)
-                else:
-                    # First new instance for this chore in this run: use DB history
-                    assigned_to = get_next_assignee(chore_id, rotation_order)
-                if assigned_to:
-                    in_run_last_assigned[chore_id] = assigned_to
+                assigned_to = get_next_assignee(chore["id"], rotation_order, target_str)
             # manual and claim modes leave assigned_to as None
 
             conn.execute(
