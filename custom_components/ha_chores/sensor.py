@@ -19,6 +19,8 @@ async def async_setup_entry(
 
     # Global overdue sensor
     entities.append(ChoresOverdueSensor(coordinator, entry))
+    # Open chores nobody has claimed yet (0.5.12)
+    entities.append(ChoresUnclaimedSensor(coordinator, entry))
     # Active household challenge (v0.4.6)
     entities.append(ChoresChallengeProgressSensor(coordinator, entry))
     # Active seasonal boss (v0.5.0)
@@ -45,6 +47,44 @@ class ChoresOverdueSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         return self.coordinator.data.get("overdue_count", 0)
+
+
+class ChoresUnclaimedSensor(CoordinatorEntity, SensorEntity):
+    """Open chore instances with nobody assigned, for dashboards that let people claim them.
+
+    The state is the count; the `chores` attribute lists them oldest due first, with the
+    instance id that `ha_chores.claim_chore` takes.
+    """
+
+    _attr_icon = "mdi:hand-back-right"
+
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_unclaimed"
+        self._attr_name = "Chores Unclaimed"
+
+    def _open(self) -> list[dict]:
+        return sorted(
+            (i for i in self.coordinator.data.get("instances", []) if not i.get("assigned_to")),
+            key=lambda i: (i.get("due_date") or "", i.get("id") or 0),
+        )
+
+    @property
+    def native_value(self):
+        return len(self._open())
+
+    @property
+    def extra_state_attributes(self):
+        return {"chores": [
+            {
+                "id": i["id"],
+                "name": i.get("chore_name", "Chore"),
+                "icon": i.get("chore_icon", "🧹"),
+                "due_date": i.get("due_date"),
+                "status": i.get("status"),
+            }
+            for i in self._open()
+        ]}
 
 
 class ChoresPersonXPSensor(CoordinatorEntity, SensorEntity):

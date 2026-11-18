@@ -173,6 +173,30 @@ assign_chore:
       selector:
         text:
 
+claim_chore:
+  name: Claim chore
+  description: >-
+    Claim an open chore instance that nobody is assigned to yet, so it becomes
+    that person's to do. Use the instance id from the Chores Unclaimed sensor's
+    `chores` attribute. Example: "Thomas takes the weekend reset".
+  fields:
+    instance_id:
+      name: Instance ID
+      description: The numeric id of the unclaimed chore instance.
+      required: true
+      example: 42
+      selector:
+        number:
+          mode: box
+    person:
+      name: Person
+      description: >-
+        Who claims it, by name (e.g. "Mira") or entity_id (e.g. "person.mira").
+      required: true
+      example: Mira
+      selector:
+        text:
+
 complete_chore:
   name: Complete chore
   description: >-

@@ -21,6 +21,7 @@ _LOGGER = logging.getLogger(__name__)
 SERVICE_CREATE_CHORE = "create_chore"
 SERVICE_SCHEDULE_CHORE = "schedule_chore"
 SERVICE_ASSIGN_CHORE = "assign_chore"
+SERVICE_CLAIM_CHORE = "claim_chore"
 SERVICE_COMPLETE_CHORE = "complete_chore"
 SERVICE_LIST_CHORES = "list_chores"
 SERVICE_LEADERBOARD = "leaderboard"
@@ -55,6 +56,13 @@ _ASSIGN_SCHEMA = vol.Schema(
         vol.Required("instance_id"): vol.Coerce(int),
         vol.Required("person"): cv.string,
         vol.Optional("assigned_by"): vol.Any(None, cv.string),
+    }
+)
+
+_CLAIM_SCHEMA = vol.Schema(
+    {
+        vol.Required("instance_id"): vol.Coerce(int),
+        vol.Required("person"): cv.string,
     }
 )
 
@@ -235,6 +243,21 @@ def async_register_services(hass: HomeAssistant) -> None:
             await coord.async_request_refresh()
         return result
 
+    async def handle_claim_chore(call: ServiceCall) -> dict:
+        result: dict = {}
+        for coord in _coordinators(hass):
+            persons = await _get(coord, "/api/persons/")
+            person = resolve_person(call.data["person"], persons)
+            if person is None:
+                raise ServiceValidationError(
+                    f"No person named '{call.data['person']}' found."
+                )
+            result = await _post(
+                coord, f"/api/assignments/{call.data['instance_id']}/claim", {"person_id": person}
+            )
+            await coord.async_request_refresh()
+        return result
+
     async def handle_complete_chore(call: ServiceCall) -> dict:
         result: dict = {}
         for coord in _coordinators(hass):
@@ -314,6 +337,13 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_CLAIM_CHORE,
+        handle_claim_chore,
+        schema=_CLAIM_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_COMPLETE_CHORE,
         handle_complete_chore,
         schema=_COMPLETE_SCHEMA,
@@ -340,6 +370,7 @@ def async_unregister_services(hass: HomeAssistant) -> None:
         SERVICE_CREATE_CHORE,
         SERVICE_SCHEDULE_CHORE,
         SERVICE_ASSIGN_CHORE,
+        SERVICE_CLAIM_CHORE,
         SERVICE_COMPLETE_CHORE,
         SERVICE_LIST_CHORES,
         SERVICE_LEADERBOARD,
