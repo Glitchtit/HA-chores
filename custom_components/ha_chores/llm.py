@@ -27,6 +27,8 @@ PROMPT = (
     " ha_chores__schedule_chore puts one on someone's plate for a date,"
     " ha_chores__create_chore adds a new chore, ha_chores__list_chores lists them"
     " and ha_chores__leaderboard gives this month's ranking."
+    " XP goes to whoever you name as completed_by and cannot be taken back, so"
+    " when it is not clear who did the chore, ask before completing it."
 )
 
 # Everything else changes something, and must not do it twice on a replay.

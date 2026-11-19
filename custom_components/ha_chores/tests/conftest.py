@@ -34,6 +34,7 @@ def _install_stubs() -> None:
         "string": str,
         "boolean": bool,
         "ensure_list": list,
+        "date": lambda v: __import__("datetime").date.fromisoformat(str(v)),
     })
     _stub_submodule("homeassistant.helpers.service", {"async_get_all_descriptions": None})
     _stub_submodule("homeassistant.util", {})

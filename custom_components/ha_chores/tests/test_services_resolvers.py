@@ -218,3 +218,33 @@ def test_complete_logs_a_chore_nothing_was_scheduled_for(monkeypatch):
     assert created["assigned_to"] == created["created_by"] == "person.thomas"
     assert complete_path == "/api/assignments/77/complete"
     assert completed["completed_by"] == "person.thomas"
+
+
+def test_complete_with_chores_not_set_up_is_an_error_not_a_silent_success(monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+
+    import pytest
+
+    handlers = {}
+    hass = SimpleNamespace(
+        services=SimpleNamespace(
+            has_service=lambda domain, service: False,
+            async_register=lambda d, name, handler, **kw: handlers.__setitem__(name, handler),
+        )
+    )
+    monkeypatch.setattr(services, "_coordinators", lambda hass: [])
+    services.async_register_services(hass)
+    call = SimpleNamespace(data={"chore": "Vacuum a bit", "completed_by": "Thomas"})
+    with pytest.raises(services.HomeAssistantError, match="not set up"):
+        asyncio.run(handlers["complete_chore"](call))
+
+
+def test_a_refusal_carries_the_add_on_reason():
+    import httpx
+
+    request = httpx.Request("POST", "http://chores/api/assignments/5/complete")
+    response = httpx.Response(400, json={"detail": "Already completed"}, request=request)
+    err = httpx.HTTPStatusError("400 Bad Request", request=request, response=response)
+    assert "Already completed" in str(services._failure(err))
+    assert "boom" in str(services._failure(httpx.ConnectError("boom")))

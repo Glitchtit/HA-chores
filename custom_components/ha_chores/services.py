@@ -46,7 +46,7 @@ _SCHEDULE_SCHEMA = vol.Schema(
     {
         vol.Required("chore"): cv.string,
         vol.Required("assigned_to"): cv.string,
-        vol.Required("due_date"): cv.string,
+        vol.Required("due_date"): cv.date,
         vol.Optional("created_by"): vol.Any(None, cv.string),
     }
 )
@@ -155,6 +155,25 @@ def _coordinators(hass: HomeAssistant) -> list[ChoresCoordinator]:
     ]
 
 
+def _require_coordinators(hass: HomeAssistant) -> list[ChoresCoordinator]:
+    """The coordinators, or an error: an empty loop must never read as done."""
+    coords = _coordinators(hass)
+    if not coords:
+        raise HomeAssistantError("Chores is not set up.")
+    return coords
+
+
+def _failure(err: httpx.HTTPError) -> HomeAssistantError:
+    """The add-on's own reason ("Already completed") when it gave one."""
+    detail = None
+    if isinstance(err, httpx.HTTPStatusError):
+        try:
+            detail = err.response.json().get("detail")
+        except (ValueError, AttributeError):
+            detail = None
+    return HomeAssistantError(f"Chores add-on request failed: {detail or err}")
+
+
 async def _post(coordinator: ChoresCoordinator, path: str, payload: dict) -> dict:
     async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
         try:
@@ -162,7 +181,7 @@ async def _post(coordinator: ChoresCoordinator, path: str, payload: dict) -> dic
             resp.raise_for_status()
         except httpx.HTTPError as err:
             # Only a HomeAssistantError reaches a voice assistant as text.
-            raise HomeAssistantError(f"Chores add-on request failed: {err}") from err
+            raise _failure(err) from err
         try:
             return resp.json()
         except ValueError:
@@ -175,7 +194,7 @@ async def _get(coordinator: ChoresCoordinator, path: str, params: dict | None = 
             resp = await client.get(f"{coordinator.addon_url}{path}", params=params or {})
             resp.raise_for_status()
         except httpx.HTTPError as err:
-            raise HomeAssistantError(f"Chores add-on request failed: {err}") from err
+            raise _failure(err) from err
         return resp.json()
 
 
@@ -189,14 +208,14 @@ def async_register_services(hass: HomeAssistant) -> None:
     async def handle_create_chore(call: ServiceCall) -> dict:
         payload = {k: v for k, v in call.data.items() if v is not None}
         result: dict = {}
-        for coord in _coordinators(hass):
+        for coord in _require_coordinators(hass):
             result = await _post(coord, "/api/chores/", payload)
             await coord.async_request_refresh()
         return result
 
     async def handle_schedule_chore(call: ServiceCall) -> dict:
         result: dict = {}
-        for coord in _coordinators(hass):
+        for coord in _require_coordinators(hass):
             chores = await _get(coord, "/api/chores/", {"active_only": "true"})
             chore_id = resolve_chore_id(call.data["chore"], chores)
             if chore_id is None:
@@ -214,7 +233,7 @@ def async_register_services(hass: HomeAssistant) -> None:
                 created_by = resolve_person(created_by, persons) or created_by
             payload = {
                 "chore_id": chore_id,
-                "due_date": call.data["due_date"],
+                "due_date": call.data["due_date"].isoformat(),
                 "assigned_to": person,
                 "created_by": created_by,
             }
@@ -225,7 +244,7 @@ def async_register_services(hass: HomeAssistant) -> None:
 
     async def handle_assign_chore(call: ServiceCall) -> dict:
         result: dict = {}
-        for coord in _coordinators(hass):
+        for coord in _require_coordinators(hass):
             persons = await _get(coord, "/api/persons/")
             person = resolve_person(call.data["person"], persons)
             if person is None:
@@ -245,7 +264,7 @@ def async_register_services(hass: HomeAssistant) -> None:
 
     async def handle_claim_chore(call: ServiceCall) -> dict:
         result: dict = {}
-        for coord in _coordinators(hass):
+        for coord in _require_coordinators(hass):
             persons = await _get(coord, "/api/persons/")
             person = resolve_person(call.data["person"], persons)
             if person is None:
@@ -260,7 +279,7 @@ def async_register_services(hass: HomeAssistant) -> None:
 
     async def handle_complete_chore(call: ServiceCall) -> dict:
         result: dict = {}
-        for coord in _coordinators(hass):
+        for coord in _require_coordinators(hass):
             persons = await _get(coord, "/api/persons/")
             person = resolve_person(call.data["completed_by"], persons)
             if person is None:
