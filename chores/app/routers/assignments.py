@@ -5,10 +5,11 @@ import json
 import logging
 from datetime import date, datetime, timedelta
 from fastapi import APIRouter, HTTPException, BackgroundTasks
-from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim, CompleteResult, BadgeResult, PowerUp
+from models import ChoreInstance, InstanceCreate, InstanceComplete, InstanceClaim, InstanceUndo, CompleteResult, BadgeResult, PowerUp
 from database import get_connection
 from gamification import calculate_xp, update_streak, add_xp, check_and_award_badges, award_levelup_powerup, apply_powerup_to_xp
 import pets
+import undo
 from notifications import (
     notify_chore_assigned,
     notify_badge_earned,
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/api/assignments", tags=["assignments"])
 
 
 def _row_to_instance(row) -> dict:
-    d = {k: row[k] for k in row.keys()}
+    d = {k: row[k] for k in row.keys() if k != "undo"}
     return d
 
 
@@ -153,6 +154,7 @@ def apply_completion(
     *,
     bg: BackgroundTasks | None,
     suppress_followup: bool = False,
+    remove_on_undo: bool = False,
 ) -> dict:
     """Shared completion logic. Returns the same dict shape as CompleteResult."""
     row = instance_row
@@ -160,6 +162,8 @@ def apply_completion(
         raise HTTPException(400, "Already completed")
 
     was_overdue = row["status"] == "overdue"
+    undo_snapshot = undo.snapshot(conn, row)
+    undo_snapshot["remove_on_undo"] = remove_on_undo
 
     person = conn.execute(
         "SELECT * FROM persons WHERE entity_id = ?", (completed_by,)
@@ -339,13 +343,20 @@ def apply_completion(
                 (followup_chore_id, followup_due),
             ).fetchone()
             if not already_exists:
-                conn.execute(
+                cur = conn.execute(
                     """INSERT INTO chore_instances (chore_id, due_date, assigned_to, status)
                        VALUES (?, ?, NULL, 'pending')""",
                     (followup_chore_id, followup_due),
                 )
                 conn.commit()
                 followup_name = followup_chore["name"]
+                undo_snapshot["followup_instance_id"] = cur.lastrowid
+
+    conn.execute(
+        "UPDATE chore_instances SET undo = ? WHERE id = ?",
+        (undo.dumps(undo_snapshot), row["id"]),
+    )
+    conn.commit()
 
     return {
         "instance": _row_to_instance(updated),
@@ -379,7 +390,63 @@ async def complete_instance(instance_id: int, body: InstanceComplete, bg: Backgr
     ).fetchone()
     if not row:
         raise HTTPException(404, "Instance not found")
-    return apply_completion(conn, row, body.completed_by, body.notes, bg=bg)
+    return apply_completion(
+        conn, row, body.completed_by, body.notes, bg=bg, remove_on_undo=body.remove_on_undo
+    )
+
+
+@router.post("/undo-last", status_code=200)
+async def undo_last_completion():
+    """Undo the newest completion, for "that was wrong" without an id."""
+    row = get_connection().execute(
+        "SELECT id FROM chore_instances WHERE status = 'completed' AND undo IS NOT NULL"
+        " ORDER BY completed_at DESC LIMIT 1"
+    ).fetchone()
+    if not row:
+        raise HTTPException(400, "There is no completion to undo.")
+    return await undo_instance(row["id"], InstanceUndo())
+
+
+@router.post("/{instance_id}/undo", status_code=200)
+async def undo_instance(instance_id: int, body: InstanceUndo):
+    """Take back a recent completion, or remove a chore scheduled by mistake.
+
+    A completed instance gets everything the completion changed written back
+    (see undo.py); `remove_instance` also deletes the instance, for one that
+    only existed to log the completion. An open instance is deleted, but only
+    within undo.UNDO_MINUTES of being created so scheduler-made ones survive.
+    """
+    conn = get_connection()
+    row = conn.execute(
+        """SELECT ci.*, c.name AS chore_name FROM chore_instances ci
+           JOIN chores c ON ci.chore_id = c.id WHERE ci.id = ?""",
+        (instance_id,),
+    ).fetchone()
+    if not row:
+        raise HTTPException(404, "Instance not found")
+    # Said back to the user, so they hear what was taken back.
+    what = {"instance_id": instance_id, "chore": row["chore_name"],
+            "completed_by": row["completed_by"], "assigned_to": row["assigned_to"],
+            "due_date": row["due_date"]}
+    if row["status"] == "completed":
+        if not row["undo"]:
+            raise HTTPException(400, "This completion predates undo and cannot be undone.")
+        try:
+            snap = json.loads(row["undo"])
+            remove = body.remove_instance or snap.get("remove_on_undo", False)
+            undo.undo_completion(conn, instance_id, snap, remove_instance=remove)
+        except ValueError as err:
+            raise HTTPException(400, str(err)) from err
+        return {"undone": "completion", **what, "xp_removed": row["xp_awarded"], "removed": remove}
+    recent = conn.execute(
+        "SELECT created_at > datetime('now', ?) FROM chore_instances WHERE id = ?",
+        (f"-{undo.UNDO_MINUTES} minutes", instance_id),
+    ).fetchone()[0]
+    if not recent:
+        raise HTTPException(400, f"Only chores scheduled in the last {undo.UNDO_MINUTES} minutes can be undone.")
+    conn.execute("DELETE FROM chore_instances WHERE id = ?", (instance_id,))
+    conn.commit()
+    return {"undone": "schedule", **what, "removed": True}
 
 
 @router.post("/{instance_id}/skip", response_model=ChoreInstance)

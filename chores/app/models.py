@@ -68,6 +68,12 @@ class InstanceCreate(BaseModel):
 class InstanceComplete(BaseModel):
     completed_by: str
     notes: str = ""
+    # The instance only exists to log this completion: undo deletes it.
+    remove_on_undo: bool = False
+
+
+class InstanceUndo(BaseModel):
+    remove_instance: bool = False
 
 
 class InstanceClaim(BaseModel):

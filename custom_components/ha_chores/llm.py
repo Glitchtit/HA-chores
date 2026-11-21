@@ -16,7 +16,7 @@ from .const import DOMAIN
 from .once import once
 
 # assign_chore is left out: it needs an instance id no voice user knows.
-ACTIONS = ("list_chores", "complete_chore", "schedule_chore", "create_chore", "leaderboard")
+ACTIONS = ("list_chores", "complete_chore", "schedule_chore", "create_chore", "undo", "leaderboard")
 
 # Some agents load tools on demand (tool search): this line is how they
 # learn the tools exist.
@@ -27,8 +27,13 @@ PROMPT = (
     " ha_chores__schedule_chore puts one on someone's plate for a date,"
     " ha_chores__create_chore adds a new chore, ha_chores__list_chores lists them"
     " and ha_chores__leaderboard gives this month's ranking."
-    " XP goes to whoever you name as completed_by and cannot be taken back, so"
-    " when it is not clear who did the chore, ask before completing it."
+    " Before completing, scheduling or creating, say back in one short sentence"
+    " the exact chore name, the person and the date, and wait for a yes;"
+    " when it is not clear who did it, ask."
+    " When the user says it was wrong (wrong person, wrong chore, misheard) or"
+    " to undo it, ha_chores__undo takes it back, using the id from the earlier"
+    " result (no id = the newest completion); then do the right one, again"
+    " after a yes."
 )
 
 # Everything else changes something, and must not do it twice on a replay.

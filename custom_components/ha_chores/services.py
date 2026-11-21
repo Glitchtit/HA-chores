@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Optional
 
 import httpx
@@ -25,6 +26,7 @@ SERVICE_CLAIM_CHORE = "claim_chore"
 SERVICE_COMPLETE_CHORE = "complete_chore"
 SERVICE_LIST_CHORES = "list_chores"
 SERVICE_LEADERBOARD = "leaderboard"
+SERVICE_UNDO = "undo"
 
 _VALID_CATEGORIES = ["dishes", "laundry", "cleaning", "trash", "cooking", "other"]
 
@@ -71,6 +73,13 @@ _COMPLETE_SCHEMA = vol.Schema(
         vol.Required("chore"): cv.string,
         vol.Required("completed_by"): cv.string,
         vol.Optional("notes", default=""): cv.string,
+    }
+)
+
+_UNDO_SCHEMA = vol.Schema(
+    {
+        vol.Optional("instance_id"): vol.Coerce(int),
+        vol.Optional("chore_id"): vol.Coerce(int),
     }
 )
 
@@ -298,7 +307,8 @@ def async_register_services(hass: HomeAssistant) -> None:
                 {"status": "pending,claimed,overdue", "person": person},
             )
             instance_id = find_open_instance(chore_id, person, instances)
-            if instance_id is None:
+            created_here = instance_id is None
+            if created_here:
                 # Nothing was scheduled: log it as done today, the way the
                 # app's quick-done tile does (self-assigned, so no notification).
                 created = await _post(
@@ -312,11 +322,46 @@ def async_register_services(hass: HomeAssistant) -> None:
                     },
                 )
                 instance_id = created["id"]
-            payload = {"completed_by": person, "notes": call.data.get("notes") or ""}
+            payload = {
+                "completed_by": person,
+                "notes": call.data.get("notes") or "",
+                # Undo then removes the instance instead of leaving it on the plate.
+                "remove_on_undo": created_here,
+            }
             result = await _post(
                 coord, f"/api/assignments/{instance_id}/complete", payload
             )
             await coord.async_request_refresh()
+        return result
+
+    async def handle_undo(call: ServiceCall) -> dict:
+        """Take back a recent completion, scheduling or new chore.
+
+        No id means the newest completion. Each add-on refuses what it can no
+        longer undo safely (older than an hour, a later completion exists).
+        """
+        coord = _require_coordinators(hass)[0]
+        chore_id = call.data.get("chore_id")
+        if chore_id is not None:
+            chore = await _get(coord, f"/api/chores/{chore_id}")
+            created = dt_util.parse_datetime(str(chore.get("created_at") or ""))
+            if created is None or dt_util.utcnow() - created.replace(
+                tzinfo=created.tzinfo or dt_util.UTC
+            ) > timedelta(hours=1):
+                raise ServiceValidationError(
+                    "Only chores created in the last hour can be undone."
+                )
+            async with httpx.AsyncClient(verify=get_default_context(), timeout=15) as client:
+                try:
+                    (await client.delete(f"{coord.addon_url}/api/chores/{chore_id}")).raise_for_status()
+                except httpx.HTTPError as err:
+                    raise _failure(err) from err
+            result = {"undone": "create_chore", "chore_id": chore_id, "chore": chore.get("name")}
+        elif call.data.get("instance_id") is not None:
+            result = await _post(coord, f"/api/assignments/{call.data['instance_id']}/undo", {})
+        else:
+            result = await _post(coord, "/api/assignments/undo-last", {})
+        await coord.async_request_refresh()
         return result
 
     async def handle_list_chores(call: ServiceCall) -> dict:
@@ -370,6 +415,13 @@ def async_register_services(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(
         DOMAIN,
+        SERVICE_UNDO,
+        handle_undo,
+        schema=_UNDO_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
+    hass.services.async_register(
+        DOMAIN,
         SERVICE_LIST_CHORES,
         handle_list_chores,
         schema=_LIST_CHORES_SCHEMA,
@@ -393,6 +445,7 @@ def async_unregister_services(hass: HomeAssistant) -> None:
         SERVICE_COMPLETE_CHORE,
         SERVICE_LIST_CHORES,
         SERVICE_LEADERBOARD,
+        SERVICE_UNDO,
     ):
         if hass.services.has_service(DOMAIN, svc):
             hass.services.async_remove(DOMAIN, svc)

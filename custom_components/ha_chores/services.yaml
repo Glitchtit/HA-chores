@@ -253,3 +253,32 @@ leaderboard:
     level, streak, and badge count. Use this to answer "who's winning this
     month?". Returns a response — call with return_response.
   fields: {}
+
+undo:
+  name: Undo
+  description: >-
+    Take back a chore change made in the last hour. With instance_id: a
+    completion is reversed (XP, streak, badges, pet, quests all restored) or a
+    scheduled chore is removed. With chore_id: a newly created chore is
+    deleted. With neither: the newest completion is reversed. To fix the wrong
+    person or the wrong chore, undo and then do it again correctly. The reply
+    says what was undone; tell the user.
+  fields:
+    instance_id:
+      name: Instance ID
+      description: >-
+        The instance id from the complete_chore or schedule_chore result
+        (its "id", or "instance"."id").
+      required: false
+      example: 42
+      selector:
+        number:
+          mode: box
+    chore_id:
+      name: Chore ID
+      description: The chore id from the create_chore result.
+      required: false
+      example: 7
+      selector:
+        number:
+          mode: box

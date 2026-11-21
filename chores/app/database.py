@@ -370,6 +370,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         # chore_instances columns (v0.3.27 — track who created/claimed the instance
         # so self-managed chores can suppress assigned/reminder notifications)
         ("chore_instances", "created_by", "TEXT DEFAULT NULL"),
+        # chore_instances columns (v0.8.12 — snapshot that lets a completion be undone)
+        ("chore_instances", "undo", "TEXT DEFAULT NULL"),
         # pet_states columns (v0.4.2 — pet evolution stages: egg → baby → teen → adult → mythic)
         ("pet_states", "stage", "TEXT DEFAULT 'egg'"),
         # persons columns (v0.4.3 — cosmetic-shop currency, 1 token per 10 XP earned)
