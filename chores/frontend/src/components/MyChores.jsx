@@ -90,6 +90,22 @@ export default function MyChores({ activePerson, persons, addToast }) {
     }
   };
 
+  // Mirrors undo.UNDO_MINUTES in the add-on; the server still has the final say.
+  const undoable = (ci) =>
+    ci.status === 'completed' && ci.completed_at &&
+    Date.now() - new Date(ci.completed_at).getTime() < 60 * 60 * 1000;
+
+  const handleUndo = async (ci) => {
+    if (!window.confirm(`Undo "${ci.chore_name}"? The ${ci.xp_awarded} XP and anything it earned are taken back.`)) return;
+    try {
+      await api.undoInstance(ci.id);
+      addToast(`↩️ Undid ${ci.chore_name}`, 'info');
+      load();
+    } catch (e) {
+      addToast(e?.response?.data?.detail || 'Failed to undo', 'error');
+    }
+  };
+
   const personName = (entityId) =>
     persons.find(p => p.entity_id === entityId)?.name || entityId || 'Unassigned';
 
@@ -190,6 +206,14 @@ export default function MyChores({ activePerson, persons, addToast }) {
                     </div>
                   )}
                 </div>
+                {undoable(ci) && (
+                  <button
+                    onClick={() => handleUndo(ci)}
+                    className="self-center flex-shrink-0 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    ↩️ Undo
+                  </button>
+                )}
               </div>
             </div>
           ))}

@@ -1,3 +1,7 @@
+## 0.8.13
+
+- My Chores: a chore completed in the last hour has an ↩️ Undo button on its right. It asks first, then takes back the XP and everything the completion earned. If someone has completed another chore since, it says so and leaves it alone
+
 ## 0.8.12
 
 - A chore completion can be undone within an hour: `POST /api/assignments/{id}/undo` writes back everything it changed (XP, level, tokens, streak, badges, power-ups, pet, daily quests, household challenge and boss progress) and removes a follow-up it queued. Refused once another chore has been completed after it, so nobody else's progress is rolled back. Completions from before this version cannot be undone
