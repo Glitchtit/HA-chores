@@ -92,7 +92,7 @@ export default function MyChores({ activePerson, persons, addToast }) {
 
   // Mirrors undo.UNDO_MINUTES in the add-on; the server still has the final say.
   const undoable = (ci) =>
-    ci.status === 'completed' && ci.completed_at &&
+    ci.can_undo && ci.completed_at &&
     Date.now() - new Date(ci.completed_at).getTime() < 60 * 60 * 1000;
 
   const handleUndo = async (ci) => {

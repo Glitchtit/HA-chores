@@ -22,6 +22,8 @@ router = APIRouter(prefix="/api/assignments", tags=["assignments"])
 
 def _row_to_instance(row) -> dict:
     d = {k: row[k] for k in row.keys() if k != "undo"}
+    if "undo" in row.keys():
+        d["can_undo"] = row["status"] == "completed" and bool(row["undo"])
     return d
 
 

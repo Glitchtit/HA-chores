@@ -43,6 +43,8 @@ def test_undo_completion_restores_everything(client, tmp_db):
 
     done = client.post(f"/api/assignments/{inst}/complete", json={"completed_by": "person.a"})
     assert done.status_code == 200 and done.json()["xp_awarded"] > 0
+    listed = client.get("/api/assignments/", params={"status": "completed"}).json()
+    assert [ci["can_undo"] for ci in listed if ci["id"] == inst] == [True]
     assert _state(tmp_db) != before  # XP, first-chore badge, pet...
 
     resp = client.post(f"/api/assignments/{inst}/undo", json={})
