@@ -23,7 +23,8 @@ router = APIRouter(prefix="/api/assignments", tags=["assignments"])
 def _row_to_instance(row) -> dict:
     d = {k: row[k] for k in row.keys() if k != "undo"}
     if "undo" in row.keys():
-        d["can_undo"] = row["status"] == "completed" and bool(row["undo"])
+        d["can_undo"] = (row["status"] == "completed" and bool(row["undo"])
+                         and "after" in json.loads(row["undo"]))
     return d
 
 
@@ -354,6 +355,7 @@ def apply_completion(
                 followup_name = followup_chore["name"]
                 undo_snapshot["followup_instance_id"] = cur.lastrowid
 
+    undo.record_after(conn, undo_snapshot)
     conn.execute(
         "UPDATE chore_instances SET undo = ? WHERE id = ?",
         (undo.dumps(undo_snapshot), row["id"]),
@@ -413,7 +415,7 @@ async def undo_last_completion():
 async def undo_instance(instance_id: int, body: InstanceUndo):
     """Take back a recent completion, or remove a chore scheduled by mistake.
 
-    A completed instance gets everything the completion changed written back
+    A completed instance gets what the completion itself changed put back
     (see undo.py); `remove_instance` also deletes the instance, for one that
     only existed to log the completion. An open instance is deleted, but only
     within undo.UNDO_MINUTES of being created so scheduler-made ones survive.

@@ -98,7 +98,7 @@ class ChoreInstance(BaseModel):
     chore_difficulty: Optional[str] = None
     chore_assignment_mode: Optional[str] = None
     chore_xp_reward: Optional[int] = None
-    can_undo: bool = False  # completed with an undo snapshot (0.8.12+)
+    can_undo: bool = False  # completed with an undo snapshot (0.8.15+)
 
 
 # ── Persons ──────────────────────────────────────────────────────────────────
