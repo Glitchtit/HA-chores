@@ -46,3 +46,24 @@ def test_the_same_call_acts_again_once_the_window_has_passed(monkeypatch):
         return first, await once_mod.once("consume 9", consume)
 
     assert asyncio.run(two_requests()) == (1, 2)
+
+
+def test_a_replayed_tool_result_gets_the_repeat_note():
+    from dataclasses import dataclass
+
+    @dataclass(slots=True)
+    class ToolResult:
+        data: dict
+
+    async def consume():
+        await asyncio.sleep(0.01)
+        return ToolResult(data={"consumed": 1})
+
+    async def burst():
+        return await asyncio.gather(
+            once_mod.once("tool 1", consume), once_mod.once("tool 1", consume)
+        )
+
+    first, replay = asyncio.run(burst())
+    assert first.data == {"consumed": 1}
+    assert replay.data == {"consumed": 1, "repeat": once_mod.REPEAT_NOTE}
