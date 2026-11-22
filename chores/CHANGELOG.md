@@ -1,3 +1,8 @@
+## 0.8.15
+
+- Undo takes back only what that completion changed. It used to put the whole household's XP, tokens, shop items, pets, power-ups and popups back to how they were before the chore, so anything someone else did in that hour (a shop purchase, feeding a pet, a popup already seen) was lost too. If something the completion changed has changed again since (for example the tokens it earned were spent), undo now says so and leaves everything as it is
+- Completions logged before this version cannot be undone, and show no Undo button
+
 ## 0.8.14
 
 - The Undo button only shows on completions that can really be undone. It used to also appear on chores completed in the last hour but before 0.8.12, and tapping it only said it could not be undone
