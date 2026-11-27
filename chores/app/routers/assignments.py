@@ -165,6 +165,7 @@ def apply_completion(
         raise HTTPException(400, "Already completed")
 
     was_overdue = row["status"] == "overdue"
+    undo.clear_expired(conn)
     undo_snapshot = undo.snapshot(conn, row)
     undo_snapshot["remove_on_undo"] = remove_on_undo
 
@@ -434,7 +435,7 @@ async def undo_instance(instance_id: int, body: InstanceUndo):
             "due_date": row["due_date"]}
     if row["status"] == "completed":
         if not row["undo"]:
-            raise HTTPException(400, "This completion predates undo and cannot be undone.")
+            raise HTTPException(400, f"Only completions from the last {undo.UNDO_MINUTES} minutes can be undone.")
         try:
             snap = json.loads(row["undo"])
             remove = body.remove_instance or snap.get("remove_on_undo", False)

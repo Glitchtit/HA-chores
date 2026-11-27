@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import json
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -156,6 +156,78 @@ def test_undo_refused_when_its_changes_changed_again(client, tmp_db):
     assert resp.status_code == 400 and "cannot undo" in resp.json()["detail"]
     assert _state(tmp_db) == after_purchase
     assert tmp_db.execute("SELECT status FROM chore_instances WHERE id = ?", (inst,)).fetchone()[0] == "completed"
+
+
+def test_undo_snapshot_skips_seen_celebrations(client, tmp_db):
+    for _ in range(50):
+        tmp_db.execute(
+            "INSERT INTO pending_celebrations (person_id, payload, seen_at) VALUES ('person.a', ?, ?)",
+            ('{"old": true}', "2026-01-01T00:00:00"),
+        )
+    tmp_db.execute(
+        "INSERT INTO pending_celebrations (person_id, payload) VALUES ('person.a', ?)",
+        ('{"fresh": true}',),
+    )
+    tmp_db.commit()
+
+    inst = _complete_wash(client)
+    snap = json.loads(tmp_db.execute("SELECT undo FROM chore_instances WHERE id = ?", (inst,)).fetchone()[0])
+    for key in ("tables", "after"):
+        rows = snap[key]["pending_celebrations"]
+        assert all(r["seen_at"] is None for r in rows), key
+        assert any(r["payload"] == '{"fresh": true}' for r in rows), key
+
+    assert client.post(f"/api/assignments/{inst}/undo", json={}).status_code == 200
+    seen = tmp_db.execute(
+        "SELECT count(*) FROM pending_celebrations WHERE person_id = 'person.a' AND seen_at IS NOT NULL"
+    ).fetchone()[0]
+    assert seen == 50
+
+
+def test_expired_undo_cleared_on_next_completion(client, tmp_db):
+    first = _complete_wash(client)
+    backdate = (datetime.now() - timedelta(minutes=61)).isoformat()
+    tmp_db.execute("UPDATE chore_instances SET completed_at = ? WHERE id = ?", (backdate, first))
+    tmp_db.commit()
+
+    second = _complete_wash(client)
+
+    assert tmp_db.execute("SELECT undo FROM chore_instances WHERE id = ?", (first,)).fetchone()[0] is None
+    assert tmp_db.execute("SELECT undo FROM chore_instances WHERE id = ?", (second,)).fetchone()[0] is not None
+    listed = client.get("/api/assignments/", params={"status": "completed"}).json()
+    assert [ci["can_undo"] for ci in listed if ci["id"] == first] == [False]
+
+
+def test_expired_undo_cleared_at_startup(client, tmp_db):
+    inst = _complete_wash(client)
+    backdate = (datetime.now() - timedelta(minutes=61)).isoformat()
+    tmp_db.execute("UPDATE chore_instances SET completed_at = ? WHERE id = ?", (backdate, inst))
+    tmp_db.commit()
+
+    from main import app
+    with TestClient(app):
+        pass
+    import database
+    assert database.get_connection().execute(
+        "SELECT undo FROM chore_instances WHERE id = ?", (inst,)).fetchone()[0] is None
+
+
+def test_undo_removes_own_celebration_even_if_seen(client, tmp_db):
+    before_ids = {r[0] for r in tmp_db.execute("SELECT id FROM pending_celebrations").fetchall()}
+    inst = _complete_wash(client)
+    new_ids = [r[0] for r in tmp_db.execute("SELECT id FROM pending_celebrations").fetchall() if r[0] not in before_ids]
+    assert new_ids  # the first completion earns the first-chore badge, so it queued a celebration
+    for cel_id in new_ids:
+        tmp_db.execute("UPDATE pending_celebrations SET seen_at = '2026-01-01T00:00:00' WHERE id = ?", (cel_id,))
+    tmp_db.commit()
+
+    resp = client.post(f"/api/assignments/{inst}/undo", json={})
+    assert resp.status_code == 200, resp.text
+    placeholders = ",".join("?" * len(new_ids))
+    left = tmp_db.execute(
+        f"SELECT count(*) FROM pending_celebrations WHERE id IN ({placeholders})", new_ids
+    ).fetchone()[0]
+    assert left == 0
 
 
 def test_undo_refuses_snapshot_without_after_state(client, tmp_db):

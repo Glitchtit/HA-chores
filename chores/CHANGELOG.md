@@ -1,3 +1,7 @@
+## 0.8.16
+
+- Completing a chore no longer stores a copy of every celebration popup ever shown for undo, and the undo copy is dropped once the hour to undo has passed. The copies grew by up to a few MB per completion and slowed the chore list down over time; old ones are cleared when the app starts. The database file itself only shrinks after a VACUUM
+
 ## 0.8.15
 
 - Undo takes back only what that completion changed. It used to put the whole household's XP, tokens, shop items, pets, power-ups and popups back to how they were before the chore, so anything someone else did in that hour (a shop purchase, feeding a pet, a popup already seen) was lost too. If something the completion changed has changed again since (for example the tokens it earned were spent), undo now says so and leaves everything as it is
