@@ -284,6 +284,15 @@ async def lifespan(app: FastAPI):
     db_tables = database.initialize()
     logger.info("Database ready (%d tables)", db_tables)
 
+    # Drop undo snapshots past the undo window; they can no longer be undone
+    try:
+        import undo
+        cleared = undo.clear_expired(database.get_connection())
+        if cleared:
+            logger.info("Cleared %d expired undo snapshot(s) at startup", cleared)
+    except Exception as e:
+        logger.warning("Failed to clear expired undo snapshots: %s", e)
+
     # Sync persons from HA on startup
     try:
         persons = await sync_persons_from_ha()

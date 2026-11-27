@@ -25,7 +25,7 @@ _TABLES = [
     ("person_badges", ("person_id", "badge_id"), "1=1"),
     ("person_cosmetics", ("person_id", "cosmetic_id"), "1=1"),
     ("person_powerups", ("id",), "1=1"),
-    ("pending_celebrations", ("id",), "1=1"),
+    ("pending_celebrations", ("id",), "seen_at IS NULL"),
     ("daily_quests", ("id",), "quest_date = :today"),
     ("daily_quest_bundles", ("person_id", "quest_date"), "quest_date = :today"),
     ("household_challenges", ("id",), "1=1"),
@@ -58,6 +58,17 @@ def snapshot(conn, instance_row) -> dict:
 def record_after(conn, snap: dict) -> None:
     """Add the same rows as they are after the completion."""
     snap["after"] = _tables(conn, snap["today"])
+
+
+def clear_expired(conn) -> int:
+    """Drop undo snapshots of completions past the undo window; they can't be used."""
+    cutoff = (datetime.now() - timedelta(minutes=UNDO_MINUTES)).isoformat()
+    cur = conn.execute(
+        "UPDATE chore_instances SET undo = NULL WHERE undo IS NOT NULL AND completed_at < ?",
+        (cutoff,),
+    )
+    conn.commit()
+    return cur.rowcount
 
 
 def _keyed(rows, pk) -> dict:
